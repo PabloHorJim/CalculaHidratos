@@ -1,0 +1,114 @@
+// ===============================================================
+// Assumed Data Model
+// ===============================================================
+//
+// Collection: /users/{userId}
+// Fields:
+//   - uid: string (required)
+//   - email: string (optional)
+//   - displayName: string (optional)
+//   - groupId: string (optional)
+//
+// Collection: /groups/{groupId}
+// Fields:
+//   - id: string (required)
+//   - name: string (required)
+//   - adminUid: string (required)
+//   - inviteCode: string (required)
+//   - ingredients: list (optional)
+//   - recipes: list (optional)
+//   - family: list (optional)
+//   - cookware: list (optional)
+//   - mealHistory: list (optional)
+//
+// ===============================================================
+
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // ===============================================================
+    // Helper Functions
+    // ===============================================================
+    
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return isAuthenticated() && request.auth.uid == userId;
+    }
+
+    function isGroupMember(groupId) {
+      let userPath = /databases/$(database)/documents/users/$(request.auth.uid);
+      return isAuthenticated() && 
+             exists(userPath) && 
+             get(userPath).data.groupId == groupId;
+    }
+
+    function isGroupAdmin() {
+      return isAuthenticated() && 
+             resource.data.adminUid == request.auth.uid;
+    }
+
+    function isValidEmail(email) {
+      return email is string && email.matches("^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}$");
+    }
+
+    function isValidString(val, maxLen) {
+      return val is string && val.size() > 0 && val.size() <= maxLen;
+    }
+
+    // ===============================================================
+    // Domain Validators
+    // ===============================================================
+
+    function isValidUser(data) {
+      return data.keys().hasAll(['uid']) &&
+             data.uid == request.auth.uid &&
+             (!('email' in data) || data.email == null || isValidEmail(data.email)) &&
+             (!('displayName' in data) || data.displayName == null || (data.displayName is string && data.displayName.size() <= 100)) &&
+             (!('groupId' in data) || data.groupId == null || data.groupId is string);
+    }
+
+    function isValidGroup(data) {
+      return data.keys().hasAll(['id', 'name', 'adminUid', 'inviteCode']) &&
+             isValidString(data.name, 100) &&
+             data.adminUid is string &&
+             data.inviteCode is string &&
+             (!('ingredients' in data) || data.ingredients is list) &&
+             (!('recipes' in data) || data.recipes is list) &&
+             (!('family' in data) || data.family is list) &&
+             (!('cookware' in data) || data.cookware is list) &&
+             (!('mealHistory' in data) || data.mealHistory is list);
+    }
+
+    // ===============================================================
+    // Match Rules
+    // ===============================================================
+
+    match /users/{userId} {
+      // Allow read if user is owner OR if they are in the same group
+      allow read: if isOwner(userId) || (
+        isAuthenticated() && 
+        exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
+        resource.data.groupId != null &&
+        resource.data.groupId == get(/databases/$(database)/documents/users/$(request.auth.uid)).data.groupId
+      );
+      allow create: if isOwner(userId) && isValidUser(request.resource.data);
+      allow update: if isOwner(userId) && isValidUser(request.resource.data);
+    }
+
+    match /groups/{groupId} {
+      // Allow get if authenticated (to check inviteCode)
+      allow get: if isAuthenticated();
+      
+      // Only admin can create or update group settings, but members can update data
+      allow create: if isAuthenticated() && isValidGroup(request.resource.data) && request.resource.data.adminUid == request.auth.uid;
+      
+      // Update data (ingredients, recipes, etc.) if member
+      // Update group settings (name, admin) if admin
+      allow update: if (isGroupMember(groupId) || isGroupAdmin()) && isValidGroup(request.resource.data);
+    }
+  }
+}

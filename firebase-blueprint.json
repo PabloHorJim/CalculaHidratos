@@ -1,0 +1,45 @@
+{
+  "entities": {
+    "UserProfile": {
+      "title": "UserProfile",
+      "description": "User profile and group association",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string" },
+        "email": { "type": "string", "format": "email" },
+        "displayName": { "type": "string" },
+        "groupId": { "type": "string", "description": "ID of the shared family group" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["uid"]
+    },
+    "FamilyGroup": {
+      "title": "FamilyGroup",
+      "description": "Shared data for a family group",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "adminUid": { "type": "string" },
+        "inviteCode": { "type": "string" },
+        "ingredients": { "type": "array" },
+        "recipes": { "type": "array" },
+        "family": { "type": "array" },
+        "cookware": { "type": "array" },
+        "mealHistory": { "type": "array" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["id", "name", "adminUid"]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": "UserProfile",
+      "description": "User profile document"
+    },
+    "/groups/{groupId}": {
+      "schema": "FamilyGroup",
+      "description": "Shared family group document"
+    }
+  }
+}

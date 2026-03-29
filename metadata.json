@@ -1,0 +1,5 @@
+{
+  "name": "CarbCalc Diabetes Assistant",
+  "description": "A mobile-first assistant for carbohydrate calculation and meal splitting for diabetes management.",
+  "requestFramePermissions": []
+}
