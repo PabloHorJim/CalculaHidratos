@@ -18,14 +18,13 @@ import {
 } from 'firebase/firestore';
 // Firebase Configuration
 // Environment variables are prioritized for security and deployment (Vercel/GitHub)
-// Fallback to project-specific keys for local development
 const firebaseConfig = {
-  apiKey: import.meta.env.VITE_FIREBASE_API_KEY || "AIzaSyAJ6ZhTxuJPWG-7glgsZimgW_ehCWfFgMI",
-  authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN || "calculahidratos.firebaseapp.com",
-  projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID || "calculahidratos",
-  storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET || "calculahidratos.firebasestorage.app",
-  messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID || "399063497592",
-  appId: import.meta.env.VITE_FIREBASE_APP_ID || "1:399063497592:web:b729e530ac46949f15668d",
+  apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
+  authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN,
+  projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID,
+  storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET,
+  messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID,
+  appId: import.meta.env.VITE_FIREBASE_APP_ID,
   firestoreDatabaseId: import.meta.env.VITE_FIREBASE_FIRESTORE_DATABASE_ID || '(default)'
 };
 
