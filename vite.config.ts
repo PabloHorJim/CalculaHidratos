@@ -18,16 +18,28 @@ export default defineConfig(({mode}) => {
           short_name: 'CarbCalc',
           description: 'Calculadora de carbohidratos para familias con diabetes',
           theme_color: '#f97316',
+          background_color: '#ffffff',
+          display: 'standalone',
+          start_url: '/',
+          scope: '/',
           icons: [
             {
               src: 'https://picsum.photos/seed/carbcalc/192/192',
               sizes: '192x192',
-              type: 'image/png'
+              type: 'image/png',
+              purpose: 'any'
             },
             {
               src: 'https://picsum.photos/seed/carbcalc/512/512',
               sizes: '512x512',
-              type: 'image/png'
+              type: 'image/png',
+              purpose: 'any'
+            },
+            {
+              src: 'https://picsum.photos/seed/carbcalc/512/512',
+              sizes: '512x512',
+              type: 'image/png',
+              purpose: 'maskable'
             }
           ]
         }
