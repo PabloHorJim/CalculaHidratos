@@ -1,18 +1,19 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { 
-  Plus, 
-  Trash2, 
-  Users, 
-  ChefHat, 
-  Scale, 
-  Utensils, 
-  Save, 
-  Search, 
-  ChevronRight, 
+import {
+  Plus,
+  Trash2,
+  Users,
+  ChefHat,
+  Scale,
+  Utensils,
+  Save,
+  Search,
+  ChevronRight,
   CheckCircle2,
   Circle,
   Calculator,
   Info,
+  Percent,
   History,
   LogIn,
   LogOut,
@@ -35,17 +36,17 @@ import {
 import { motion, AnimatePresence } from 'motion/react';
 import { Ingredient, Recipe, RecipeIngredient, FamilyMember, Cookware, MealHistoryEntry, FamilyGroup } from './types';
 import { INITIAL_INGREDIENTS } from './data/ingredients';
-import { 
-  auth, 
-  db, 
-  googleProvider, 
-  signInWithPopup, 
-  signOut, 
-  onAuthStateChanged, 
-  collection, 
-  doc, 
-  setDoc, 
-  getDoc, 
+import {
+  auth,
+  db,
+  googleProvider,
+  signInWithPopup,
+  signOut,
+  onAuthStateChanged,
+  collection,
+  doc,
+  setDoc,
+  getDoc,
   onSnapshot,
   OperationType,
   handleFirestoreError,
@@ -105,6 +106,11 @@ export default function App() {
   // Split Calculation State
   const [selectedCookwareId, setSelectedCookwareId] = useState('');
   const [totalWeightWithCookware, setTotalWeightWithCookware] = useState<number | ''>('');
+  const [cachedTotalCarbs, setCachedTotalCarbs] = useState(0);
+  const [setAsideMode, setSetAsideMode] = useState<'none' | 'percentage' | 'absolute'>('none');
+  const [setAsideValue, setSetAsideValue] = useState<number | ''>('');
+  const [portionErrorPercent, setPortionErrorPercent] = useState(0);
+  const [isErrorDisabledForCurrentSplit, setIsErrorDisabledForCurrentSplit] = useState(false);
 
   // --- Auth & Sync ---
   useEffect(() => {
@@ -127,6 +133,7 @@ export default function App() {
         if (parsed.cookware) setCookware(parsed.cookware);
         if (parsed.mealHistory) setMealHistory(parsed.mealHistory);
         if (parsed.groupId) setGroupId(parsed.groupId);
+        if (typeof parsed.portionErrorPercent === 'number') setPortionErrorPercent(parsed.portionErrorPercent);
       } catch (e) {
         console.error('Failed to load state', e);
       }
@@ -250,11 +257,11 @@ export default function App() {
   // Save changes (Local + Cloud)
   useEffect(() => {
     if (!isLoaded || !isAuthReady || isSyncing) return;
-    
+
     setSaveStatus('saving');
     const timer = setTimeout(async () => {
-      const state = { ingredients, recipes, family, cookware, mealHistory, groupId };
-      
+      const state = { ingredients, recipes, family, cookware, mealHistory, groupId, portionErrorPercent };
+
       localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
 
       if (user) {
@@ -285,7 +292,7 @@ export default function App() {
     }, 1000);
 
     return () => clearTimeout(timer);
-  }, [ingredients, recipes, family, cookware, mealHistory, groupId, isLoaded, user, isAuthReady, isSyncing]);
+  }, [ingredients, recipes, family, cookware, mealHistory, groupId, portionErrorPercent, isLoaded, user, isAuthReady, isSyncing]);
 
   useEffect(() => {
     if (toast) {
@@ -318,7 +325,7 @@ export default function App() {
     }
   };
   const filteredIngredients = useMemo(() => {
-    return ingredients.filter(i => 
+    return ingredients.filter(i =>
       i.name.toLowerCase().includes(searchTerm.toLowerCase())
     ).sort((a, b) => a.name.localeCompare(b.name));
   }, [ingredients, searchTerm]);
@@ -331,21 +338,30 @@ export default function App() {
     }, 0);
   }, [currentRecipeIngredients, ingredients]);
 
+  // Cache totalCarbs for the split tab (persists after recipe save/clear)
+  useEffect(() => {
+    if (totalCarbs > 0) setCachedTotalCarbs(totalCarbs);
+  }, [totalCarbs]);
+
   const activeFamilyProportionSum = useMemo(() => {
     return family.filter(m => m.isActive).reduce((sum, m) => sum + m.proportion, 0);
   }, [family]);
 
-  const diabeticMember = useMemo(() => {
-    return family.find(m => m.isDiabetic && m.isActive);
+  const diabeticMembers = useMemo(() => {
+    return family.filter(m => m.isDiabetic && m.isActive);
   }, [family]);
 
-  const diabeticCarbs = useMemo(() => {
-    if (!diabeticMember || activeFamilyProportionSum === 0) return 0;
-    return (diabeticMember.proportion / activeFamilyProportionSum) * totalCarbs;
-  }, [diabeticMember, activeFamilyProportionSum, totalCarbs]);
+  const diabeticCarbsMap = useMemo(() => {
+    const map = new Map<string, number>();
+    if (activeFamilyProportionSum === 0) return map;
+    diabeticMembers.forEach(m => {
+      map.set(m.id, (m.proportion / activeFamilyProportionSum) * totalCarbs);
+    });
+    return map;
+  }, [diabeticMembers, activeFamilyProportionSum, totalCarbs]);
 
   const filteredRecipes = useMemo(() => {
-    return recipes.filter(r => 
+    return recipes.filter(r =>
       r.name.toLowerCase().includes(recipeSearchTerm.toLowerCase())
     ).sort((a, b) => a.name.localeCompare(b.name));
   }, [recipes, recipeSearchTerm]);
@@ -373,7 +389,7 @@ export default function App() {
   };
 
   const updateIngredientWeight = (id: string, weight: number) => {
-    setCurrentRecipeIngredients(prev => 
+    setCurrentRecipeIngredients(prev =>
       prev.map(ri => ri.ingredientId === id ? { ...ri, weight } : ri)
     );
   };
@@ -384,14 +400,14 @@ export default function App() {
 
   const saveRecipe = () => {
     if (!currentRecipeName || currentRecipeIngredients.length === 0) return;
-    
+
     const recipeData = {
       name: currentRecipeName,
       ingredients: [...currentRecipeIngredients]
     };
 
     if (editingRecipeId) {
-      setRecipes(prev => prev.map(r => 
+      setRecipes(prev => prev.map(r =>
         r.id === editingRecipeId ? { ...r, ...recipeData } : r
       ));
       setToast('Receta actualizada');
@@ -413,7 +429,7 @@ export default function App() {
 
   const saveAsNewRecipe = () => {
     if (!currentRecipeName || currentRecipeIngredients.length === 0) return;
-    
+
     const newRecipe: Recipe = {
       id: Date.now().toString(),
       name: currentRecipeName,
@@ -518,7 +534,7 @@ export default function App() {
     if (!user) return;
     const inviteCode = Math.random().toString(36).substring(2, 8).toUpperCase();
     const newGroupId = inviteCode; // Use inviteCode as the document ID for easier joining
-    
+
     const newGroup: FamilyGroup = {
       id: newGroupId,
       name,
@@ -559,7 +575,7 @@ export default function App() {
     try {
       // Since inviteCode IS the groupId, we can just try to get the doc
       const groupDoc = await getDoc(doc(db, 'groups', inviteCode));
-      
+
       if (groupDoc.exists()) {
         await updateDoc(doc(db, 'users', user.uid), {
           groupId: inviteCode
@@ -627,26 +643,47 @@ export default function App() {
     });
   };
 
+  const shareFullMeal = (recipeName: string, totalMealCarbs: number, netW: number, portions: { memberName: string; weight: number; carbs: number; isDiabetic: boolean }[], via: 'whatsapp' | 'clipboard') => {
+    const portionLines = portions.map(p =>
+      `- ${p.memberName}: ${p.weight.toFixed(0)}g (${p.carbs.toFixed(1)}g HC)${p.isDiabetic ? ' ⚠️' : ''}`
+    ).join('\n');
+    const message = `🍽️ ${via === 'whatsapp' ? '*' : ''}Reparto: ${recipeName}${via === 'whatsapp' ? '*' : ''}\n\nPeso neto: ${netW.toFixed(0)}g\nHC totales: ${totalMealCarbs.toFixed(1)}g\n\n${portionLines}\n\nCalculado con CarbCalc`;
+    if (via === 'whatsapp') {
+      const encoded = encodeURIComponent(message);
+      window.open(`https://wa.me/?text=${encoded}`, '_blank');
+    } else {
+      navigator.clipboard.writeText(message).then(() => setToast('Reparto copiado al portapapeles'));
+    }
+  };
+
   // --- Render Helpers ---
-  const renderRecipeTab = () => (
-    <div className="space-y-4">
-      <div className="bg-white p-3 rounded-2xl shadow-sm border border-orange-100">
-        <div className="flex items-center justify-between mb-3">
+  const renderRecipeTab = () => {
+    // Calculate effective carbs considering set-aside food
+    const setAsideAmount = typeof setAsideValue === 'number' && setAsideValue > 0 ? setAsideValue : 0;
+    const effectiveCarbsForDiabetics = setAsideMode === 'percentage'
+      ? totalCarbs * (1 - setAsideAmount / 100)
+      : setAsideMode === 'absolute' && totalCarbs > 0
+        ? totalCarbs * (1 - setAsideAmount / (currentRecipeIngredients.reduce((sum, ri) => sum + ri.weight, 0) || 1))
+        : totalCarbs;
+
+    return (
+      <div className="space-y-4">
+        <div className="flex items-center justify-between mb-1">
           <div className="flex items-center gap-2 flex-1">
-            <ChefHat className="text-orange-500" size={18} />
-            <input 
-              type="text" 
-              placeholder="Nombre (opcional para cálculo rápido)" 
-              className="flex-1 text-base font-semibold outline-none bg-transparent placeholder:text-gray-300"
+            <ChefHat className="text-orange-500" size={22} />
+            <input
+              type="text"
+              placeholder="Nombre (opcional para cálculo rápido)"
+              className="flex-1 text-lg font-semibold outline-none bg-transparent placeholder:text-gray-300"
               value={currentRecipeName}
               onChange={(e) => setCurrentRecipeName(e.target.value)}
             />
           </div>
           <div className="flex gap-2">
             {(currentRecipeName || currentRecipeIngredients.length > 0) && (
-              <button 
+              <button
                 onClick={startNewRecipe}
-                className="text-[10px] font-black uppercase px-2 py-1 bg-gray-100 text-gray-500 rounded-lg hover:bg-orange-100 hover:text-orange-600 transition-colors"
+                className="text-xs font-black uppercase px-3 py-1.5 bg-gray-100 text-gray-500 rounded-lg hover:bg-orange-100 hover:text-orange-600 transition-colors"
               >
                 Limpiar
               </button>
@@ -654,19 +691,19 @@ export default function App() {
           </div>
         </div>
 
-        <div className="relative mb-3">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={16} />
-          <input 
-            type="text" 
-            placeholder="Añadir ingrediente..." 
-            className="w-full pl-9 pr-4 py-1.5 bg-gray-50 rounded-xl outline-none focus:ring-2 focus:ring-orange-200 text-sm"
+        <div className="relative">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
+          <input
+            type="text"
+            placeholder="Añadir ingrediente..."
+            className="w-full pl-10 pr-4 py-2.5 bg-gray-50 rounded-xl outline-none focus:ring-2 focus:ring-orange-200 text-sm"
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
           />
           {searchTerm && (
             <div className="absolute z-10 w-full mt-1 bg-white border border-gray-100 rounded-xl shadow-lg max-h-60 overflow-y-auto">
               {filteredIngredients.map(i => (
-                <button 
+                <button
                   key={i.id}
                   onClick={() => addIngredientToRecipe(i)}
                   className="w-full px-4 py-3 text-left hover:bg-orange-50 flex justify-between items-center border-b border-gray-50 last:border-0"
@@ -684,40 +721,40 @@ export default function App() {
           )}
         </div>
 
-        <div className="mb-3">
+        <div>
           {!showAddIngredient ? (
-            <button 
+            <button
               onClick={() => setShowAddIngredient(true)}
-              className="text-[10px] font-bold text-orange-500 flex items-center gap-1 hover:underline"
+              className="text-xs font-bold text-orange-500 flex items-center gap-1 hover:underline"
             >
-              <Plus size={12} /> Ingrediente nuevo
+              <Plus size={14} /> Ingrediente nuevo
             </button>
           ) : (
-            <div className="bg-orange-50 p-2 rounded-xl space-y-2 border border-orange-100">
-              <input 
-                type="text" 
-                placeholder="Nombre" 
-                className="w-full px-2 py-1.5 bg-white rounded-lg text-xs outline-none"
+            <div className="bg-orange-50 p-3 rounded-xl space-y-2 border border-orange-100">
+              <input
+                type="text"
+                placeholder="Nombre"
+                className="w-full px-3 py-2 bg-white rounded-lg text-sm outline-none"
                 value={newIngredientName}
                 onChange={(e) => setNewIngredientName(e.target.value)}
               />
               <div className="flex gap-2">
-                <input 
-                  type="number" 
-                  placeholder="HC/100g" 
-                  className="flex-1 px-2 py-1.5 bg-white rounded-lg text-xs outline-none"
+                <input
+                  type="number"
+                  placeholder="HC/100g"
+                  className="flex-1 px-3 py-2 bg-white rounded-lg text-sm outline-none"
                   value={newIngredientCarbs}
                   onChange={(e) => setNewIngredientCarbs(e.target.value === '' ? '' : Number(e.target.value))}
                 />
-                <button 
+                <button
                   onClick={createAndAddIngredient}
-                  className="bg-orange-500 text-white px-3 py-1.5 rounded-lg text-xs font-bold"
+                  className="bg-orange-500 text-white px-4 py-2 rounded-lg text-sm font-bold"
                 >
                   Añadir
                 </button>
-                <button 
+                <button
                   onClick={() => setShowAddIngredient(false)}
-                  className="text-gray-400 px-1"
+                  className="text-gray-400 px-2"
                 >
                   ✕
                 </button>
@@ -731,30 +768,30 @@ export default function App() {
             const ingredient = ingredients.find(i => i.id === ri.ingredientId);
             if (!ingredient) return null;
             return (
-              <motion.div 
+              <motion.div
                 layout
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
-                key={ri.ingredientId} 
-                className="flex items-center gap-3 bg-gray-50 p-2 rounded-xl"
+                key={ri.ingredientId}
+                className="flex items-center gap-3 bg-white p-3 rounded-xl shadow-sm border border-gray-100"
               >
                 <div className="flex-1">
-                  <div className="font-medium text-xs">{ingredient.name}</div>
-                  <div className="text-[10px] text-gray-500">{ingredient.carbsPer100g}g HC/100g</div>
+                  <div className="font-medium text-sm">{ingredient.name}</div>
+                  <div className="text-xs text-gray-500">{ingredient.carbsPer100g}g HC/100g</div>
                 </div>
                 <div className="flex items-center gap-2">
-                  <input 
-                    type="number" 
+                  <input
+                    type="number"
                     value={ri.weight}
                     onChange={(e) => updateIngredientWeight(ri.ingredientId, Number(e.target.value))}
-                    className="w-16 px-2 py-1 bg-white border border-gray-200 rounded-lg text-right text-sm outline-none focus:ring-2 focus:ring-orange-200"
+                    className="w-20 px-3 py-1.5 bg-gray-50 border border-gray-200 rounded-lg text-right text-base outline-none focus:ring-2 focus:ring-orange-200"
                   />
-                  <span className="text-xs text-gray-500">g</span>
-                  <button 
+                  <span className="text-sm text-gray-500">g</span>
+                  <button
                     onClick={() => removeIngredientFromRecipe(ri.ingredientId)}
-                    className="p-1 text-gray-400 hover:text-red-500"
+                    className="p-1.5 text-gray-400 hover:text-red-500"
                   >
-                    <Trash2 size={14} />
+                    <Trash2 size={16} />
                   </button>
                 </div>
               </motion.div>
@@ -764,40 +801,52 @@ export default function App() {
 
         {currentRecipeIngredients.length > 0 && (
           <div className="mt-4 pt-4 border-t border-gray-100">
-            <div className="flex justify-between items-end mb-3">
-              <div>
-                <div className="text-[10px] text-gray-400 uppercase tracking-wider font-bold">Total Carbohidratos</div>
-                <div className="text-2xl font-black text-orange-600 leading-none">{totalCarbs.toFixed(1)} <span className="text-sm font-normal">g HC</span></div>
-              </div>
-              {diabeticMember && (
-                <div className="text-right">
-                  <div className="text-[10px] text-blue-400 uppercase tracking-wider font-bold">Para {diabeticMember.name}</div>
-                  <div className="text-xl font-black text-blue-600 leading-none">{diabeticCarbs.toFixed(1)} <span className="text-xs font-normal">g HC</span></div>
-                </div>
-              )}
+            <div className="mb-3">
+              <div className="text-xs text-gray-400 uppercase tracking-wider font-bold mb-1">Total Carbohidratos</div>
+              <div className="text-3xl font-black text-orange-600 leading-none">{totalCarbs.toFixed(1)} <span className="text-base font-normal">g HC</span></div>
             </div>
+            {setAsideMode !== 'none' && setAsideAmount > 0 && (
+              <div className="mb-3 text-xs text-gray-400">
+                Tras apartar comida: <span className="font-bold text-orange-500">{effectiveCarbsForDiabetics.toFixed(1)}g HC</span>
+              </div>
+            )}
+            {diabeticMembers.length > 0 && (
+              <div className="flex flex-wrap gap-3 mb-3">
+                {diabeticMembers.map(dm => {
+                  const dmCarbs = activeFamilyProportionSum > 0
+                    ? (dm.proportion / activeFamilyProportionSum) * effectiveCarbsForDiabetics
+                    : 0;
+                  return (
+                    <div key={dm.id} className="bg-blue-50 px-3 py-2 rounded-xl border border-blue-100">
+                      <div className="text-xs text-blue-400 uppercase tracking-wider font-bold">Para {dm.name}</div>
+                      <div className="text-2xl font-black text-blue-600 leading-none">{dmCarbs.toFixed(1)} <span className="text-sm font-normal">g HC</span></div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
             <div className="flex flex-col gap-2">
               <div className="flex gap-2">
-                <button 
+                <button
                   onClick={saveRecipe}
                   disabled={!currentRecipeName}
-                  className={`flex-1 py-2.5 rounded-xl font-bold flex items-center justify-center gap-2 transition-colors text-sm ${currentRecipeName ? 'bg-orange-500 text-white hover:bg-orange-600' : 'bg-gray-100 text-gray-400 cursor-not-allowed'}`}
+                  className={`flex-1 py-3 rounded-xl font-bold flex items-center justify-center gap-2 transition-colors text-base ${currentRecipeName ? 'bg-orange-500 text-white hover:bg-orange-600' : 'bg-gray-100 text-gray-400 cursor-not-allowed'}`}
                 >
-                  <Save size={16} />
+                  <Save size={18} />
                   {editingRecipeId ? 'Actualizar' : 'Guardar'}
                 </button>
                 {editingRecipeId && (
-                  <button 
+                  <button
                     onClick={saveAsNewRecipe}
-                    className="flex-1 py-2.5 bg-white border border-orange-200 text-orange-500 rounded-xl font-bold flex items-center justify-center gap-2 hover:bg-orange-50 transition-colors text-sm"
+                    className="flex-1 py-3 bg-white border border-orange-200 text-orange-500 rounded-xl font-bold flex items-center justify-center gap-2 hover:bg-orange-50 transition-colors text-base"
                   >
-                    <Plus size={16} />
+                    <Plus size={18} />
                     Como Nueva
                   </button>
                 )}
               </div>
               {!currentRecipeName && (
-                <div className="flex-1 flex items-center justify-center text-[10px] text-gray-400 font-medium text-center leading-tight">
+                <div className="flex-1 flex items-center justify-center text-xs text-gray-400 font-medium text-center leading-tight">
                   Pon un nombre para guardar como receta
                 </div>
               )}
@@ -805,14 +854,14 @@ export default function App() {
           </div>
         )}
       </div>
-    </div>
-  );
+    );
+  };
 
   const renderFamilyTab = () => (
     <div className="space-y-3">
       <div className="flex justify-between items-center mb-1">
         <h2 className="text-lg font-bold text-gray-800">Familia</h2>
-        <button 
+        <button
           onClick={addFamilyMember}
           className="p-1.5 bg-blue-500 text-white rounded-full hover:bg-blue-600"
         >
@@ -830,13 +879,13 @@ export default function App() {
                   <Circle className="text-gray-300" size={20} />
                 )}
               </button>
-              <input 
-                type="text" 
+              <input
+                type="text"
                 value={member.name}
                 onChange={(e) => updateFamilyMember(member.id, { name: e.target.value })}
                 className="flex-1 font-bold text-sm outline-none"
               />
-              <button 
+              <button
                 onClick={() => removeFamilyMember(member.id)}
                 className="text-gray-300 hover:text-red-500"
               >
@@ -846,8 +895,8 @@ export default function App() {
             <div className="grid grid-cols-2 gap-3">
               <div>
                 <label className="text-[9px] uppercase font-bold text-gray-400 block mb-0.5">Proporción</label>
-                <input 
-                  type="number" 
+                <input
+                  type="number"
                   step="0.001"
                   value={member.proportion}
                   onChange={(e) => updateFamilyMember(member.id, { proportion: Number(e.target.value) })}
@@ -855,7 +904,7 @@ export default function App() {
                 />
               </div>
               <div className="flex flex-col justify-end">
-                <button 
+                <button
                   onClick={() => updateFamilyMember(member.id, { isDiabetic: !member.isDiabetic })}
                   className={`px-2 py-1 rounded text-[10px] font-bold transition-colors ${member.isDiabetic ? 'bg-blue-100 text-blue-600' : 'bg-gray-100 text-gray-400'}`}
                 >
@@ -873,7 +922,7 @@ export default function App() {
     <div className="space-y-3">
       <div className="flex justify-between items-center mb-1">
         <h2 className="text-lg font-bold text-gray-800">Utensilios</h2>
-        <button 
+        <button
           onClick={addCookware}
           className="p-1.5 bg-purple-500 text-white rounded-full hover:bg-purple-600"
         >
@@ -885,13 +934,13 @@ export default function App() {
           <div key={item.id} className="bg-white p-3 rounded-xl shadow-sm border border-gray-100">
             <div className="flex items-center gap-2 mb-2">
               <Utensils className="text-purple-500" size={18} />
-              <input 
-                type="text" 
+              <input
+                type="text"
                 value={item.name}
                 onChange={(e) => updateCookware(item.id, { name: e.target.value })}
                 className="flex-1 font-bold text-sm outline-none"
               />
-              <button 
+              <button
                 onClick={() => removeCookware(item.id)}
                 className="text-gray-300 hover:text-red-500"
               >
@@ -900,8 +949,8 @@ export default function App() {
             </div>
             <div>
               <label className="text-[9px] uppercase font-bold text-gray-400 block mb-0.5">Masa (g)</label>
-              <input 
-                type="number" 
+              <input
+                type="number"
                 value={item.mass}
                 onChange={(e) => updateCookware(item.id, { mass: Number(e.target.value) })}
                 className="w-full px-2 py-1 bg-gray-50 rounded text-sm outline-none focus:ring-2 focus:ring-purple-200"
@@ -915,15 +964,44 @@ export default function App() {
 
   const renderSplitTab = () => {
     const selectedItem = cookware.find(c => c.id === selectedCookwareId);
-    const netWeight = (typeof totalWeightWithCookware === 'number' && selectedItem) 
-      ? Math.max(0, totalWeightWithCookware - selectedItem.mass) 
+    const cookwareMass = selectedCookwareId === 'none' ? 0 : (selectedItem?.mass ?? 0);
+    const hasCookwareSelection = selectedCookwareId === 'none' || !!selectedItem;
+    const netWeightRaw = (typeof totalWeightWithCookware === 'number' && hasCookwareSelection)
+      ? Math.max(0, totalWeightWithCookware - cookwareMass)
       : 0;
 
+    // Set aside food calculation
+    const setAsideAmount = typeof setAsideValue === 'number' && setAsideValue > 0 ? setAsideValue : 0;
+    const setAsideWeight = setAsideMode === 'percentage'
+      ? netWeightRaw * (setAsideAmount / 100)
+      : setAsideMode === 'absolute'
+        ? Math.min(setAsideAmount, netWeightRaw)
+        : 0;
+    const netWeight = Math.max(0, netWeightRaw - setAsideWeight);
+
+    // Use cachedTotalCarbs so carb data persists after recipe save/clear
+    const effectiveCarbs = totalCarbs > 0 ? totalCarbs : cachedTotalCarbs;
+    // Adjust carbs proportionally to set-aside
+    const adjustedCarbs = netWeightRaw > 0 ? effectiveCarbs * (netWeight / netWeightRaw) : effectiveCarbs;
+
+    // Portion error
+    const errorMultiplier = (portionErrorPercent > 0 && !isErrorDisabledForCurrentSplit)
+      ? 1 - (portionErrorPercent / 100)
+      : 1;
+
     const calculatedPortions = family.filter(m => m.isActive).map(member => {
-      const portion = (member.proportion / activeFamilyProportionSum) * netWeight;
-      const portionCarbs = totalCarbs > 0 ? (portion * (totalCarbs / netWeight)) : 0;
+      const portionRaw = (member.proportion / activeFamilyProportionSum) * netWeight;
+      const portion = portionRaw * errorMultiplier;
+      const portionCarbs = adjustedCarbs > 0 && netWeight > 0 ? (portionRaw * (adjustedCarbs / netWeight)) : 0;
       return { member, portion, portionCarbs };
     });
+
+    const portionsForSharing = calculatedPortions.map(p => ({
+      memberName: p.member.name,
+      weight: p.portion,
+      carbs: p.portionCarbs,
+      isDiabetic: p.member.isDiabetic
+    }));
 
     return (
       <div className="space-y-6">
@@ -934,17 +1012,12 @@ export default function App() {
               Reparto de Comida
             </h2>
             {netWeight > 0 && (
-              <button 
+              <button
                 onClick={() => saveMealToHistory(
                   currentRecipeName || 'Comida sin nombre',
-                  totalCarbs,
+                  adjustedCarbs,
                   netWeight,
-                  calculatedPortions.map(p => ({
-                    memberName: p.member.name,
-                    weight: p.portion,
-                    carbs: p.portionCarbs,
-                    isDiabetic: p.member.isDiabetic
-                  }))
+                  portionsForSharing
                 )}
                 className="p-2 bg-orange-100 text-orange-600 rounded-xl hover:bg-orange-200 transition-colors"
                 title="Guardar en historial"
@@ -958,8 +1031,15 @@ export default function App() {
             <div>
               <label className="text-xs font-bold text-gray-400 uppercase mb-2 block">Seleccionar Utensilio</label>
               <div className="grid grid-cols-2 gap-2">
+                <button
+                  onClick={() => setSelectedCookwareId('none')}
+                  className={`px-3 py-3 rounded-xl text-sm font-medium transition-all ${selectedCookwareId === 'none' ? 'bg-green-500 text-white shadow-md' : 'bg-gray-50 text-gray-600 hover:bg-gray-100'}`}
+                >
+                  Sin utensilio
+                  <div className={`text-[10px] ${selectedCookwareId === 'none' ? 'text-green-100' : 'text-gray-400'}`}>Peso directo</div>
+                </button>
                 {cookware.map(c => (
-                  <button 
+                  <button
                     key={c.id}
                     onClick={() => setSelectedCookwareId(c.id)}
                     className={`px-3 py-3 rounded-xl text-sm font-medium transition-all ${selectedCookwareId === c.id ? 'bg-purple-500 text-white shadow-md' : 'bg-gray-50 text-gray-600 hover:bg-gray-100'}`}
@@ -972,10 +1052,12 @@ export default function App() {
             </div>
 
             <div>
-              <label className="text-xs font-bold text-gray-400 uppercase mb-2 block">Peso Total (con utensilio)</label>
+              <label className="text-xs font-bold text-gray-400 uppercase mb-2 block">
+                {selectedCookwareId === 'none' ? 'Peso Total' : 'Peso Total (con utensilio)'}
+              </label>
               <div className="flex items-center gap-3">
-                <input 
-                  type="number" 
+                <input
+                  type="number"
                   placeholder="0"
                   value={totalWeightWithCookware}
                   onChange={(e) => setTotalWeightWithCookware(e.target.value === '' ? '' : Number(e.target.value))}
@@ -985,10 +1067,67 @@ export default function App() {
               </div>
             </div>
 
-            {netWeight > 0 && (
-              <div className="bg-green-50 p-4 rounded-2xl border border-green-100">
-                <div className="text-xs text-green-600 font-bold uppercase mb-1">Peso Neto de la Comida</div>
-                <div className="text-2xl font-black text-green-700">{netWeight} g</div>
+            {netWeightRaw > 0 && (
+              <>
+                <div className="bg-green-50 p-4 rounded-2xl border border-green-100">
+                  <div className="text-xs text-green-600 font-bold uppercase mb-1">Peso Neto de la Comida</div>
+                  <div className="text-2xl font-black text-green-700">{netWeightRaw} g</div>
+                </div>
+
+                {/* Set Aside Food */}
+                <div className="bg-gray-50 p-3 rounded-2xl border border-gray-100">
+                  <div className="flex items-center justify-between mb-2">
+                    <div className="text-xs font-bold text-gray-400 uppercase">Apartar comida</div>
+                    <div className="flex gap-1">
+                      <button
+                        onClick={() => { setSetAsideMode(setAsideMode === 'none' ? 'percentage' : 'none'); setSetAsideValue(''); }}
+                        className={`text-[10px] font-bold px-2 py-1 rounded-lg transition-colors ${setAsideMode !== 'none' ? 'bg-orange-100 text-orange-600' : 'bg-gray-100 text-gray-400'}`}
+                      >
+                        {setAsideMode !== 'none' ? 'Activado' : 'Desactivado'}
+                      </button>
+                    </div>
+                  </div>
+                  {setAsideMode !== 'none' && (
+                    <div className="space-y-2">
+                      <div className="flex gap-2">
+                        <button
+                          onClick={() => setSetAsideMode('percentage')}
+                          className={`flex-1 text-xs font-bold py-1.5 rounded-lg transition-colors ${setAsideMode === 'percentage' ? 'bg-orange-500 text-white' : 'bg-white text-gray-500 border border-gray-200'}`}
+                        >
+                          Porcentaje
+                        </button>
+                        <button
+                          onClick={() => setSetAsideMode('absolute')}
+                          className={`flex-1 text-xs font-bold py-1.5 rounded-lg transition-colors ${setAsideMode === 'absolute' ? 'bg-orange-500 text-white' : 'bg-white text-gray-500 border border-gray-200'}`}
+                        >
+                          Gramos
+                        </button>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <input
+                          type="number"
+                          placeholder={setAsideMode === 'percentage' ? '25' : '500'}
+                          value={setAsideValue}
+                          onChange={(e) => setSetAsideValue(e.target.value === '' ? '' : Number(e.target.value))}
+                          className="flex-1 px-3 py-2 bg-white rounded-lg text-sm outline-none focus:ring-2 focus:ring-orange-200 border border-gray-200"
+                        />
+                        <span className="text-sm font-bold text-gray-400">{setAsideMode === 'percentage' ? '%' : 'g'}</span>
+                      </div>
+                      {setAsideWeight > 0 && (
+                        <div className="text-xs text-gray-400">
+                          Apartando <span className="font-bold text-orange-500">{setAsideWeight.toFixed(0)}g</span> → Queda <span className="font-bold text-green-600">{netWeight.toFixed(0)}g</span>
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
+              </>
+            )}
+
+            {effectiveCarbs > 0 && netWeightRaw > 0 && (
+              <div className="bg-orange-50 p-3 rounded-2xl border border-orange-100">
+                <div className="text-xs text-orange-600 font-bold uppercase mb-1">Carbohidratos</div>
+                <div className="text-lg font-black text-orange-700">{adjustedCarbs.toFixed(1)} g HC</div>
               </div>
             )}
           </div>
@@ -996,12 +1135,23 @@ export default function App() {
 
         {netWeight > 0 && activeFamilyProportionSum > 0 && (
           <div className="space-y-3">
-            <h3 className="text-sm font-bold text-gray-400 uppercase px-2">Raciones Calculadas</h3>
+            <div className="flex items-center justify-between px-2">
+              <h3 className="text-sm font-bold text-gray-400 uppercase">Raciones Calculadas</h3>
+              {portionErrorPercent > 0 && (
+                <button
+                  onClick={() => setIsErrorDisabledForCurrentSplit(!isErrorDisabledForCurrentSplit)}
+                  className={`text-[10px] font-bold px-2 py-1 rounded-lg transition-colors ${isErrorDisabledForCurrentSplit ? 'bg-gray-100 text-gray-400' : 'bg-yellow-100 text-yellow-700'}`}
+                  title={isErrorDisabledForCurrentSplit ? 'Error de pesaje desactivado' : `Aplicando -${portionErrorPercent}% de error`}
+                >
+                  {isErrorDisabledForCurrentSplit ? 'Error OFF' : `-${portionErrorPercent}%`}
+                </button>
+              )}
+            </div>
             {calculatedPortions.map(({ member, portion, portionCarbs }) => (
-              <motion.div 
+              <motion.div
                 initial={{ opacity: 0, x: -20 }}
                 animate={{ opacity: 1, x: 0 }}
-                key={member.id} 
+                key={member.id}
                 className={`bg-white p-3 rounded-xl shadow-sm border flex justify-between items-center ${member.isDiabetic ? 'border-blue-200 bg-blue-50/30' : 'border-gray-100'}`}
               >
                 <div className="flex-1">
@@ -1014,19 +1164,19 @@ export default function App() {
                 <div className="flex items-center gap-4">
                   <div className="text-right">
                     <div className="text-lg font-black text-gray-900 leading-none">{portion.toFixed(0)} <span className="text-xs font-normal">g</span></div>
-                    {totalCarbs > 0 && (
+                    {adjustedCarbs > 0 && (
                       <div className="text-xs font-bold text-orange-600 mt-0.5">{portionCarbs.toFixed(1)} <span className="text-[10px] font-normal">g HC</span></div>
                     )}
                   </div>
                   <div className="flex gap-2">
-                    <button 
+                    <button
                       onClick={() => copyPortionToClipboard(member.name, portion, portionCarbs, member.isDiabetic)}
                       className="p-2 text-gray-400 hover:bg-gray-100 rounded-full transition-colors"
                       title="Copiar al portapapeles"
                     >
                       <Share2 size={18} />
                     </button>
-                    <button 
+                    <button
                       onClick={() => sharePortion(member.name, portion, portionCarbs, member.isDiabetic)}
                       className="p-2 text-green-500 hover:bg-green-50 rounded-full transition-colors"
                       title="Compartir por WhatsApp"
@@ -1037,6 +1187,24 @@ export default function App() {
                 </div>
               </motion.div>
             ))}
+
+            {/* Share full meal */}
+            <div className="flex gap-2 pt-2">
+              <button
+                onClick={() => shareFullMeal(currentRecipeName || 'Comida sin nombre', adjustedCarbs, netWeight, portionsForSharing, 'clipboard')}
+                className="flex-1 py-2.5 bg-gray-100 text-gray-600 rounded-xl font-bold flex items-center justify-center gap-2 text-xs hover:bg-gray-200 transition-colors"
+              >
+                <Share2 size={16} />
+                Copiar Reparto
+              </button>
+              <button
+                onClick={() => shareFullMeal(currentRecipeName || 'Comida sin nombre', adjustedCarbs, netWeight, portionsForSharing, 'whatsapp')}
+                className="flex-1 py-2.5 bg-green-500 text-white rounded-xl font-bold flex items-center justify-center gap-2 text-xs hover:bg-green-600 transition-colors"
+              >
+                <MessageSquare size={16} />
+                WhatsApp
+              </button>
+            </div>
           </div>
         )}
       </div>
@@ -1075,14 +1243,14 @@ export default function App() {
                     return (
                       <div key={entry.id} className={`bg-white rounded-2xl shadow-sm border transition-all ${isExpanded ? 'border-orange-200 ring-1 ring-orange-100' : 'border-gray-100 hover:border-gray-200'}`}>
                         {/* Summary View (Discrete) */}
-                        <div 
+                        <div
                           onClick={() => setExpandedHistoryId(isExpanded ? null : entry.id)}
                           className="p-4 flex items-center justify-between cursor-pointer"
                         >
                           <div className="flex-1 min-w-0">
                             {editingHistoryId === entry.id ? (
                               <div className="flex gap-2 items-center" onClick={(e) => e.stopPropagation()}>
-                                <input 
+                                <input
                                   type="text"
                                   value={editingHistoryName}
                                   onChange={(e) => setEditingHistoryName(e.target.value)}
@@ -1093,7 +1261,7 @@ export default function App() {
                                     if (e.key === 'Escape') setEditingHistoryId(null);
                                   }}
                                 />
-                                <button 
+                                <button
                                   onClick={() => updateMealHistoryEntry(entry.id, editingHistoryName)}
                                   className="p-1 text-green-500 hover:bg-green-50 rounded"
                                 >
@@ -1122,7 +1290,7 @@ export default function App() {
                         {/* Expanded Detail View */}
                         <AnimatePresence>
                           {isExpanded && (
-                            <motion.div 
+                            <motion.div
                               initial={{ height: 0, opacity: 0 }}
                               animate={{ height: 'auto', opacity: 1 }}
                               exit={{ height: 0, opacity: 0 }}
@@ -1132,7 +1300,7 @@ export default function App() {
                                 <div className="flex justify-between items-center">
                                   <div className="text-[10px] font-bold text-gray-400 uppercase">Detalles del Reparto</div>
                                   <div className="flex gap-1">
-                                    <button 
+                                    <button
                                       onClick={(e) => {
                                         e.stopPropagation();
                                         setEditingHistoryId(entry.id);
@@ -1143,7 +1311,7 @@ export default function App() {
                                     >
                                       <Pencil size={14} />
                                     </button>
-                                    <button 
+                                    <button
                                       onClick={(e) => {
                                         e.stopPropagation();
                                         deleteMealHistoryEntry(entry.id);
@@ -1171,31 +1339,54 @@ export default function App() {
                                   <div className="text-[10px] font-bold text-gray-400 uppercase px-1">Raciones por Persona</div>
                                   {entry.portions.map((p, idx) => (
                                     <div key={idx} className={`bg-white p-3 rounded-xl border flex justify-between items-center ${p.isDiabetic ? 'border-blue-100 bg-blue-50/20' : 'border-gray-100'}`}>
-                                      <div>
-                                        <div className="text-xs font-bold text-gray-800 flex items-center gap-1.5">
+                                      <div className="flex-1">
+                                        <div className="font-bold text-gray-800 flex items-center gap-2 text-sm">
                                           {p.memberName}
                                           {p.isDiabetic && <span className="text-[8px] bg-blue-500 text-white px-1.5 py-0.5 rounded-full uppercase">Diabético</span>}
                                         </div>
-                                        <div className="text-[10px] text-gray-400">{p.weight.toFixed(0)}g • {p.carbs.toFixed(1)}g HC</div>
                                       </div>
-                                      <div className="flex gap-1">
-                                        <button 
-                                          onClick={() => copyPortionToClipboard(p.memberName, p.weight, p.carbs, p.isDiabetic)}
-                                          className="p-1.5 text-gray-400 hover:bg-gray-100 rounded-lg"
-                                          title="Copiar"
-                                        >
-                                          <Share2 size={14} />
-                                        </button>
-                                        <button 
-                                          onClick={() => sharePortion(p.memberName, p.weight, p.carbs, p.isDiabetic)}
-                                          className="p-1.5 text-green-500 hover:bg-green-50 rounded-lg"
-                                          title="WhatsApp"
-                                        >
-                                          <MessageSquare size={14} />
-                                        </button>
+                                      <div className="flex items-center gap-3">
+                                        <div className="text-right">
+                                          <div className="text-lg font-black text-gray-900 leading-none">{p.weight.toFixed(0)} <span className="text-xs font-normal">g</span></div>
+                                          <div className="text-xs font-bold text-orange-600 mt-0.5">{p.carbs.toFixed(1)} <span className="text-[10px] font-normal">g HC</span></div>
+                                        </div>
+                                        <div className="flex gap-1">
+                                          <button
+                                            onClick={() => copyPortionToClipboard(p.memberName, p.weight, p.carbs, p.isDiabetic)}
+                                            className="p-1.5 text-gray-400 hover:bg-gray-100 rounded-lg"
+                                            title="Copiar"
+                                          >
+                                            <Share2 size={14} />
+                                          </button>
+                                          <button
+                                            onClick={() => sharePortion(p.memberName, p.weight, p.carbs, p.isDiabetic)}
+                                            className="p-1.5 text-green-500 hover:bg-green-50 rounded-lg"
+                                            title="WhatsApp"
+                                          >
+                                            <MessageSquare size={14} />
+                                          </button>
+                                        </div>
                                       </div>
                                     </div>
                                   ))}
+                                </div>
+
+                                {/* Share full meal from history */}
+                                <div className="flex gap-2 pt-1">
+                                  <button
+                                    onClick={() => shareFullMeal(entry.recipeName, entry.totalCarbs, entry.netWeight, entry.portions, 'clipboard')}
+                                    className="flex-1 py-2 bg-gray-100 text-gray-600 rounded-xl font-bold flex items-center justify-center gap-1.5 text-[10px] hover:bg-gray-200 transition-colors"
+                                  >
+                                    <Share2 size={12} />
+                                    Copiar Todo
+                                  </button>
+                                  <button
+                                    onClick={() => shareFullMeal(entry.recipeName, entry.totalCarbs, entry.netWeight, entry.portions, 'whatsapp')}
+                                    className="flex-1 py-2 bg-green-500 text-white rounded-xl font-bold flex items-center justify-center gap-1.5 text-[10px] hover:bg-green-600 transition-colors"
+                                  >
+                                    <MessageSquare size={12} />
+                                    WhatsApp
+                                  </button>
                                 </div>
                               </div>
                             </motion.div>
@@ -1225,7 +1416,7 @@ export default function App() {
           <div className="bg-white p-6 rounded-3xl shadow-sm border border-gray-100 text-center">
             <CloudOff className="mx-auto text-gray-300 mb-4" size={48} />
             <p className="text-gray-600 mb-4">Inicia sesión para compartir tus datos con tu familia.</p>
-            <button 
+            <button
               onClick={handleLogin}
               className="w-full py-3 bg-blue-500 text-white rounded-2xl font-bold hover:bg-blue-600 transition-colors"
             >
@@ -1240,7 +1431,7 @@ export default function App() {
                   <div className="text-xs font-bold text-blue-400 uppercase">Grupo Activo</div>
                   <h3 className="text-2xl font-black text-gray-800">{familyGroup.name}</h3>
                 </div>
-                <button 
+                <button
                   onClick={leaveGroup}
                   className="p-2 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-xl transition-colors"
                   title="Salir del grupo"
@@ -1248,12 +1439,12 @@ export default function App() {
                   <LogOut size={20} />
                 </button>
               </div>
-              
+
               <div className="bg-blue-50 p-4 rounded-2xl border border-blue-100 mb-4">
                 <div className="text-[10px] text-blue-600 font-bold uppercase mb-1">Código de Invitación</div>
                 <div className="flex items-center justify-between">
                   <div className="text-xl font-mono font-black text-blue-800 tracking-widest">{familyGroup.inviteCode}</div>
-                  <button 
+                  <button
                     onClick={() => {
                       navigator.clipboard.writeText(familyGroup.inviteCode);
                       setToast('Código copiado');
@@ -1302,14 +1493,14 @@ export default function App() {
                 Crear Nuevo Grupo
               </h3>
               <div className="space-y-3">
-                <input 
-                  type="text" 
-                  placeholder="Nombre de la familia (ej: Los García)" 
+                <input
+                  type="text"
+                  placeholder="Nombre de la familia (ej: Los García)"
                   className="w-full px-4 py-3 bg-gray-50 rounded-2xl outline-none focus:ring-2 focus:ring-green-200"
                   value={groupNameInput}
                   onChange={(e) => setGroupNameInput(e.target.value)}
                 />
-                <button 
+                <button
                   onClick={() => createGroup(groupNameInput)}
                   disabled={!groupNameInput}
                   className={`w-full py-3 rounded-2xl font-bold transition-colors ${groupNameInput ? 'bg-green-500 text-white hover:bg-green-600' : 'bg-gray-100 text-gray-400 cursor-not-allowed'}`}
@@ -1325,14 +1516,14 @@ export default function App() {
                 Unirse a un Grupo
               </h3>
               <div className="space-y-3">
-                <input 
-                  type="text" 
-                  placeholder="Código de invitación" 
+                <input
+                  type="text"
+                  placeholder="Código de invitación"
                   className="w-full px-4 py-3 bg-gray-50 rounded-2xl outline-none focus:ring-2 focus:ring-blue-200 uppercase font-mono"
                   value={inviteInput}
                   onChange={(e) => setInviteInput(e.target.value)}
                 />
-                <button 
+                <button
                   onClick={() => joinGroup(inviteInput)}
                   disabled={!inviteInput}
                   className={`w-full py-3 rounded-2xl font-bold transition-colors ${inviteInput ? 'bg-blue-500 text-white hover:bg-blue-600' : 'bg-gray-100 text-gray-400 cursor-not-allowed'}`}
@@ -1351,7 +1542,7 @@ export default function App() {
     <div className="space-y-4">
       <div className="flex justify-between items-center mb-2">
         <h2 className="text-xl font-bold text-gray-800">Recetas Guardadas</h2>
-        <button 
+        <button
           onClick={startNewRecipe}
           className="flex items-center gap-1 px-3 py-1.5 bg-orange-500 text-white rounded-lg text-xs font-bold shadow-sm"
         >
@@ -1361,9 +1552,9 @@ export default function App() {
 
       <div className="relative mb-4">
         <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
-        <input 
-          type="text" 
-          placeholder="Buscar receta guardada..." 
+        <input
+          type="text"
+          placeholder="Buscar receta guardada..."
           className="w-full pl-10 pr-4 py-2 bg-white border border-gray-100 rounded-xl outline-none focus:ring-2 focus:ring-orange-200 text-sm"
           value={recipeSearchTerm}
           onChange={(e) => setRecipeSearchTerm(e.target.value)}
@@ -1379,7 +1570,7 @@ export default function App() {
         <div className="space-y-2">
           {filteredRecipes.map(recipe => (
             <div key={recipe.id} className="bg-white p-3 rounded-xl shadow-sm border border-gray-100 flex justify-between items-center">
-              <button 
+              <button
                 onClick={() => loadRecipe(recipe)}
                 className="flex-1 text-left"
               >
@@ -1387,13 +1578,13 @@ export default function App() {
                 <div className="text-[10px] text-gray-400">{recipe.ingredients.length} ingredientes</div>
               </button>
               <div className="flex items-center gap-1">
-                <button 
+                <button
                   onClick={() => loadRecipe(recipe)}
                   className="p-1.5 text-blue-500 hover:bg-blue-50 rounded-lg"
                 >
                   <ChevronRight size={18} />
                 </button>
-                <button 
+                <button
                   onClick={() => deleteRecipe(recipe.id)}
                   className="p-1.5 text-gray-300 hover:text-red-500 rounded-lg"
                 >
@@ -1413,14 +1604,14 @@ export default function App() {
       <AnimatePresence>
         {isSidebarOpen && (
           <>
-            <motion.div 
+            <motion.div
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
               onClick={() => setIsSidebarOpen(false)}
               className="fixed inset-0 bg-black/40 z-40 backdrop-blur-sm"
             />
-            <motion.div 
+            <motion.div
               initial={{ x: '-100%' }}
               animate={{ x: 0 }}
               exit={{ x: '-100%' }}
@@ -1438,31 +1629,65 @@ export default function App() {
               </div>
 
               <div className="flex-1 overflow-y-auto p-4 space-y-2">
-                <SidebarButton 
-                  active={activeTab === 'history'} 
-                  onClick={() => { setActiveTab('history'); setIsSidebarOpen(false); }} 
-                  icon={<History size={20} />} 
+                <SidebarButton
+                  active={activeTab === 'history'}
+                  onClick={() => { setActiveTab('history'); setIsSidebarOpen(false); }}
+                  icon={<History size={20} />}
                   label="Historial de Comidas"
                   description="Ver repartos anteriores"
                 />
-                <SidebarButton 
-                  active={activeTab === 'group'} 
-                  onClick={() => { setActiveTab('group'); setIsSidebarOpen(false); }} 
-                  icon={<Cloud size={20} />} 
+                <SidebarButton
+                  active={activeTab === 'group'}
+                  onClick={() => { setActiveTab('group'); setIsSidebarOpen(false); }}
+                  icon={<Cloud size={20} />}
                   label="Sincronización en la Nube"
                   description="Compartir con la familia"
                 />
-                <SidebarButton 
-                  active={activeTab === 'cookware'} 
-                  onClick={() => { setActiveTab('cookware'); setIsSidebarOpen(false); }} 
-                  icon={<Utensils size={20} />} 
+                <SidebarButton
+                  active={activeTab === 'cookware'}
+                  onClick={() => { setActiveTab('cookware'); setIsSidebarOpen(false); }}
+                  icon={<Utensils size={20} />}
                   label="Mis Utensilios"
                   description="Ollas, sartenes y pesos"
                 />
 
+                {/* Portion Error Config */}
+                <div className="pt-4 border-t border-gray-100 mt-4">
+                  <div className="flex items-center gap-3 p-3">
+                    <div className="text-gray-400">
+                      <Percent size={20} />
+                    </div>
+                    <div className="flex-1">
+                      <div className="text-sm font-bold leading-none mb-1">Error de pesaje</div>
+                      <div className="text-[10px] text-gray-400 font-medium">Reducir raciones automáticamente</div>
+                    </div>
+                  </div>
+                  <div className="px-3 pb-2">
+                    <div className="flex items-center gap-2">
+                      <input
+                        type="range"
+                        min="0"
+                        max="20"
+                        step="1"
+                        value={portionErrorPercent}
+                        onChange={(e) => setPortionErrorPercent(Number(e.target.value))}
+                        className="flex-1 accent-orange-500"
+                      />
+                      <span className={`text-sm font-bold min-w-[3ch] text-right ${portionErrorPercent > 0 ? 'text-orange-600' : 'text-gray-400'}`}>
+                        {portionErrorPercent}%
+                      </span>
+                    </div>
+                    {portionErrorPercent > 0 && (
+                      <div className="text-[10px] text-gray-400 mt-1">
+                        Las raciones se reducirán un {portionErrorPercent}% para compensar errores
+                      </div>
+                    )}
+                  </div>
+                </div>
+
                 {isInstallable && (
                   <div className="pt-4 border-t border-gray-100 mt-4">
-                    <button 
+                    <button
                       onClick={handleInstallClick}
                       className="w-full flex items-center gap-3 p-3 bg-orange-50 text-orange-600 rounded-2xl hover:bg-orange-100 transition-all border border-orange-100 group"
                     >
@@ -1491,7 +1716,7 @@ export default function App() {
                     </button>
                   </div>
                 ) : (
-                  <button 
+                  <button
                     onClick={handleLogin}
                     className="w-full py-3 bg-blue-500 text-white rounded-xl font-bold text-sm flex items-center justify-center gap-2"
                   >
@@ -1509,7 +1734,7 @@ export default function App() {
       <header className="bg-white px-6 py-4 shadow-sm sticky top-0 z-20">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <button 
+            <button
               onClick={() => setIsSidebarOpen(true)}
               className="p-2 -ml-2 text-gray-400 hover:bg-gray-100 rounded-xl transition-colors"
             >
@@ -1570,28 +1795,28 @@ export default function App() {
 
       {/* Navigation Bar */}
       <nav className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-100 px-2 py-3 flex justify-around items-center z-30 shadow-[0_-4px_20px_rgba(0,0,0,0.05)]">
-        <NavButton 
-          active={activeTab === 'recipe'} 
-          onClick={() => setActiveTab('recipe')} 
-          icon={<ChefHat size={20} />} 
+        <NavButton
+          active={activeTab === 'recipe'}
+          onClick={() => setActiveTab('recipe')}
+          icon={<ChefHat size={20} />}
           label="Cocinar"
         />
-        <NavButton 
-          active={activeTab === 'saved'} 
-          onClick={() => setActiveTab('saved')} 
-          icon={<Book size={20} />} 
+        <NavButton
+          active={activeTab === 'saved'}
+          onClick={() => setActiveTab('saved')}
+          icon={<Book size={20} />}
           label="Recetas"
         />
-        <NavButton 
-          active={activeTab === 'split'} 
-          onClick={() => setActiveTab('split')} 
-          icon={<Scale size={20} />} 
+        <NavButton
+          active={activeTab === 'split'}
+          onClick={() => setActiveTab('split')}
+          icon={<Scale size={20} />}
           label="Reparto"
         />
-        <NavButton 
-          active={activeTab === 'family'} 
-          onClick={() => setActiveTab('family')} 
-          icon={<Users size={20} />} 
+        <NavButton
+          active={activeTab === 'family'}
+          onClick={() => setActiveTab('family')}
+          icon={<Users size={20} />}
           label="Familia"
         />
       </nav>
@@ -1599,7 +1824,7 @@ export default function App() {
       {/* Toast Notification */}
       <AnimatePresence>
         {toast && (
-          <motion.div 
+          <motion.div
             initial={{ opacity: 0, y: 50 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: 50 }}
@@ -1616,7 +1841,7 @@ export default function App() {
 
 function SidebarButton({ active, onClick, icon, label, description }: { active: boolean, onClick: () => void, icon: React.ReactNode, label: string, description: string }) {
   return (
-    <button 
+    <button
       onClick={onClick}
       className={`w-full flex items-center gap-4 p-3 rounded-2xl transition-all ${active ? 'bg-orange-50 text-orange-600' : 'text-gray-600 hover:bg-gray-50'}`}
     >
@@ -1633,7 +1858,7 @@ function SidebarButton({ active, onClick, icon, label, description }: { active: 
 
 function NavButton({ active, onClick, icon, label }: { active: boolean, onClick: () => void, icon: React.ReactNode, label: string }) {
   return (
-    <button 
+    <button
       onClick={onClick}
       className={`flex flex-col items-center gap-1 transition-all ${active ? 'text-orange-500 scale-110' : 'text-gray-400'}`}
     >

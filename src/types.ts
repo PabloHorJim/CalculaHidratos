@@ -55,4 +55,5 @@ export interface AppState {
   recipes: Recipe[];
   family: FamilyMember[];
   cookware: Cookware[];
+  portionErrorPercent: number;
 }
