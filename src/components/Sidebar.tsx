@@ -1,4 +1,5 @@
 import React from 'react';
+import { useNavigate } from 'react-router-dom';
 import {
     Calculator, History, Utensils, Percent, Download,
     LogIn, LogOut, BarChart3, Shield, Mail, Moon, Sun, FileDown
@@ -12,6 +13,7 @@ interface SidebarProps {
 }
 
 export function Sidebar({ state }: SidebarProps) {
+    const navigate = useNavigate();
     const {
         activeTab, setActiveTab,
         isSidebarOpen, setIsSidebarOpen,
@@ -53,6 +55,25 @@ export function Sidebar({ state }: SidebarProps) {
                         </div>
 
                         <div className="flex-1 overflow-y-auto p-4 space-y-1">
+                            {/* Clinical Section */}
+                            <div className="mb-4">
+                                <button
+                                    onClick={() => {
+                                        setIsSidebarOpen(false);
+                                        navigate('/patient');
+                                    }}
+                                    className="w-full bg-slate-900 border border-slate-700 text-left p-3 rounded-2xl flex items-center gap-3 hover:bg-slate-800 transition-colors shadow-sm"
+                                >
+                                    <div className="w-8 h-8 rounded-full bg-cyan-900/50 flex items-center justify-center text-cyan-400">
+                                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z" /></svg>
+                                    </div>
+                                    <div>
+                                        <div className="font-bold text-slate-200 text-sm">Modo Paciente</div>
+                                        <div className="text-[10px] text-slate-400 font-medium tracking-wide">Cálculo clínico de insulina</div>
+                                    </div>
+                                </button>
+                            </div>
+
                             {/* Data Section */}
                             <div className="text-[9px] font-black text-gray-300 dark:text-gray-600 uppercase tracking-widest px-3 pt-2 pb-1">Datos</div>
                             <SidebarButton
