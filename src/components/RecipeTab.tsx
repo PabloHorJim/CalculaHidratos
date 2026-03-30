@@ -75,15 +75,24 @@ export function RecipeTab({ state }: RecipeTabProps) {
         }
 
         // 2. Default: Most frequent recent ingredients
-        const sortedByFrequency = Object.entries(ingredientWeightHistory as Record<string, number[]>)
+        let fallback = Object.entries(ingredientWeightHistory as Record<string, number[]>)
             .filter(([id]) => !currentIds.includes(id))
             .sort((a, b) => b[1].length - a[1].length)
             .map(e => e[0])
-            .slice(0, 8);
-
-        return sortedByFrequency
+            .slice(0, 8)
             .map(id => ingredients.find(i => i.id === id))
             .filter((i): i is NonNullable<typeof i> => !!i);
+
+        if (fallback.length === 0 && currentRecipeIngredients.length === 0) {
+            // Hardcoded fallback for new users without history
+            const defaultPopular = ['Aceite', 'Pan', 'Leche', 'Patata', 'Arroz', 'Huevo', 'Tomate', 'Manzana'];
+            fallback = ingredients
+                .filter(i => defaultPopular.some(name => i.name.toLowerCase().includes(name.toLowerCase())))
+                .slice(0, 8);
+            if (fallback.length === 0) fallback = ingredients.slice(0, 8);
+        }
+
+        return fallback;
 
     }, [searchTerm, currentRecipeIngredients, recipes, ingredientWeightHistory, ingredients]);
 
