@@ -1,5 +1,5 @@
-import React from 'react';
-import { Scale, Save, Share2, MessageSquare } from 'lucide-react';
+import React, { useEffect, useRef } from 'react';
+import { Scale, Save, Share2, MessageSquare, X, Clock, Trash2 } from 'lucide-react';
 import { motion } from 'motion/react';
 import { AppState } from '../hooks/useAppState';
 
@@ -12,13 +12,15 @@ export function SplitTab({ state }: SplitTabProps) {
         family, cookware, activeFamilyProportionSum,
         selectedCookwareId, setSelectedCookwareId,
         totalWeightWithCookware, setTotalWeightWithCookware,
-        totalCarbs, cachedTotalCarbs,
+        totalCarbs, cachedTotalCarbs, cachedRecipeName,
         setAsideMode, setSetAsideMode,
         setAsideValue, setSetAsideValue,
         portionErrorPercent,
         isErrorDisabledForCurrentSplit, setIsErrorDisabledForCurrentSplit,
         currentRecipeName,
         saveMealToHistory, sharePortion, copyPortionToClipboard, shareFullMeal,
+        pendingAutoSave, autoSaveCountdown,
+        startAutoSave, cancelAutoSave, clearReparto,
     } = state;
 
     const selectedItem = cookware.find(c => c.id === selectedCookwareId);
@@ -57,29 +59,79 @@ export function SplitTab({ state }: SplitTabProps) {
         isDiabetic: p.member.isDiabetic
     }));
 
+    const displayRecipeName = currentRecipeName || cachedRecipeName || 'Comida sin nombre';
+
+    // Auto-save: trigger when portions are calculated and no auto-save is pending
+    const hasPortions = netWeight > 0 && activeFamilyProportionSum > 0;
+    const autoSaveTriggered = useRef(false);
+
+    useEffect(() => {
+        if (hasPortions && !pendingAutoSave && !autoSaveTriggered.current) {
+            autoSaveTriggered.current = true;
+            startAutoSave(displayRecipeName, adjustedCarbs, netWeight, portionsForSharing);
+        }
+        if (!hasPortions) {
+            autoSaveTriggered.current = false;
+        }
+    }, [hasPortions, pendingAutoSave]);
+
     return (
         <div className="space-y-6">
-            <div className="bg-white p-5 rounded-3xl shadow-sm border border-gray-100">
+            <div className="bg-white dark:bg-gray-800 p-5 rounded-3xl shadow-sm border border-gray-100 dark:border-gray-700 transition-colors">
                 <div className="flex justify-between items-center mb-4">
-                    <h2 className="text-xl font-bold text-gray-800 flex items-center gap-2">
+                    <h2 className="text-xl font-bold text-gray-800 dark:text-gray-100 flex items-center gap-2">
                         <Scale className="text-green-500" size={24} />
                         Reparto de Comida
                     </h2>
-                    {netWeight > 0 && (
-                        <button
-                            onClick={() => saveMealToHistory(
-                                currentRecipeName || 'Comida sin nombre',
-                                adjustedCarbs,
-                                netWeight,
-                                portionsForSharing
-                            )}
-                            className="p-2 bg-orange-100 text-orange-600 rounded-xl hover:bg-orange-200 transition-colors"
-                            title="Guardar en historial"
-                        >
-                            <Save size={20} />
-                        </button>
-                    )}
+                    <div className="flex gap-2">
+                        {netWeight > 0 && (
+                            <>
+                                <button
+                                    onClick={() => saveMealToHistory(
+                                        displayRecipeName,
+                                        adjustedCarbs,
+                                        netWeight,
+                                        portionsForSharing
+                                    )}
+                                    className="p-2 bg-orange-100 dark:bg-orange-900/30 text-orange-600 dark:text-orange-400 rounded-xl hover:bg-orange-200 dark:hover:bg-orange-900/50 transition-colors"
+                                    title="Guardar en historial"
+                                >
+                                    <Save size={20} />
+                                </button>
+                                <button
+                                    onClick={clearReparto}
+                                    className="p-2 bg-gray-100 dark:bg-gray-700 text-gray-400 rounded-xl hover:bg-red-100 hover:text-red-500 dark:hover:bg-red-900/30 transition-colors"
+                                    title="Limpiar reparto"
+                                >
+                                    <Trash2 size={20} />
+                                </button>
+                            </>
+                        )}
+                    </div>
                 </div>
+
+                {/* Auto-save banner */}
+                {pendingAutoSave && (
+                    <motion.div
+                        initial={{ opacity: 0, y: -10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        className="mb-4 bg-blue-50 dark:bg-blue-900/30 p-3 rounded-xl border border-blue-100 dark:border-blue-800 flex items-center justify-between"
+                    >
+                        <div className="flex items-center gap-2">
+                            <Clock size={16} className="text-blue-500" />
+                            <span className="text-xs font-bold text-blue-600 dark:text-blue-400">
+                                Guardando en {autoSaveCountdown}s...
+                            </span>
+                        </div>
+                        <button
+                            onClick={() => { cancelAutoSave(); clearReparto(); }}
+                            className="text-xs font-bold text-gray-400 hover:text-red-500 flex items-center gap-1 transition-colors"
+                        >
+                            <X size={14} />
+                            No guardar
+                        </button>
+                    </motion.div>
+                )}
 
                 <div className="space-y-4">
                     <div>
@@ -87,19 +139,19 @@ export function SplitTab({ state }: SplitTabProps) {
                         <div className="grid grid-cols-2 gap-2">
                             <button
                                 onClick={() => setSelectedCookwareId('none')}
-                                className={`px-3 py-3 rounded-xl text-sm font-medium transition-all ${selectedCookwareId === 'none' ? 'bg-green-500 text-white shadow-md' : 'bg-gray-50 text-gray-600 hover:bg-gray-100'}`}
+                                className={`px-3 py-3 rounded-xl text-sm font-medium transition-all ${selectedCookwareId === 'none' ? 'bg-green-500 text-white shadow-md' : 'bg-gray-50 dark:bg-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-600'}`}
                             >
                                 Sin utensilio
-                                <div className={`text-[10px] ${selectedCookwareId === 'none' ? 'text-green-100' : 'text-gray-400'}`}>Peso directo</div>
+                                <div className={`text-[10px] ${selectedCookwareId === 'none' ? 'text-green-100' : 'text-gray-400 dark:text-gray-500'}`}>Peso directo</div>
                             </button>
                             {cookware.map(c => (
                                 <button
                                     key={c.id}
                                     onClick={() => setSelectedCookwareId(c.id)}
-                                    className={`px-3 py-3 rounded-xl text-sm font-medium transition-all ${selectedCookwareId === c.id ? 'bg-purple-500 text-white shadow-md' : 'bg-gray-50 text-gray-600 hover:bg-gray-100'}`}
+                                    className={`px-3 py-3 rounded-xl text-sm font-medium transition-all ${selectedCookwareId === c.id ? 'bg-purple-500 text-white shadow-md' : 'bg-gray-50 dark:bg-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-600'}`}
                                 >
                                     {c.name}
-                                    <div className={`text-[10px] ${selectedCookwareId === c.id ? 'text-purple-100' : 'text-gray-400'}`}>{c.mass}g</div>
+                                    <div className={`text-[10px] ${selectedCookwareId === c.id ? 'text-purple-100' : 'text-gray-400 dark:text-gray-500'}`}>{c.mass}g</div>
                                 </button>
                             ))}
                         </div>
@@ -115,7 +167,7 @@ export function SplitTab({ state }: SplitTabProps) {
                                 placeholder="0"
                                 value={totalWeightWithCookware}
                                 onChange={(e) => setTotalWeightWithCookware(e.target.value === '' ? '' : Number(e.target.value))}
-                                className="flex-1 px-4 py-3 bg-gray-50 rounded-2xl text-xl font-bold outline-none focus:ring-2 focus:ring-green-200"
+                                className="flex-1 px-4 py-3 bg-gray-50 dark:bg-gray-700 rounded-2xl text-xl font-bold outline-none focus:ring-2 focus:ring-green-200 dark:focus:ring-green-800 dark:text-gray-100 transition-colors"
                             />
                             <span className="text-lg font-bold text-gray-400">g</span>
                         </div>
@@ -123,18 +175,18 @@ export function SplitTab({ state }: SplitTabProps) {
 
                     {netWeightRaw > 0 && (
                         <>
-                            <div className="bg-green-50 p-4 rounded-2xl border border-green-100">
-                                <div className="text-xs text-green-600 font-bold uppercase mb-1">Peso Neto de la Comida</div>
-                                <div className="text-2xl font-black text-green-700">{netWeightRaw} g</div>
+                            <div className="bg-green-50 dark:bg-green-900/20 p-4 rounded-2xl border border-green-100 dark:border-green-800">
+                                <div className="text-xs text-green-600 dark:text-green-400 font-bold uppercase mb-1">Peso Neto de la Comida</div>
+                                <div className="text-2xl font-black text-green-700 dark:text-green-400">{netWeightRaw} g</div>
                             </div>
 
-                            <div className="bg-gray-50 p-3 rounded-2xl border border-gray-100">
+                            <div className="bg-gray-50 dark:bg-gray-700 p-3 rounded-2xl border border-gray-100 dark:border-gray-600">
                                 <div className="flex items-center justify-between mb-2">
                                     <div className="text-xs font-bold text-gray-400 uppercase">Apartar comida</div>
                                     <div className="flex gap-1">
                                         <button
                                             onClick={() => { setSetAsideMode(setAsideMode === 'none' ? 'percentage' : 'none'); setSetAsideValue(''); }}
-                                            className={`text-[10px] font-bold px-2 py-1 rounded-lg transition-colors ${setAsideMode !== 'none' ? 'bg-orange-100 text-orange-600' : 'bg-gray-100 text-gray-400'}`}
+                                            className={`text-[10px] font-bold px-2 py-1 rounded-lg transition-colors ${setAsideMode !== 'none' ? 'bg-orange-100 dark:bg-orange-900/30 text-orange-600 dark:text-orange-400' : 'bg-gray-100 dark:bg-gray-600 text-gray-400'}`}
                                         >
                                             {setAsideMode !== 'none' ? 'Activado' : 'Desactivado'}
                                         </button>
@@ -145,13 +197,13 @@ export function SplitTab({ state }: SplitTabProps) {
                                         <div className="flex gap-2">
                                             <button
                                                 onClick={() => setSetAsideMode('percentage')}
-                                                className={`flex-1 text-xs font-bold py-1.5 rounded-lg transition-colors ${setAsideMode === 'percentage' ? 'bg-orange-500 text-white' : 'bg-white text-gray-500 border border-gray-200'}`}
+                                                className={`flex-1 text-xs font-bold py-1.5 rounded-lg transition-colors ${setAsideMode === 'percentage' ? 'bg-orange-500 text-white' : 'bg-white dark:bg-gray-800 text-gray-500 border border-gray-200 dark:border-gray-600'}`}
                                             >
                                                 Porcentaje
                                             </button>
                                             <button
                                                 onClick={() => setSetAsideMode('absolute')}
-                                                className={`flex-1 text-xs font-bold py-1.5 rounded-lg transition-colors ${setAsideMode === 'absolute' ? 'bg-orange-500 text-white' : 'bg-white text-gray-500 border border-gray-200'}`}
+                                                className={`flex-1 text-xs font-bold py-1.5 rounded-lg transition-colors ${setAsideMode === 'absolute' ? 'bg-orange-500 text-white' : 'bg-white dark:bg-gray-800 text-gray-500 border border-gray-200 dark:border-gray-600'}`}
                                             >
                                                 Gramos
                                             </button>
@@ -162,13 +214,13 @@ export function SplitTab({ state }: SplitTabProps) {
                                                 placeholder={setAsideMode === 'percentage' ? '25' : '500'}
                                                 value={setAsideValue}
                                                 onChange={(e) => setSetAsideValue(e.target.value === '' ? '' : Number(e.target.value))}
-                                                className="flex-1 px-3 py-2 bg-white rounded-lg text-sm outline-none focus:ring-2 focus:ring-orange-200 border border-gray-200"
+                                                className="flex-1 px-3 py-2 bg-white dark:bg-gray-800 rounded-lg text-sm outline-none focus:ring-2 focus:ring-orange-200 dark:focus:ring-orange-800 border border-gray-200 dark:border-gray-600 dark:text-gray-100"
                                             />
                                             <span className="text-sm font-bold text-gray-400">{setAsideMode === 'percentage' ? '%' : 'g'}</span>
                                         </div>
                                         {setAsideWeight > 0 && (
                                             <div className="text-xs text-gray-400">
-                                                Apartando <span className="font-bold text-orange-500">{setAsideWeight.toFixed(0)}g</span> → Queda <span className="font-bold text-green-600">{netWeight.toFixed(0)}g</span>
+                                                Apartando <span className="font-bold text-orange-500">{setAsideWeight.toFixed(0)}g</span> → Queda <span className="font-bold text-green-600 dark:text-green-400">{netWeight.toFixed(0)}g</span>
                                             </div>
                                         )}
                                     </div>
@@ -178,9 +230,12 @@ export function SplitTab({ state }: SplitTabProps) {
                     )}
 
                     {effectiveCarbs > 0 && netWeightRaw > 0 && (
-                        <div className="bg-orange-50 p-3 rounded-2xl border border-orange-100">
-                            <div className="text-xs text-orange-600 font-bold uppercase mb-1">Carbohidratos</div>
-                            <div className="text-lg font-black text-orange-700">{adjustedCarbs.toFixed(1)} g HC</div>
+                        <div className="bg-orange-50 dark:bg-orange-900/20 p-3 rounded-2xl border border-orange-100 dark:border-orange-800">
+                            <div className="text-xs text-orange-600 dark:text-orange-400 font-bold uppercase mb-1">Carbohidratos</div>
+                            <div className="text-lg font-black text-orange-700 dark:text-orange-400">{adjustedCarbs.toFixed(1)} g HC</div>
+                            {cachedRecipeName && (
+                                <div className="text-[10px] text-orange-400 mt-0.5">Receta: {cachedRecipeName}</div>
+                            )}
                         </div>
                     )}
                 </div>
@@ -193,7 +248,7 @@ export function SplitTab({ state }: SplitTabProps) {
                         {portionErrorPercent > 0 && (
                             <button
                                 onClick={() => setIsErrorDisabledForCurrentSplit(!isErrorDisabledForCurrentSplit)}
-                                className={`text-[10px] font-bold px-2 py-1 rounded-lg transition-colors ${isErrorDisabledForCurrentSplit ? 'bg-gray-100 text-gray-400' : 'bg-yellow-100 text-yellow-700'}`}
+                                className={`text-[10px] font-bold px-2 py-1 rounded-lg transition-colors ${isErrorDisabledForCurrentSplit ? 'bg-gray-100 dark:bg-gray-700 text-gray-400' : 'bg-yellow-100 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-400'}`}
                                 title={isErrorDisabledForCurrentSplit ? 'Error de pesaje desactivado' : `Aplicando -${portionErrorPercent}% de error`}
                             >
                                 {isErrorDisabledForCurrentSplit ? 'Error OFF' : `-${portionErrorPercent}%`}
@@ -205,10 +260,10 @@ export function SplitTab({ state }: SplitTabProps) {
                             initial={{ opacity: 0, x: -20 }}
                             animate={{ opacity: 1, x: 0 }}
                             key={member.id}
-                            className={`bg-white p-3 rounded-xl shadow-sm border flex justify-between items-center ${member.isDiabetic ? 'border-blue-200 bg-blue-50/30' : 'border-gray-100'}`}
+                            className={`bg-white dark:bg-gray-800 p-3 rounded-xl shadow-sm border flex justify-between items-center transition-colors ${member.isDiabetic ? 'border-blue-200 dark:border-blue-800 bg-blue-50/30 dark:bg-blue-900/20' : 'border-gray-100 dark:border-gray-700'}`}
                         >
                             <div className="flex-1">
-                                <div className="font-bold text-gray-800 flex items-center gap-2 text-sm">
+                                <div className="font-bold text-gray-800 dark:text-gray-200 flex items-center gap-2 text-sm">
                                     {member.name}
                                     {member.isDiabetic && <span className="text-[8px] bg-blue-500 text-white px-1.5 py-0.5 rounded-full uppercase">Diabético</span>}
                                 </div>
@@ -216,22 +271,22 @@ export function SplitTab({ state }: SplitTabProps) {
                             </div>
                             <div className="flex items-center gap-4">
                                 <div className="text-right">
-                                    <div className="text-lg font-black text-gray-900 leading-none">{portion.toFixed(0)} <span className="text-xs font-normal">g</span></div>
+                                    <div className="text-lg font-black text-gray-900 dark:text-gray-100 leading-none">{portion.toFixed(0)} <span className="text-xs font-normal">g</span></div>
                                     {adjustedCarbs > 0 && (
-                                        <div className="text-xs font-bold text-orange-600 mt-0.5">{portionCarbs.toFixed(1)} <span className="text-[10px] font-normal">g HC</span></div>
+                                        <div className="text-xs font-bold text-orange-600 dark:text-orange-400 mt-0.5">{portionCarbs.toFixed(1)} <span className="text-[10px] font-normal">g HC</span></div>
                                     )}
                                 </div>
                                 <div className="flex gap-2">
                                     <button
                                         onClick={() => copyPortionToClipboard(member.name, portion, portionCarbs, member.isDiabetic)}
-                                        className="p-2 text-gray-400 hover:bg-gray-100 rounded-full transition-colors"
+                                        className="p-2 text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-full transition-colors"
                                         title="Copiar al portapapeles"
                                     >
                                         <Share2 size={18} />
                                     </button>
                                     <button
                                         onClick={() => sharePortion(member.name, portion, portionCarbs, member.isDiabetic)}
-                                        className="p-2 text-green-500 hover:bg-green-50 rounded-full transition-colors"
+                                        className="p-2 text-green-500 hover:bg-green-50 dark:hover:bg-green-900/30 rounded-full transition-colors"
                                         title="Compartir por WhatsApp"
                                     >
                                         <MessageSquare size={18} />
@@ -243,14 +298,14 @@ export function SplitTab({ state }: SplitTabProps) {
 
                     <div className="flex gap-2 pt-2">
                         <button
-                            onClick={() => shareFullMeal(currentRecipeName || 'Comida sin nombre', adjustedCarbs, netWeight, portionsForSharing, 'clipboard')}
-                            className="flex-1 py-2.5 bg-gray-100 text-gray-600 rounded-xl font-bold flex items-center justify-center gap-2 text-xs hover:bg-gray-200 transition-colors"
+                            onClick={() => shareFullMeal(displayRecipeName, adjustedCarbs, netWeight, portionsForSharing, 'clipboard')}
+                            className="flex-1 py-2.5 bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 rounded-xl font-bold flex items-center justify-center gap-2 text-xs hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"
                         >
                             <Share2 size={16} />
                             Copiar Reparto
                         </button>
                         <button
-                            onClick={() => shareFullMeal(currentRecipeName || 'Comida sin nombre', adjustedCarbs, netWeight, portionsForSharing, 'whatsapp')}
+                            onClick={() => shareFullMeal(displayRecipeName, adjustedCarbs, netWeight, portionsForSharing, 'whatsapp')}
                             className="flex-1 py-2.5 bg-green-500 text-white rounded-xl font-bold flex items-center justify-center gap-2 text-xs hover:bg-green-600 transition-colors"
                         >
                             <MessageSquare size={16} />

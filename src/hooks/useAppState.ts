@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import { Ingredient, Recipe, RecipeIngredient, FamilyMember, Cookware, MealHistoryEntry, FamilyGroup } from '../types';
 import { INITIAL_INGREDIENTS } from '../data/ingredients';
 import {
@@ -23,9 +23,15 @@ import {
 } from '../firebase';
 
 const STORAGE_KEY = 'carb_calc_state';
+const COOKING_STATE_KEY = 'carb_calc_cooking';
 const TUTORIAL_KEY = 'carbcalc_tutorial_done';
+const DARK_MODE_KEY = 'carbcalc_dark_mode';
+const CONSENT_KEY = 'carbcalc_consent';
 
-export type TabType = 'recipe' | 'split' | 'family' | 'cookware' | 'saved' | 'history' | 'group' | 'stats' | 'legal';
+export type TabType = 'recipe' | 'split' | 'family' | 'cookware' | 'history' | 'group' | 'stats' | 'legal';
+
+// Ordered tabs for swipe navigation (main nav bar tabs only)
+export const MAIN_TABS: TabType[] = ['recipe', 'split', 'family'];
 
 export function useAppState() {
     // --- State ---
@@ -56,7 +62,18 @@ export function useAppState() {
     const [isInstallable, setIsInstallable] = useState(false);
     const [showTutorial, setShowTutorial] = useState(false);
 
+    // Dark mode
+    const [isDarkMode, setIsDarkMode] = useState(() => {
+        return localStorage.getItem(DARK_MODE_KEY) === 'true';
+    });
+
+    // Cookie consent
+    const [hasConsent, setHasConsent] = useState(() => {
+        return localStorage.getItem(CONSENT_KEY) === 'true';
+    });
+
     // Recipe Builder State
+    const [cookingMode, setCookingMode] = useState(false);
     const [editingRecipeId, setEditingRecipeId] = useState<string | null>(null);
     const [editingHistoryId, setEditingHistoryId] = useState<string | null>(null);
     const [expandedHistoryId, setExpandedHistoryId] = useState<string | null>(null);
@@ -75,10 +92,39 @@ export function useAppState() {
     const [selectedCookwareId, setSelectedCookwareId] = useState('');
     const [totalWeightWithCookware, setTotalWeightWithCookware] = useState<number | ''>('');
     const [cachedTotalCarbs, setCachedTotalCarbs] = useState(0);
+    const [cachedRecipeName, setCachedRecipeName] = useState('');
     const [setAsideMode, setSetAsideMode] = useState<'none' | 'percentage' | 'absolute'>('none');
     const [setAsideValue, setSetAsideValue] = useState<number | ''>('');
     const [portionErrorPercent, setPortionErrorPercent] = useState(0);
     const [isErrorDisabledForCurrentSplit, setIsErrorDisabledForCurrentSplit] = useState(false);
+
+    // Auto-save state for reparto
+    const [pendingAutoSave, setPendingAutoSave] = useState(false);
+    const [autoSaveCountdown, setAutoSaveCountdown] = useState(0);
+    const autoSaveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+    const countdownRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+    // Adaptive ingredient weights
+    const [ingredientWeightHistory, setIngredientWeightHistory] = useState<Record<string, number[]>>({});
+
+    // --- Dark mode effect ---
+    useEffect(() => {
+        if (isDarkMode) {
+            document.documentElement.classList.add('dark');
+        } else {
+            document.documentElement.classList.remove('dark');
+        }
+        localStorage.setItem(DARK_MODE_KEY, String(isDarkMode));
+    }, [isDarkMode]);
+
+    const toggleDarkMode = useCallback(() => {
+        setIsDarkMode(prev => !prev);
+    }, []);
+
+    const acceptConsent = useCallback(() => {
+        setHasConsent(true);
+        localStorage.setItem(CONSENT_KEY, 'true');
+    }, []);
 
     // --- Auth & Sync ---
     useEffect(() => {
@@ -114,16 +160,58 @@ export function useAppState() {
                 if (parsed.mealHistory) setMealHistory(parsed.mealHistory);
                 if (parsed.groupId) setGroupId(parsed.groupId);
                 if (typeof parsed.portionErrorPercent === 'number') setPortionErrorPercent(parsed.portionErrorPercent);
+                if (parsed.ingredientWeightHistory) setIngredientWeightHistory(parsed.ingredientWeightHistory);
             } catch (e) {
                 console.error('Failed to load state', e);
             }
         }
+
+        // Load cooking/split state separately (persists across refreshes)
+        const cookingSaved = localStorage.getItem(COOKING_STATE_KEY);
+        if (cookingSaved) {
+            try {
+                const parsed = JSON.parse(cookingSaved);
+                if (parsed.currentRecipeName) setCurrentRecipeName(parsed.currentRecipeName);
+                if (parsed.currentRecipeIngredients) setCurrentRecipeIngredients(parsed.currentRecipeIngredients);
+                if (parsed.editingRecipeId) setEditingRecipeId(parsed.editingRecipeId);
+                if (parsed.cookingMode) setCookingMode(parsed.cookingMode);
+                if (parsed.selectedCookwareId) setSelectedCookwareId(parsed.selectedCookwareId);
+                if (typeof parsed.totalWeightWithCookware === 'number') setTotalWeightWithCookware(parsed.totalWeightWithCookware);
+                if (typeof parsed.cachedTotalCarbs === 'number') setCachedTotalCarbs(parsed.cachedTotalCarbs);
+                if (parsed.cachedRecipeName) setCachedRecipeName(parsed.cachedRecipeName);
+                if (parsed.setAsideMode) setSetAsideMode(parsed.setAsideMode);
+                if (typeof parsed.setAsideValue === 'number') setSetAsideValue(parsed.setAsideValue);
+            } catch (e) {
+                console.error('Failed to load cooking state', e);
+            }
+        }
+
         setIsLoaded(true);
     }, []);
 
+    // Save cooking/split state to localStorage whenever it changes
+    useEffect(() => {
+        if (!isLoaded) return;
+        const cookingState = {
+            currentRecipeName,
+            currentRecipeIngredients,
+            editingRecipeId,
+            cookingMode,
+            selectedCookwareId,
+            totalWeightWithCookware,
+            cachedTotalCarbs,
+            cachedRecipeName,
+            setAsideMode,
+            setAsideValue,
+        };
+        localStorage.setItem(COOKING_STATE_KEY, JSON.stringify(cookingState));
+    }, [currentRecipeName, currentRecipeIngredients, editingRecipeId, cookingMode,
+        selectedCookwareId, totalWeightWithCookware, cachedTotalCarbs, cachedRecipeName,
+        setAsideMode, setAsideValue, isLoaded]);
+
     // Sync with Firestore if logged in
     useEffect(() => {
-        if (!isAuthReady || !user) return;
+        if (!isAuthReady || !user || !hasConsent) return;
 
         const userDocRef = doc(db, 'users', user.uid);
 
@@ -153,11 +241,11 @@ export function useAppState() {
         });
 
         return () => unsubscribeUser();
-    }, [user, isAuthReady, groupId]);
+    }, [user, isAuthReady, groupId, hasConsent]);
 
     // Sync with Group members
     useEffect(() => {
-        if (!isAuthReady || !user || !groupId) {
+        if (!isAuthReady || !user || !groupId || !hasConsent) {
             setGroupMembers([]);
             return;
         }
@@ -176,11 +264,11 @@ export function useAppState() {
         });
 
         return () => unsubscribe();
-    }, [groupId, isAuthReady, user]);
+    }, [groupId, isAuthReady, user, hasConsent]);
 
     // Sync with Group data if groupId is present
     useEffect(() => {
-        if (!isAuthReady || !user || !groupId) return;
+        if (!isAuthReady || !user || !groupId || !hasConsent) return;
 
         const groupDocRef = doc(db, 'groups', groupId);
 
@@ -206,11 +294,11 @@ export function useAppState() {
         });
 
         return () => unsubscribeGroup();
-    }, [user, isAuthReady, groupId]);
+    }, [user, isAuthReady, groupId, hasConsent]);
 
     // Sync with User data if NO groupId is present
     useEffect(() => {
-        if (!isAuthReady || !user || groupId) return;
+        if (!isAuthReady || !user || groupId || !hasConsent) return;
 
         const userDocRef = doc(db, 'users', user.uid);
 
@@ -230,7 +318,7 @@ export function useAppState() {
         });
 
         return () => unsubscribeUser();
-    }, [user, isAuthReady, groupId]);
+    }, [user, isAuthReady, groupId, hasConsent]);
 
     // Save changes (Local + Cloud)
     useEffect(() => {
@@ -238,11 +326,11 @@ export function useAppState() {
 
         setSaveStatus('saving');
         const timer = setTimeout(async () => {
-            const state = { ingredients, recipes, family, cookware, mealHistory, groupId, portionErrorPercent };
+            const state = { ingredients, recipes, family, cookware, mealHistory, groupId, portionErrorPercent, ingredientWeightHistory };
 
             localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
 
-            if (user) {
+            if (user && hasConsent) {
                 try {
                     if (groupId) {
                         const groupDocRef = doc(db, 'groups', groupId);
@@ -270,7 +358,7 @@ export function useAppState() {
         }, 1000);
 
         return () => clearTimeout(timer);
-    }, [ingredients, recipes, family, cookware, mealHistory, groupId, portionErrorPercent, isLoaded, user, isAuthReady, isSyncing]);
+    }, [ingredients, recipes, family, cookware, mealHistory, groupId, portionErrorPercent, ingredientWeightHistory, isLoaded, user, isAuthReady, isSyncing, hasConsent]);
 
     useEffect(() => {
         if (toast) {
@@ -318,10 +406,14 @@ export function useAppState() {
         }, 0);
     }, [currentRecipeIngredients, ingredients]);
 
-    // Cache totalCarbs for the split tab (persists after recipe save/clear)
+    // Cache totalCarbs and recipeName for the split tab (persists after recipe save/clear)
     useEffect(() => {
         if (totalCarbs > 0) setCachedTotalCarbs(totalCarbs);
     }, [totalCarbs]);
+
+    useEffect(() => {
+        if (currentRecipeName) setCachedRecipeName(currentRecipeName);
+    }, [currentRecipeName]);
 
     const activeFamilyProportionSum = useMemo(() => {
         return family.filter(m => m.isActive).reduce((sum, m) => sum + m.proportion, 0);
@@ -346,11 +438,32 @@ export function useAppState() {
         ).sort((a, b) => a.name.localeCompare(b.name));
     }, [recipes, recipeSearchTerm]);
 
+    // --- Helpers ---
+    const getAdaptiveWeight = useCallback((ingredientId: string): number => {
+        const history = ingredientWeightHistory[ingredientId];
+        if (!history || history.length === 0) return 100;
+        const sorted = [...history].sort((a, b) => a - b);
+        const mid = Math.floor(sorted.length / 2);
+        const median = sorted.length % 2 !== 0
+            ? sorted[mid]
+            : (sorted[mid - 1] + sorted[mid]) / 2;
+        return Math.max(25, Math.round(median / 25) * 25);
+    }, [ingredientWeightHistory]);
+
+    const recordIngredientWeight = useCallback((ingredientId: string, weight: number) => {
+        setIngredientWeightHistory(prev => {
+            const existing = prev[ingredientId] || [];
+            const updated = [...existing, weight].slice(-7); // Keep last 7
+            return { ...prev, [ingredientId]: updated };
+        });
+    }, []);
+
     // --- Handlers ---
     const addIngredientToRecipe = (ingredient: Ingredient) => {
         const existing = currentRecipeIngredients.find(ri => ri.ingredientId === ingredient.id);
         if (existing) return;
-        setCurrentRecipeIngredients([...currentRecipeIngredients, { ingredientId: ingredient.id, weight: 100 }]);
+        const defaultWeight = getAdaptiveWeight(ingredient.id);
+        setCurrentRecipeIngredients([...currentRecipeIngredients, { ingredientId: ingredient.id, weight: defaultWeight }]);
         setSearchTerm('');
     };
 
@@ -387,6 +500,11 @@ export function useAppState() {
             ingredients: [...currentRecipeIngredients]
         };
 
+        // Record weights for adaptive defaults
+        currentRecipeIngredients.forEach(ri => {
+            recordIngredientWeight(ri.ingredientId, ri.weight);
+        });
+
         if (editingRecipeId) {
             setRecipes(prev => prev.map(r =>
                 r.id === editingRecipeId ? { ...r, ...recipeData } : r
@@ -398,17 +516,21 @@ export function useAppState() {
                 ...recipeData
             };
             setRecipes(prev => [...prev, newRecipe]);
+            setEditingRecipeId(newRecipe.id);
             setToast('Receta guardada');
         }
 
-        setEditingRecipeId(null);
-        setCurrentRecipeName('');
-        setCurrentRecipeIngredients([]);
-        setActiveTab('saved');
+        // Do NOT clear recipe data — user explicitly requested this
+        // Stay in cooking mode, do NOT switch tabs
     };
 
     const saveAsNewRecipe = () => {
         if (!currentRecipeName || currentRecipeIngredients.length === 0) return;
+
+        // Record weights for adaptive defaults
+        currentRecipeIngredients.forEach(ri => {
+            recordIngredientWeight(ri.ingredientId, ri.weight);
+        });
 
         const newRecipe: Recipe = {
             id: Date.now().toString(),
@@ -418,21 +540,29 @@ export function useAppState() {
         setRecipes(prev => [...prev, newRecipe]);
         setToast('Guardada como nueva receta');
         setEditingRecipeId(newRecipe.id);
-        setActiveTab('saved');
+        // Do NOT clear or switch tabs
     };
 
     const loadRecipe = (recipe: Recipe) => {
         setEditingRecipeId(recipe.id);
         setCurrentRecipeName(recipe.name);
         setCurrentRecipeIngredients([...recipe.ingredients]);
-        setActiveTab('recipe');
+        setCookingMode(true);
+        // Stay on recipe tab (already there)
     };
 
     const startNewRecipe = () => {
         setEditingRecipeId(null);
         setCurrentRecipeName('');
         setCurrentRecipeIngredients([]);
-        setActiveTab('recipe');
+        setCookingMode(true);
+    };
+
+    const clearCookingState = () => {
+        setEditingRecipeId(null);
+        setCurrentRecipeName('');
+        setCurrentRecipeIngredients([]);
+        setCookingMode(false);
     };
 
     const deleteRecipe = (id: string) => {
@@ -593,17 +723,76 @@ export function useAppState() {
     };
 
     const saveMealToHistory = (recipeName: string, totalCarbs: number, netWeight: number, portions: any[]) => {
+        const finalName = recipeName || cachedRecipeName || 'Comida sin nombre';
         const newEntry: MealHistoryEntry = {
             id: Date.now().toString(),
             timestamp: new Date().toISOString(),
-            recipeName,
+            recipeName: finalName,
             totalCarbs,
             netWeight,
             portions
         };
         setMealHistory([newEntry, ...mealHistory].slice(0, 50));
         setToast('Comida guardada en el historial');
+        cancelAutoSave();
     };
+
+    // Auto-save reparto logic
+    const startAutoSave = useCallback((recipeName: string, totalCarbs: number, netWeight: number, portions: any[]) => {
+        cancelAutoSave();
+        setPendingAutoSave(true);
+        setAutoSaveCountdown(5);
+
+        countdownRef.current = setInterval(() => {
+            setAutoSaveCountdown(prev => {
+                if (prev <= 1) {
+                    if (countdownRef.current) clearInterval(countdownRef.current);
+                    return 0;
+                }
+                return prev - 1;
+            });
+        }, 1000);
+
+        autoSaveTimerRef.current = setTimeout(() => {
+            const finalName = recipeName || cachedRecipeName || 'Comida sin nombre';
+            const newEntry: MealHistoryEntry = {
+                id: Date.now().toString(),
+                timestamp: new Date().toISOString(),
+                recipeName: finalName,
+                totalCarbs,
+                netWeight,
+                portions
+            };
+            setMealHistory(prev => [newEntry, ...prev].slice(0, 50));
+            setToast('Reparto guardado automáticamente');
+            setPendingAutoSave(false);
+            setAutoSaveCountdown(0);
+        }, 5000);
+    }, [cachedRecipeName]);
+
+    const cancelAutoSave = useCallback(() => {
+        if (autoSaveTimerRef.current) {
+            clearTimeout(autoSaveTimerRef.current);
+            autoSaveTimerRef.current = null;
+        }
+        if (countdownRef.current) {
+            clearInterval(countdownRef.current);
+            countdownRef.current = null;
+        }
+        setPendingAutoSave(false);
+        setAutoSaveCountdown(0);
+    }, []);
+
+    const clearReparto = useCallback(() => {
+        cancelAutoSave();
+        setSelectedCookwareId('');
+        setTotalWeightWithCookware('');
+        setSetAsideMode('none');
+        setSetAsideValue('');
+        setCachedTotalCarbs(0);
+        setCachedRecipeName('');
+        setIsErrorDisabledForCurrentSplit(false);
+    }, [cancelAutoSave]);
 
     const sharePortion = (name: string, weight: number, carbs: number, isDiabetic: boolean) => {
         const message = `🍽️ *Reparto de Comida*\n\nPara *${name}*:\n- Ración: *${weight.toFixed(0)}g*\n- Carbohidratos: *${carbs.toFixed(1)}g HC*${isDiabetic ? ' (¡Diabético! ⚠️)' : ''}\n\nCalculado con CarbCalc`;
@@ -631,6 +820,49 @@ export function useAppState() {
         }
     };
 
+    // Export meal data for integration readiness
+    const exportMealData = useCallback((format: 'json' | 'csv') => {
+        const data = mealHistory.map(entry => ({
+            timestamp: entry.timestamp,
+            recipeName: entry.recipeName,
+            totalCarbs: entry.totalCarbs,
+            netWeight: entry.netWeight,
+            portions: entry.portions
+        }));
+
+        let blob: Blob;
+        let filename: string;
+
+        if (format === 'json') {
+            blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+            filename = `carbcalc_export_${new Date().toISOString().split('T')[0]}.json`;
+        } else {
+            const headers = ['Fecha', 'Receta', 'HC Totales', 'Peso Neto', 'Persona', 'Peso Ración', 'HC Ración', 'Diabético'];
+            const rows = data.flatMap(entry =>
+                entry.portions.map(p => [
+                    entry.timestamp,
+                    entry.recipeName,
+                    entry.totalCarbs.toFixed(1),
+                    entry.netWeight.toFixed(0),
+                    p.memberName,
+                    p.weight.toFixed(0),
+                    p.carbs.toFixed(1),
+                    p.isDiabetic ? 'Sí' : 'No'
+                ].join(','))
+            );
+            blob = new Blob([headers.join(',') + '\n' + rows.join('\n')], { type: 'text/csv' });
+            filename = `carbcalc_export_${new Date().toISOString().split('T')[0]}.csv`;
+        }
+
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = filename;
+        a.click();
+        URL.revokeObjectURL(url);
+        setToast(`Datos exportados como ${format.toUpperCase()}`);
+    }, [mealHistory]);
+
     return {
         // Tab navigation
         activeTab, setActiveTab,
@@ -645,8 +877,11 @@ export function useAppState() {
         isSidebarOpen, setIsSidebarOpen,
         isInstallable, handleInstallClick,
         showTutorial, dismissTutorial,
+        isDarkMode, toggleDarkMode,
+        hasConsent, acceptConsent,
 
         // Recipe builder
+        cookingMode, setCookingMode,
         editingRecipeId, currentRecipeName, setCurrentRecipeName,
         currentRecipeIngredients, searchTerm, setSearchTerm,
         recipeSearchTerm, setRecipeSearchTerm,
@@ -664,11 +899,13 @@ export function useAppState() {
         // Split
         selectedCookwareId, setSelectedCookwareId,
         totalWeightWithCookware, setTotalWeightWithCookware,
-        cachedTotalCarbs,
+        cachedTotalCarbs, cachedRecipeName,
         setAsideMode, setSetAsideMode,
         setAsideValue, setSetAsideValue,
         portionErrorPercent, setPortionErrorPercent,
         isErrorDisabledForCurrentSplit, setIsErrorDisabledForCurrentSplit,
+        pendingAutoSave, autoSaveCountdown,
+        startAutoSave, cancelAutoSave, clearReparto,
 
         // Computed
         filteredIngredients, totalCarbs, activeFamilyProportionSum,
@@ -677,13 +914,14 @@ export function useAppState() {
         // Handlers
         addIngredientToRecipe, createAndAddIngredient,
         updateIngredientWeight, removeIngredientFromRecipe,
-        saveRecipe, saveAsNewRecipe, loadRecipe, startNewRecipe, deleteRecipe,
+        saveRecipe, saveAsNewRecipe, loadRecipe, startNewRecipe, clearCookingState, deleteRecipe,
         toggleFamilyMember, updateFamilyMember, addFamilyMember, removeFamilyMember,
         addCookware, updateCookware, removeCookware,
         handleLogin, handleLogout,
         createGroup, joinGroup, leaveGroup,
         deleteMealHistoryEntry, updateMealHistoryEntry, saveMealToHistory,
-        sharePortion, copyPortionToClipboard, shareFullMeal
+        sharePortion, copyPortionToClipboard, shareFullMeal,
+        exportMealData,
     };
 }
 

@@ -11,25 +11,25 @@ const slides = [
         icon: <Scale className="text-orange-500" size={48} />,
         title: 'Bienvenido a CarbCalc',
         description: 'Calcula los carbohidratos de tus comidas y reparte las raciones entre la familia. Diseñada especialmente para familias con miembros diabéticos.',
-        color: 'bg-orange-50 border-orange-100',
+        color: 'bg-orange-50 dark:bg-orange-900/20 border-orange-100 dark:border-orange-800',
     },
     {
         icon: <ChefHat className="text-green-500" size={48} />,
-        title: 'Pestaña Cocinar',
-        description: 'Busca ingredientes, añade las cantidades y mira los carbohidratos totales en tiempo real. Guarda la receta para reutilizarla.',
-        color: 'bg-green-50 border-green-100',
+        title: 'Pestaña Recetas',
+        description: 'Busca ingredientes, añade las cantidades y mira los carbohidratos totales en tiempo real. Guarda la receta para reutilizarla o usa "Cocinar sin receta".',
+        color: 'bg-green-50 dark:bg-green-900/20 border-green-100 dark:border-green-800',
     },
     {
         icon: <Scale className="text-purple-500" size={48} />,
         title: 'Pestaña Reparto',
-        description: 'Pesa la comida con o sin utensilio, y la app calcula automáticamente cuánto toca a cada miembro según su proporción.',
-        color: 'bg-purple-50 border-purple-100',
+        description: 'Pesa la comida con o sin utensilio, y la app calcula automáticamente cuánto toca a cada miembro según su proporción. Se guarda automáticamente.',
+        color: 'bg-purple-50 dark:bg-purple-900/20 border-purple-100 dark:border-purple-800',
     },
     {
         icon: <Users className="text-blue-500" size={48} />,
         title: 'Familia y Nube',
         description: 'Configura los miembros de tu familia y sus proporciones. Marca quién es diabético. Sincroniza todo con la nube para compartir con la familia.',
-        color: 'bg-blue-50 border-blue-100',
+        color: 'bg-blue-50 dark:bg-blue-900/20 border-blue-100 dark:border-blue-800',
     },
 ];
 
@@ -43,10 +43,10 @@ export function OnboardingTutorial({ onDismiss }: OnboardingTutorialProps) {
             <motion.div
                 initial={{ opacity: 0, scale: 0.9, y: 20 }}
                 animate={{ opacity: 1, scale: 1, y: 0 }}
-                className="bg-white rounded-3xl shadow-2xl max-w-sm w-full overflow-hidden"
+                className="bg-white dark:bg-gray-800 rounded-3xl shadow-2xl max-w-sm w-full overflow-hidden"
             >
                 <div className="flex justify-end p-3">
-                    <button onClick={onDismiss} className="p-2 text-gray-300 hover:text-gray-600 rounded-full hover:bg-gray-50 transition-colors">
+                    <button onClick={onDismiss} className="p-2 text-gray-300 dark:text-gray-600 hover:text-gray-600 dark:hover:text-gray-300 rounded-full hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">
                         <X size={20} />
                     </button>
                 </div>
@@ -63,8 +63,8 @@ export function OnboardingTutorial({ onDismiss }: OnboardingTutorialProps) {
                         <div className={`w-24 h-24 mx-auto rounded-3xl ${current.color} border flex items-center justify-center mb-6`}>
                             {current.icon}
                         </div>
-                        <h3 className="text-xl font-black text-center text-gray-800 mb-3">{current.title}</h3>
-                        <p className="text-sm text-gray-500 text-center leading-relaxed mb-4">{current.description}</p>
+                        <h3 className="text-xl font-black text-center text-gray-800 dark:text-gray-100 mb-3">{current.title}</h3>
+                        <p className="text-sm text-gray-500 dark:text-gray-400 text-center leading-relaxed mb-4">{current.description}</p>
                     </motion.div>
                 </AnimatePresence>
 
@@ -74,7 +74,7 @@ export function OnboardingTutorial({ onDismiss }: OnboardingTutorialProps) {
                         <button
                             key={i}
                             onClick={() => setStep(i)}
-                            className={`w-2 h-2 rounded-full transition-all ${i === step ? 'bg-orange-500 w-6' : 'bg-gray-200 hover:bg-gray-300'}`}
+                            className={`w-2 h-2 rounded-full transition-all ${i === step ? 'bg-orange-500 w-6' : 'bg-gray-200 dark:bg-gray-600 hover:bg-gray-300 dark:hover:bg-gray-500'}`}
                         />
                     ))}
                 </div>
@@ -90,7 +90,7 @@ export function OnboardingTutorial({ onDismiss }: OnboardingTutorialProps) {
                     ) : (
                         <button
                             onClick={() => setStep(step + 1)}
-                            className="w-full py-3.5 bg-gray-900 text-white rounded-2xl font-bold text-base hover:bg-gray-800 transition-colors flex items-center justify-center gap-2"
+                            className="w-full py-3.5 bg-gray-900 dark:bg-gray-100 text-white dark:text-gray-900 rounded-2xl font-bold text-base hover:bg-gray-800 dark:hover:bg-gray-200 transition-colors flex items-center justify-center gap-2"
                         >
                             Siguiente <ChevronRight size={18} />
                         </button>
@@ -99,7 +99,7 @@ export function OnboardingTutorial({ onDismiss }: OnboardingTutorialProps) {
 
                 {/* Disclaimer at bottom of tutorial */}
                 <div className="px-6 pb-5">
-                    <p className="text-[9px] text-gray-400 text-center leading-tight">
+                    <p className="text-[9px] text-gray-400 dark:text-gray-500 text-center leading-tight">
                         ⚠️ Esta app no sustituye el consejo médico profesional. Consulta siempre con tu endocrino.
                     </p>
                 </div>
