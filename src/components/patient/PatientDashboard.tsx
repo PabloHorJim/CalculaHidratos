@@ -26,7 +26,11 @@ export function PatientDashboard({ manualGlucose, setManualGlucose, onOpenSettin
                     <h2 className="text-xl font-black text-slate-100 uppercase tracking-wide">Dosis</h2>
                     <div className="text-xs text-slate-400">Modo Clínico {user ? 'Online' : 'Offline'}</div>
                 </div>
-                <button onClick={onOpenSettings} className="p-2 bg-slate-800 text-slate-300 hover:text-cyan-400 rounded-xl transition-colors shadow-sm">
+                <button
+                    onClick={onOpenSettings}
+                    className="p-2 bg-slate-800 text-slate-300 hover:text-cyan-400 rounded-xl transition-colors shadow-sm"
+                    aria-label="Configuración clínica"
+                >
                     <Settings size={22} />
                 </button>
             </div>
@@ -58,10 +62,12 @@ export function PatientDashboard({ manualGlucose, setManualGlucose, onOpenSettin
                     <Droplets size={20} className="text-slate-500 shrink-0" />
                     <input
                         type="number"
+                        id="manual-glucose"
                         placeholder="Glucemia capilar"
                         value={manualGlucose}
                         onChange={(e) => setManualGlucose(e.target.value)}
                         className="bg-transparent w-full text-slate-200 outline-none font-bold text-lg placeholder-slate-600"
+                        aria-label="Introducir glucemia capilar manualmente en mg/dL"
                     />
                 </div>
             </div>

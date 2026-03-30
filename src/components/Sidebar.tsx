@@ -105,6 +105,7 @@ export function Sidebar({ state }: SidebarProps) {
                             <button
                                 onClick={toggleDarkMode}
                                 className="w-full flex items-center gap-3 p-3 text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 rounded-2xl transition-all"
+                                aria-label={`Cambiar a modo ${isDarkMode ? 'claro' : 'oscuro'}`}
                             >
                                 <div className="text-gray-400 dark:text-gray-500">
                                     {isDarkMode ? <Sun size={20} /> : <Moon size={20} />}
@@ -130,12 +131,14 @@ export function Sidebar({ state }: SidebarProps) {
                                     <div className="flex items-center gap-2">
                                         <input
                                             type="range"
+                                            id="portion-error-percent"
                                             min="0"
                                             max="20"
                                             step="1"
                                             value={portionErrorPercent}
                                             onChange={(e) => setPortionErrorPercent(Number(e.target.value))}
                                             className="flex-1 accent-orange-500"
+                                            aria-label="Porcentaje de error de pesaje"
                                         />
                                         <span className={`text-sm font-bold min-w-[3ch] text-right ${portionErrorPercent > 0 ? 'text-orange-600 dark:text-orange-400' : 'text-gray-400'}`}>
                                             {portionErrorPercent}%
@@ -163,6 +166,7 @@ export function Sidebar({ state }: SidebarProps) {
                             <a
                                 href="mailto:pablohorjim@gmail.com?subject=CarbCalc%20—%20Sugerencia"
                                 className="flex items-center gap-3 p-3 text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 rounded-2xl transition-all"
+                                aria-label="Contactar con el desarrollador por email"
                             >
                                 <div className="text-gray-400 dark:text-gray-500">
                                     <Mail size={20} />
@@ -177,6 +181,7 @@ export function Sidebar({ state }: SidebarProps) {
                             <button
                                 onClick={() => { exportMealData('csv'); setIsSidebarOpen(false); }}
                                 className="w-full flex items-center gap-3 p-3 text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 rounded-2xl transition-all"
+                                aria-label="Exportar historial de comidas a CSV"
                             >
                                 <div className="text-gray-400 dark:text-gray-500">
                                     <FileDown size={20} />
@@ -215,12 +220,16 @@ export function Sidebar({ state }: SidebarProps) {
                         <div className="p-6 border-t border-gray-100 dark:border-gray-700 bg-gray-50 dark:bg-gray-900">
                             {user ? (
                                 <div className="flex items-center gap-3">
-                                    <img src={user.photoURL || ''} alt="" className="w-10 h-10 rounded-full border-2 border-white dark:border-gray-700 shadow-sm" referrerPolicy="no-referrer" />
+                                    <img src={user.photoURL || ''} alt="Foto de perfil" className="w-10 h-10 rounded-full border-2 border-white dark:border-gray-700 shadow-sm" referrerPolicy="no-referrer" />
                                     <div className="flex-1 min-w-0">
                                         <div className="text-sm font-bold text-gray-800 dark:text-gray-200 truncate">{user.displayName}</div>
                                         <div className="text-[10px] text-gray-400 dark:text-gray-500 truncate">{user.email}</div>
                                     </div>
-                                    <button onClick={handleLogout} className="text-gray-400 hover:text-red-500">
+                                    <button
+                                        onClick={handleLogout}
+                                        className="text-gray-400 hover:text-red-500"
+                                        aria-label="Cerrar sesión"
+                                    >
                                         <LogOut size={18} />
                                     </button>
                                 </div>

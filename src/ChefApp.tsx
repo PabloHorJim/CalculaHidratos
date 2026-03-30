@@ -74,6 +74,7 @@ export default function ChefApp() {
             <button
               onClick={() => setIsSidebarOpen(true)}
               className="p-2 -ml-2 text-gray-400 dark:text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-xl transition-colors"
+              aria-label="Menú principal"
             >
               <Menu size={24} />
             </button>
@@ -100,11 +101,12 @@ export default function ChefApp() {
           </div>
           <div className="flex items-center gap-2">
             {user && user.photoURL && (
-              <img src={user.photoURL} alt="" className="w-8 h-8 rounded-full border border-gray-100 dark:border-gray-700" referrerPolicy="no-referrer" />
+              <img src={user.photoURL} alt="Foto de perfil" className="w-8 h-8 rounded-full border border-gray-100 dark:border-gray-700" referrerPolicy="no-referrer" />
             )}
             <button
               onClick={() => setActiveTab('legal')}
               className="p-2 text-gray-400 dark:text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-full"
+              aria-label="Información legal"
             >
               <Info size={20} />
             </button>

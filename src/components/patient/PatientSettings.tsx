@@ -25,7 +25,11 @@ export function PatientSettings({ onBack }: PatientSettingsProps) {
         <div className="p-4 space-y-6 max-w-md mx-auto pb-24">
             {/* Header */}
             <div className="flex justify-between items-center mb-6">
-                <button onClick={onBack} className="p-2 -ml-2 text-slate-400 hover:bg-slate-800 rounded-xl transition-colors">
+                <button
+                    onClick={onBack}
+                    className="p-2 -ml-2 text-slate-400 hover:bg-slate-800 rounded-xl transition-colors"
+                    aria-label="Volver al panel principal"
+                >
                     <ArrowLeft size={24} />
                 </button>
                 <h2 className="text-xl font-bold text-slate-100">Configuración Clínica</h2>
@@ -50,10 +54,11 @@ export function PatientSettings({ onBack }: PatientSettingsProps) {
                         const labels: Record<string, string> = { breakfast: 'Desayuno', lunch: 'Comida', snack: 'Merienda', dinner: 'Cena' };
                         return (
                             <div key={meal} className="bg-slate-800 p-3 rounded-xl border border-slate-700">
-                                <label className="text-[10px] text-slate-400 uppercase font-bold block mb-1">{labels[meal]}</label>
+                                <label htmlFor={`ratio-${meal}`} className="text-[10px] text-slate-400 uppercase font-bold block mb-1">{labels[meal]}</label>
                                 <div className="flex items-center gap-2">
                                     <input
                                         type="number"
+                                        id={`ratio-${meal}`}
                                         step="0.1"
                                         min="0"
                                         value={localSettings.ratios[meal as keyof SettingsType['ratios']]}
@@ -76,13 +81,14 @@ export function PatientSettings({ onBack }: PatientSettingsProps) {
                 </h3>
                 <div className="space-y-3">
                     <div className="flex items-center justify-between bg-slate-800 p-3 rounded-xl border border-slate-700">
-                        <div>
+                        <label htmlFor="isf-setting" className="flex-1">
                             <div className="font-bold text-sm text-slate-200">Sensibilidad (FSI)</div>
                             <div className="text-[10px] text-slate-400">Cuánto baja 1 Unidad (mg/dL)</div>
-                        </div>
+                        </label>
                         <div className="flex items-center gap-2">
                             <input
                                 type="number"
+                                id="isf-setting"
                                 value={localSettings.isf}
                                 onChange={(e) => setLocalSettings(prev => ({ ...prev, isf: Number(e.target.value) }))}
                                 className="w-20 bg-slate-900 text-slate-200 px-3 py-2 rounded-lg text-lg font-bold outline-none focus:ring-2 focus:ring-cyan-500/50 text-right border border-slate-700/50"
@@ -91,13 +97,14 @@ export function PatientSettings({ onBack }: PatientSettingsProps) {
                     </div>
 
                     <div className="flex items-center justify-between bg-slate-800 p-3 rounded-xl border border-slate-700">
-                        <div>
+                        <label htmlFor="target-bg-setting" className="flex-1">
                             <div className="font-bold text-sm text-slate-200">Objetivo Glucémico</div>
                             <div className="text-[10px] text-slate-400">Meta deseada (mg/dL)</div>
-                        </div>
+                        </label>
                         <div className="flex items-center gap-2">
                             <input
                                 type="number"
+                                id="target-bg-setting"
                                 value={localSettings.targetBg}
                                 onChange={(e) => setLocalSettings(prev => ({ ...prev, targetBg: Number(e.target.value) }))}
                                 className="w-20 bg-slate-900 text-slate-200 px-3 py-2 rounded-lg text-lg font-bold outline-none focus:ring-2 focus:ring-cyan-500/50 text-right border border-slate-700/50"
@@ -114,13 +121,14 @@ export function PatientSettings({ onBack }: PatientSettingsProps) {
                     Acción Insulina
                 </h3>
                 <div className="flex items-center justify-between bg-slate-800 p-3 rounded-xl border border-slate-700">
-                    <div>
+                    <label htmlFor="dia-setting" className="flex-1">
                         <div className="font-bold text-sm text-slate-200">Duración (DIA)</div>
                         <div className="text-[10px] text-slate-400">Horas de insulina activa</div>
-                    </div>
+                    </label>
                     <div className="flex items-center gap-2">
                         <input
                             type="number"
+                            id="dia-setting"
                             step="0.5"
                             value={localSettings.dia}
                             onChange={(e) => setLocalSettings(prev => ({ ...prev, dia: Number(e.target.value) }))}

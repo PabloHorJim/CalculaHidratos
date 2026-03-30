@@ -44,7 +44,11 @@ export function BolusCalculator({ currentGlucose, onBack }: BolusCalculatorProps
         <div className="p-4 space-y-6 max-w-md mx-auto pb-24">
             {/* Header */}
             <div className="flex justify-between items-center mb-6">
-                <button onClick={onBack} className="p-2 -ml-2 text-slate-400 hover:bg-slate-800 rounded-xl transition-colors">
+                <button
+                    onClick={onBack}
+                    className="p-2 -ml-2 text-slate-400 hover:bg-slate-800 rounded-xl transition-colors"
+                    aria-label="Volver al panel principal"
+                >
                     <ArrowLeft size={24} />
                 </button>
                 <h2 className="text-xl font-bold text-slate-100 flex items-center gap-2">
@@ -89,10 +93,12 @@ export function BolusCalculator({ currentGlucose, onBack }: BolusCalculatorProps
                         <div className="text-xs text-slate-400 font-bold uppercase">Manual</div>
                         <input
                             type="number"
+                            id="manual-carbs"
                             value={selectedCarbs !== null ? Number(selectedCarbs).toString() : ''}
                             onChange={(e) => setSelectedCarbs(e.target.value ? Number(e.target.value) : null)}
                             placeholder="Ej. 45"
                             className="bg-transparent w-full text-slate-100 font-black text-xl outline-none placeholder-slate-700"
+                            aria-label="Gramos de carbohidratos manuales"
                         />
                     </div>
                     <span className="text-slate-500 font-bold">g HC</span>
@@ -134,14 +140,16 @@ export function BolusCalculator({ currentGlucose, onBack }: BolusCalculatorProps
             {/* Paso 3: Insulina Activa (IOB) */}
             <div className="bg-slate-800/80 border border-slate-700 p-4 rounded-3xl space-y-3 shadow-lg">
                 <div className="flex justify-between items-center">
-                    <h3 className="text-sm font-black text-cyan-400 uppercase tracking-widest">3. Insulina a Bordo</h3>
+                    <label htmlFor="iob-input" className="text-sm font-black text-cyan-400 uppercase tracking-widest">3. Insulina a Bordo</label>
                     <input
                         type="number"
+                        id="iob-input"
                         step="0.5"
                         value={iob || ''}
                         onChange={(e) => setIob(Number(e.target.value))}
                         placeholder="0"
                         className="w-16 bg-slate-900 text-slate-100 px-2 py-1 rounded-lg text-center font-bold outline-none border border-slate-700 focus:border-cyan-500"
+                        aria-label="Unidades de insulina activa a bordo"
                     />
                 </div>
             </div>

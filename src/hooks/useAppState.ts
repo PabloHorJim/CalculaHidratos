@@ -628,9 +628,12 @@ export function useAppState() {
                 console.warn('Login request cancelled (multiple clicks)');
             } else if (error.code === 'auth/popup-blocked') {
                 setToast('Ventana emergente bloqueada. Habilita las ventanas emergentes o abre en pestaña nueva.');
+            } else if (error.code === 'auth/unauthorized-domain') {
+                setToast('Dominio no autorizado. Añade este dominio en la Consola de Firebase.');
+                console.error('Firebase Auth: Unauthorized domain. Add', window.location.hostname, 'to authorized domains in Firebase Console.');
             } else {
                 console.error('Login failed', error);
-                setToast('Error al iniciar sesión');
+                setToast('Error al iniciar sesión: ' + (error.message || 'Error desconocido'));
             }
         }
     };
