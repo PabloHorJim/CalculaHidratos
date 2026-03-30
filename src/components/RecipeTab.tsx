@@ -207,14 +207,16 @@ export function RecipeTab({ state }: RecipeTabProps) {
             </div>
 
             <div className="relative">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
-                <input
-                    type="text"
-                    placeholder="Añadir ingrediente..."
-                    className="w-full pl-10 pr-4 py-2.5 bg-gray-50 dark:bg-gray-800 rounded-xl outline-none focus:ring-2 focus:ring-orange-200 dark:focus:ring-orange-800 text-sm transition-colors dark:text-gray-100"
-                    value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
-                />
+                <div className="flex items-center bg-white dark:bg-gray-800 rounded-2xl p-1 border-2 border-orange-200 dark:border-orange-800/60 shadow-sm focus-within:border-orange-400 dark:focus-within:border-orange-500 transition-colors">
+                    <Search className="text-orange-400 ml-3" size={20} />
+                    <input
+                        type="text"
+                        placeholder="Buscar ingrediente para añadir..."
+                        className="w-full px-3 py-2.5 bg-transparent outline-none text-gray-800 dark:text-gray-100 placeholder:text-gray-400 font-medium"
+                        value={searchTerm}
+                        onChange={(e) => setSearchTerm(e.target.value)}
+                    />
+                </div>
                 {searchTerm && (
                     <div className="absolute z-10 w-full mt-1 bg-white dark:bg-gray-800 border border-gray-100 dark:border-gray-700 rounded-xl shadow-lg max-h-60 overflow-y-auto">
                         {filteredIngredients.map(i => (
@@ -228,8 +230,21 @@ export function RecipeTab({ state }: RecipeTabProps) {
                             </button>
                         ))}
                         {filteredIngredients.length === 0 && (
-                            <div className="p-4 text-center text-gray-400 dark:text-gray-500 text-sm">
-                                No se encontró "{searchTerm}"
+                            <div className="p-4 text-center">
+                                <p className="text-gray-500 dark:text-gray-400 mb-3 text-sm">
+                                    No se encontró "{searchTerm}"
+                                </p>
+                                <button
+                                    onClick={() => {
+                                        setNewIngredientName(searchTerm);
+                                        setShowAddIngredient(true);
+                                        setSearchTerm('');
+                                    }}
+                                    className="w-full py-2.5 bg-orange-100 dark:bg-orange-900/40 text-orange-600 dark:text-orange-400 font-bold rounded-xl flex items-center justify-center gap-2 hover:bg-orange-200 dark:hover:bg-orange-800/60 transition-colors"
+                                >
+                                    <Plus size={18} />
+                                    Crear como nuevo
+                                </button>
                             </div>
                         )}
                     </div>
@@ -261,9 +276,9 @@ export function RecipeTab({ state }: RecipeTabProps) {
                 {!showAddIngredient ? (
                     <button
                         onClick={() => setShowAddIngredient(true)}
-                        className="text-xs font-bold text-orange-500 flex items-center gap-1 hover:underline"
+                        className="w-full py-3 border-2 border-dashed border-gray-200 dark:border-gray-700 text-gray-400 dark:text-gray-500 rounded-2xl font-bold flex items-center justify-center gap-2 hover:bg-gray-50 dark:hover:bg-gray-800/50 hover:text-orange-500 dark:hover:text-orange-400 transition-colors"
                     >
-                        <Plus size={14} /> Ingrediente nuevo
+                        <Plus size={18} /> Crear ingrediente
                     </button>
                 ) : (
                     <div className="bg-orange-50 dark:bg-orange-900/20 p-3 rounded-xl space-y-2 border border-orange-100 dark:border-orange-800">
