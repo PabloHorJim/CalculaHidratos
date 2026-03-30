@@ -38,6 +38,22 @@ export default defineConfig(({ mode }) => {
               sizes: '512x512',
               type: 'image/png'
             }
+          ],
+          shortcuts: [
+            {
+              name: 'CarbCalc Chef',
+              short_name: 'Chef',
+              description: 'Cocinar y calcular raciones',
+              url: '/chef',
+              icons: [{ src: 'logo.png', sizes: '192x192', type: 'image/png' }]
+            },
+            {
+              name: 'Mi Dosis (Clínico)',
+              short_name: 'Dosis',
+              description: 'Calculadora de insulina',
+              url: '/patient',
+              icons: [{ src: 'patient-logo.svg', sizes: '192x192', type: 'image/svg+xml' }]
+            }
           ]
         },
         workbox: {

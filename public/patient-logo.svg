@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 192 192">
+  <rect width="192" height="192" fill="#0f172a"/>
+  <!-- Droplet / Blood shape -->
+  <path d="M96 40 C 96 40, 56 100, 56 130 C 56 152, 74 170, 96 170 C 118 170, 136 152, 136 130 C 136 100, 96 40, 96 40 Z" fill="#06b6d4"/>
+  <!-- Cross in the middle -->
+  <path d="M88 110 H104 V126 H116 V142 H104 V158 H88 V142 H72 V126 H88 V110 Z" fill="#ffffff"/>
+</svg>
