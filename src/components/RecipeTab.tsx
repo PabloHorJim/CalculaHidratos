@@ -141,7 +141,7 @@ export function RecipeTab({ state }: RecipeTabProps) {
         } else if (hour >= 12 && hour < 16) {
             timeSlot = 'almuerzo';
             title = 'Sugerencias para el almuerzo';
-        } else if (hour >= 16 && hour < 20) {
+        } else if (hour >= 16 && hour < 19) {
             timeSlot = 'merienda';
             title = 'Sugerencias para merendar';
         } else {
@@ -161,8 +161,8 @@ export function RecipeTab({ state }: RecipeTabProps) {
                 let match = false;
                 if (timeSlot === 'desayuno' && mHour >= 6 && mHour < 12) match = true;
                 else if (timeSlot === 'almuerzo' && mHour >= 12 && mHour < 16) match = true;
-                else if (timeSlot === 'merienda' && mHour >= 16 && mHour < 20) match = true;
-                else if (timeSlot === 'cena' && (mHour >= 20 || mHour < 6)) match = true;
+                else if (timeSlot === 'merienda' && mHour >= 16 && mHour < 19) match = true;
+                else if (timeSlot === 'cena' && (mHour >= 19 || mHour < 6)) match = true;
 
                 if (match) {
                     recipeCounts[meal.recipeName] = (recipeCounts[meal.recipeName] || 0) + 1;
