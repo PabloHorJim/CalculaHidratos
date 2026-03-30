@@ -724,63 +724,42 @@ export function useAppState() {
 
     const saveMealToHistory = (recipeName: string, totalCarbs: number, netWeight: number, portions: any[]) => {
         const finalName = recipeName || cachedRecipeName || 'Comida sin nombre';
-        const newEntry: MealHistoryEntry = {
-            id: Date.now().toString(),
-            timestamp: new Date().toISOString(),
-            recipeName: finalName,
-            totalCarbs,
-            netWeight,
-            portions
-        };
-        setMealHistory([newEntry, ...mealHistory].slice(0, 50));
-        setToast('Comida guardada en el historial');
-        cancelAutoSave();
-    };
 
-    // Auto-save reparto logic
-    const startAutoSave = useCallback((recipeName: string, totalCarbs: number, netWeight: number, portions: any[]) => {
-        cancelAutoSave();
-        setPendingAutoSave(true);
-        setAutoSaveCountdown(5);
+        setMealHistory(prevMeals => {
+            const now = Date.now();
+            const TWO_HOURS = 2 * 60 * 60 * 1000; // 2 hours window for overwrite
 
-        countdownRef.current = setInterval(() => {
-            setAutoSaveCountdown(prev => {
-                if (prev <= 1) {
-                    if (countdownRef.current) clearInterval(countdownRef.current);
-                    return 0;
-                }
-                return prev - 1;
-            });
-        }, 1000);
+            // Look for a recent entry with the same recipe name
+            const recentDuplicateIndex = prevMeals.findIndex(
+                m => m.recipeName === finalName && (now - new Date(m.timestamp).getTime()) < TWO_HOURS
+            );
 
-        autoSaveTimerRef.current = setTimeout(() => {
-            const finalName = recipeName || cachedRecipeName || 'Comida sin nombre';
             const newEntry: MealHistoryEntry = {
-                id: Date.now().toString(),
+                id: recentDuplicateIndex >= 0 ? prevMeals[recentDuplicateIndex].id : now.toString(),
                 timestamp: new Date().toISOString(),
                 recipeName: finalName,
                 totalCarbs,
                 netWeight,
                 portions
             };
-            setMealHistory(prev => [newEntry, ...prev].slice(0, 50));
-            setToast('Reparto guardado automáticamente');
-            setPendingAutoSave(false);
-            setAutoSaveCountdown(0);
-        }, 5000);
-    }, [cachedRecipeName]);
+
+            if (recentDuplicateIndex >= 0) {
+                // Overwrite the existing entry
+                const updated = [...prevMeals];
+                updated[recentDuplicateIndex] = newEntry;
+                return updated;
+            } else {
+                // Add new entry
+                return [newEntry, ...prevMeals].slice(0, 50);
+            }
+        });
+
+        setToast('Guardado en el historial');
+    };
 
     const cancelAutoSave = useCallback(() => {
-        if (autoSaveTimerRef.current) {
-            clearTimeout(autoSaveTimerRef.current);
-            autoSaveTimerRef.current = null;
-        }
-        if (countdownRef.current) {
-            clearInterval(countdownRef.current);
-            countdownRef.current = null;
-        }
+        // Kept for signature compatibility if still called elsewhere, though no longer needed
         setPendingAutoSave(false);
-        setAutoSaveCountdown(0);
     }, []);
 
     const clearReparto = useCallback(() => {
@@ -905,7 +884,7 @@ export function useAppState() {
         portionErrorPercent, setPortionErrorPercent,
         isErrorDisabledForCurrentSplit, setIsErrorDisabledForCurrentSplit,
         pendingAutoSave, autoSaveCountdown,
-        startAutoSave, cancelAutoSave, clearReparto,
+        cancelAutoSave, clearReparto,
 
         // Computed
         filteredIngredients, totalCarbs, activeFamilyProportionSum,

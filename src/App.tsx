@@ -53,7 +53,11 @@ export default function App() {
   }, [currentTabIndex]);
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-gray-100 font-sans pb-24 transition-colors duration-300">
+    <div
+      className="min-h-screen bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-gray-100 font-sans pb-24 transition-colors duration-300"
+      onTouchStart={onTouchStart}
+      onTouchEnd={onTouchEnd}
+    >
       {/* Cookie Consent */}
       {!hasConsent && <CookieConsent state={state} />}
 

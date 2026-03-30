@@ -19,8 +19,7 @@ export function SplitTab({ state }: SplitTabProps) {
         isErrorDisabledForCurrentSplit, setIsErrorDisabledForCurrentSplit,
         currentRecipeName,
         saveMealToHistory, sharePortion, copyPortionToClipboard, shareFullMeal,
-        pendingAutoSave, autoSaveCountdown,
-        startAutoSave, cancelAutoSave, clearReparto,
+        clearReparto,
     } = state;
 
     const selectedItem = cookware.find(c => c.id === selectedCookwareId);
@@ -61,19 +60,8 @@ export function SplitTab({ state }: SplitTabProps) {
 
     const displayRecipeName = currentRecipeName || cachedRecipeName || 'Comida sin nombre';
 
-    // Auto-save: trigger when portions are calculated and no auto-save is pending
-    const hasPortions = netWeight > 0 && activeFamilyProportionSum > 0;
-    const autoSaveTriggered = useRef(false);
-
-    useEffect(() => {
-        if (hasPortions && !pendingAutoSave && !autoSaveTriggered.current) {
-            autoSaveTriggered.current = true;
-            startAutoSave(displayRecipeName, adjustedCarbs, netWeight, portionsForSharing);
-        }
-        if (!hasPortions) {
-            autoSaveTriggered.current = false;
-        }
-    }, [hasPortions, pendingAutoSave]);
+    // Auto-save is disabled per user request, using explicit save only
+    // Meals with identical names saved within 2 hours will be silently upserted by useAppState.
 
     return (
         <div className="space-y-6">
@@ -109,29 +97,6 @@ export function SplitTab({ state }: SplitTabProps) {
                         )}
                     </div>
                 </div>
-
-                {/* Auto-save banner */}
-                {pendingAutoSave && (
-                    <motion.div
-                        initial={{ opacity: 0, y: -10 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        className="mb-4 bg-blue-50 dark:bg-blue-900/30 p-3 rounded-xl border border-blue-100 dark:border-blue-800 flex items-center justify-between"
-                    >
-                        <div className="flex items-center gap-2">
-                            <Clock size={16} className="text-blue-500" />
-                            <span className="text-xs font-bold text-blue-600 dark:text-blue-400">
-                                Guardando en {autoSaveCountdown}s...
-                            </span>
-                        </div>
-                        <button
-                            onClick={() => { cancelAutoSave(); clearReparto(); }}
-                            className="text-xs font-bold text-gray-400 hover:text-red-500 flex items-center gap-1 transition-colors"
-                        >
-                            <X size={14} />
-                            No guardar
-                        </button>
-                    </motion.div>
-                )}
 
                 <div className="space-y-4">
                     <div>

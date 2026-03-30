@@ -125,36 +125,37 @@ export function RecipeTab({ state }: RecipeTabProps) {
     // ---- Cooking Mode (ingredient builder) ----
     return (
         <div className="space-y-4">
-            {/* Back to saved recipes */}
-            <button
-                onClick={() => setCookingMode(false)}
-                className="flex items-center gap-1 text-xs font-bold text-gray-400 dark:text-gray-500 hover:text-orange-500 dark:hover:text-orange-400 transition-colors -mb-2"
-            >
-                <ArrowLeft size={14} />
-                Volver a recetas guardadas
-            </button>
+            {/* Header: Back & Clear */}
+            <div className="flex items-center justify-between mb-2">
+                <button
+                    onClick={() => setCookingMode(false)}
+                    className="flex items-center gap-2 px-3 py-2 bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-300 rounded-xl font-bold text-sm shadow-sm border border-gray-100 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
+                >
+                    <ArrowLeft size={16} className="text-gray-400" />
+                    Volver a Recetas
+                </button>
+                {(currentRecipeName || currentRecipeIngredients.length > 0) && (
+                    <button
+                        onClick={clearCookingState}
+                        className="text-xs font-black uppercase px-3 py-2 bg-red-50 dark:bg-red-900/20 text-red-500 dark:text-red-400 rounded-xl hover:bg-red-100 dark:hover:bg-red-900/40 transition-colors"
+                    >
+                        Limpiar todo
+                    </button>
+                )}
+            </div>
 
-            <div className="flex items-center justify-between mb-1">
-                <div className="flex items-center gap-2 flex-1">
-                    <ChefHat className="text-orange-500" size={22} />
-                    <input
-                        type="text"
-                        placeholder="Nombre (opcional para cálculo rápido)"
-                        className="flex-1 text-lg font-semibold outline-none bg-transparent placeholder:text-gray-300 dark:placeholder:text-gray-600 dark:text-gray-100"
-                        value={currentRecipeName}
-                        onChange={(e) => setCurrentRecipeName(e.target.value)}
-                    />
+            {/* Recipe Name Input Box */}
+            <div className="bg-white dark:bg-gray-800 p-3 rounded-2xl shadow-sm border border-orange-100 dark:border-orange-900/40 flex items-center gap-3">
+                <div className="bg-orange-100 dark:bg-orange-900/50 p-2.5 rounded-xl text-orange-500">
+                    <ChefHat size={22} />
                 </div>
-                <div className="flex gap-2">
-                    {(currentRecipeName || currentRecipeIngredients.length > 0) && (
-                        <button
-                            onClick={clearCookingState}
-                            className="text-xs font-black uppercase px-3 py-1.5 bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-400 rounded-lg hover:bg-orange-100 hover:text-orange-600 dark:hover:bg-orange-900/30 dark:hover:text-orange-400 transition-colors"
-                        >
-                            Limpiar
-                        </button>
-                    )}
-                </div>
+                <input
+                    type="text"
+                    placeholder="Nombre de la receta (opcional)"
+                    className="flex-1 text-lg font-black outline-none bg-transparent placeholder:text-gray-300 dark:placeholder:text-gray-600 dark:text-gray-100"
+                    value={currentRecipeName}
+                    onChange={(e) => setCurrentRecipeName(e.target.value)}
+                />
             </div>
 
             <div className="relative">
