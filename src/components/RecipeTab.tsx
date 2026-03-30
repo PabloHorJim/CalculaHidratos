@@ -1,5 +1,5 @@
 import React from 'react';
-import { ChefHat, Search, Plus, Trash2, Save, ChevronRight, Utensils, ArrowLeft } from 'lucide-react';
+import { ChefHat, Search, Plus, Trash2, Save, ChevronRight, Utensils, ArrowLeft, Sparkles } from 'lucide-react';
 import { motion } from 'motion/react';
 import { AppState } from '../hooks/useAppState';
 
@@ -14,6 +14,7 @@ export function RecipeTab({ state }: RecipeTabProps) {
         currentRecipeIngredients,
         searchTerm, setSearchTerm,
         filteredIngredients,
+        ingredientWeightHistory, recipes,
         showAddIngredient, setShowAddIngredient,
         newIngredientName, setNewIngredientName,
         newIngredientCarbs, setNewIngredientCarbs,
@@ -38,6 +39,53 @@ export function RecipeTab({ state }: RecipeTabProps) {
         : setAsideMode === 'absolute' && totalCarbs > 0
             ? totalCarbs * (1 - setAsideAmount / (currentRecipeIngredients.reduce((sum, ri) => sum + ri.weight, 0) || 1))
             : totalCarbs;
+
+    const suggestedIngredients = React.useMemo(() => {
+        if (searchTerm) return [];
+
+        const currentIds = currentRecipeIngredients.map(ri => ri.ingredientId);
+
+        // 1. If currently building a recipe, find complementary ingredients (co-occurrence)
+        if (currentRecipeIngredients.length > 0) {
+            const coOccurringMap: Record<string, number> = {};
+
+            recipes.forEach(r => {
+                const rIds = r.ingredients.map(i => i.ingredientId);
+                const intersection = rIds.filter(id => currentIds.includes(id));
+                // Only count if this recipe shares ingredients but is not identical
+                if (intersection.length > 0 && intersection.length < rIds.length) {
+                    rIds.forEach(id => {
+                        if (!currentIds.includes(id)) {
+                            coOccurringMap[id] = (coOccurringMap[id] || 0) + 1;
+                        }
+                    });
+                }
+            });
+
+            const sortedByCoOccurrence = Object.entries(coOccurringMap)
+                .sort((a, b) => b[1] - a[1])
+                .map(e => e[0])
+                .slice(0, 8);
+
+            if (sortedByCoOccurrence.length > 0) {
+                return sortedByCoOccurrence
+                    .map(id => ingredients.find(i => i.id === id))
+                    .filter((i): i is NonNullable<typeof i> => !!i);
+            }
+        }
+
+        // 2. Default: Most frequent recent ingredients
+        const sortedByFrequency = Object.entries(ingredientWeightHistory as Record<string, number[]>)
+            .filter(([id]) => !currentIds.includes(id))
+            .sort((a, b) => b[1].length - a[1].length)
+            .map(e => e[0])
+            .slice(0, 8);
+
+        return sortedByFrequency
+            .map(id => ingredients.find(i => i.id === id))
+            .filter((i): i is NonNullable<typeof i> => !!i);
+
+    }, [searchTerm, currentRecipeIngredients, recipes, ingredientWeightHistory, ingredients]);
 
     // ---- Saved Recipes View (default) ----
     if (!cookingMode) {
@@ -187,6 +235,27 @@ export function RecipeTab({ state }: RecipeTabProps) {
                     </div>
                 )}
             </div>
+
+            {/* Smart Suggestions */}
+            {!searchTerm && suggestedIngredients.length > 0 && (
+                <div className="space-y-2 mb-4">
+                    <div className="flex items-center gap-1.5 text-xs font-bold text-orange-500 uppercase tracking-wider">
+                        <Sparkles size={14} />
+                        Sugerencias rápidas
+                    </div>
+                    <div className="flex flex-wrap gap-2">
+                        {suggestedIngredients.map(ingredient => (
+                            <button
+                                key={`suggest-${ingredient.id}`}
+                                onClick={() => addIngredientToRecipe(ingredient)}
+                                className="px-3 py-1.5 bg-orange-50/80 dark:bg-orange-900/20 text-orange-700 dark:text-orange-300 rounded-full text-xs font-semibold border border-orange-200/50 dark:border-orange-800/50 shadow-sm hover:scale-105 transition-transform active:scale-95"
+                            >
+                                + {ingredient.name}
+                            </button>
+                        ))}
+                    </div>
+                </div>
+            )}
 
             <div>
                 {!showAddIngredient ? (

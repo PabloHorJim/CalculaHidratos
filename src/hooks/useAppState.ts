@@ -885,6 +885,7 @@ export function useAppState() {
         isErrorDisabledForCurrentSplit, setIsErrorDisabledForCurrentSplit,
         pendingAutoSave, autoSaveCountdown,
         cancelAutoSave, clearReparto,
+        ingredientWeightHistory,
 
         // Computed
         filteredIngredients, totalCarbs, activeFamilyProportionSum,
