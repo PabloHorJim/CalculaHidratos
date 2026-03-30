@@ -147,13 +147,21 @@ export function useAppState() {
         localStorage.setItem(TUTORIAL_KEY, 'true');
     };
 
+    // Helper to merge official ingredients with user's custom ingredients
+    const mergeIngredients = useCallback((savedIngredients: Ingredient[]) => {
+        const customIngredients = savedIngredients.filter(
+            saved => !INITIAL_INGREDIENTS.some(init => init.id === saved.id)
+        );
+        return [...INITIAL_INGREDIENTS, ...customIngredients];
+    }, []);
+
     // Load initial data from localStorage
     useEffect(() => {
         const saved = localStorage.getItem(STORAGE_KEY);
         if (saved) {
             try {
                 const parsed = JSON.parse(saved);
-                if (parsed.ingredients) setIngredients(parsed.ingredients);
+                if (parsed.ingredients) setIngredients(mergeIngredients(parsed.ingredients));
                 if (parsed.recipes) setRecipes(parsed.recipes);
                 if (parsed.family) setFamily(parsed.family);
                 if (parsed.cookware) setCookware(parsed.cookware);
@@ -282,7 +290,7 @@ export function useAppState() {
                     adminUid: data.adminUid,
                     inviteCode: data.inviteCode
                 });
-                if (data.ingredients) setIngredients(data.ingredients);
+                if (data.ingredients) setIngredients(mergeIngredients(data.ingredients));
                 if (data.recipes) setRecipes(data.recipes);
                 if (data.family) setFamily(data.family);
                 if (data.cookware) setCookware(data.cookware);
@@ -306,7 +314,7 @@ export function useAppState() {
             if (!snapshot.metadata.hasPendingWrites && snapshot.exists()) {
                 const data = snapshot.data();
                 setIsSyncing(true);
-                if (data.ingredients) setIngredients(data.ingredients);
+                if (data.ingredients) setIngredients(mergeIngredients(data.ingredients));
                 if (data.recipes) setRecipes(data.recipes);
                 if (data.family) setFamily(data.family);
                 if (data.cookware) setCookware(data.cookware);
