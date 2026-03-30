@@ -1,5 +1,5 @@
 import React, { useEffect, useRef } from 'react';
-import { Scale, Save, Share2, MessageSquare, X, Clock, Trash2 } from 'lucide-react';
+import { Scale, Save, Share2, MessageSquare, X, Clock, Trash2, AlertTriangle } from 'lucide-react';
 import { motion } from 'motion/react';
 import { AppState } from '../hooks/useAppState';
 
@@ -19,7 +19,7 @@ export function SplitTab({ state }: SplitTabProps) {
         isErrorDisabledForCurrentSplit, setIsErrorDisabledForCurrentSplit,
         currentRecipeName,
         saveMealToHistory, sharePortion, copyPortionToClipboard, shareFullMeal,
-        clearReparto,
+        clearReparto, mealHistory
     } = state;
 
     const selectedItem = cookware.find(c => c.id === selectedCookwareId);
@@ -40,16 +40,60 @@ export function SplitTab({ state }: SplitTabProps) {
     const effectiveCarbs = totalCarbs > 0 ? totalCarbs : cachedTotalCarbs;
     const adjustedCarbs = netWeightRaw > 0 ? effectiveCarbs * (netWeight / netWeightRaw) : effectiveCarbs;
 
-    const errorMultiplier = (portionErrorPercent > 0 && !isErrorDisabledForCurrentSplit)
-        ? 1 - (portionErrorPercent / 100)
-        : 1;
+    const calculatedPortions = family
+        .filter(m => m.isActive)
+        .map(member => {
+            const memberPortion = activeFamilyProportionSum > 0
+                ? (member.proportion / activeFamilyProportionSum) * netWeight
+                : 0;
+            const memberCarbs = activeFamilyProportionSum > 0
+                ? (member.proportion / activeFamilyProportionSum) * adjustedCarbs
+                : 0;
 
-    const calculatedPortions = family.filter(m => m.isActive).map(member => {
-        const portionRaw = (member.proportion / activeFamilyProportionSum) * netWeight;
-        const portion = portionRaw * errorMultiplier;
-        const portionCarbs = adjustedCarbs > 0 && netWeight > 0 ? (portionRaw * (adjustedCarbs / netWeight)) : 0;
-        return { member, portion, portionCarbs };
-    });
+            return {
+                member,
+                portion: isErrorDisabledForCurrentSplit ? memberPortion : memberPortion * (1 - portionErrorPercent / 100),
+                portionCarbs: memberCarbs
+            };
+        });
+
+    const historicalWarnings = React.useMemo(() => {
+        const warnings: string[] = [];
+
+        // 1. Check historical HC/100g for this recipe
+        if (cachedRecipeName && netWeight > 0) {
+            const lastSimilarMeal = [...mealHistory]
+                .reverse()
+                .find(m => m.recipeName === cachedRecipeName && m.totalCarbs && m.netWeight);
+
+            if (lastSimilarMeal && lastSimilarMeal.netWeight > 0) {
+                const lastHc100g = (lastSimilarMeal.totalCarbs / lastSimilarMeal.netWeight) * 100;
+                const currentHc100g = (adjustedCarbs / netWeight) * 100;
+
+                if (Math.abs(lastHc100g - currentHc100g) > 2 && Math.max(lastHc100g, currentHc100g) / Math.min(lastHc100g, currentHc100g) > 1.3) {
+                    warnings.push(`La receta ha cambiado: antes tenía ${lastHc100g.toFixed(1)}g HC/100g, ahora ${currentHc100g.toFixed(1)}g HC/100g.`);
+                }
+            }
+        }
+
+        // 2. Check for abnormally large portions
+        let portionWarning = false;
+        calculatedPortions.forEach(cp => {
+            const memberRecentMeals = mealHistory.slice(-20).map(m => m.portions?.find(p => p.memberName === cp.member.name)).filter((p): p is NonNullable<typeof p> => !!p && p.weight > 0);
+            if (memberRecentMeals.length >= 3) {
+                const avgWeight = memberRecentMeals.reduce((sum, p) => sum + p.weight, 0) / memberRecentMeals.length;
+                if (cp.portion > 150 && cp.portion > avgWeight * 1.5) {
+                    portionWarning = true;
+                }
+            }
+        });
+
+        if (portionWarning) {
+            warnings.push('Se ha detectado una ración calculada inusualmente alta (>50% sobre la media). Revisa el peso final o el recipiente seleccionado.');
+        }
+
+        return warnings;
+    }, [cachedRecipeName, netWeight, adjustedCarbs, mealHistory, calculatedPortions]);
 
     const portionsForSharing = calculatedPortions.map(p => ({
         memberName: p.member.name,
@@ -194,10 +238,28 @@ export function SplitTab({ state }: SplitTabProps) {
                         </>
                     )}
 
+                    {historicalWarnings.length > 0 && (
+                        <div className="bg-yellow-50 dark:bg-yellow-900/20 p-3 rounded-2xl border border-yellow-200 dark:border-yellow-800/50 space-y-2 mt-4">
+                            {historicalWarnings.map((w, i) => (
+                                <div key={i} className="flex items-start gap-2 text-xs text-yellow-700 dark:text-yellow-400 font-medium">
+                                    <AlertTriangle size={14} className="shrink-0 mt-0.5" />
+                                    <span>{w}</span>
+                                </div>
+                            ))}
+                        </div>
+                    )}
+
                     {effectiveCarbs > 0 && netWeightRaw > 0 && (
-                        <div className="bg-orange-50 dark:bg-orange-900/20 p-3 rounded-2xl border border-orange-100 dark:border-orange-800">
+                        <div className="bg-orange-50 dark:bg-orange-900/20 p-3 rounded-2xl border border-orange-100 dark:border-orange-800 mt-4">
                             <div className="text-xs text-orange-600 dark:text-orange-400 font-bold uppercase mb-1">Carbohidratos</div>
-                            <div className="text-lg font-black text-orange-700 dark:text-orange-400">{adjustedCarbs.toFixed(1)} g HC</div>
+                            <div className="flex justify-between items-baseline">
+                                <div className="text-lg font-black text-orange-700 dark:text-orange-400">{adjustedCarbs.toFixed(1)} g HC</div>
+                                {netWeight > 0 && (
+                                    <div className="text-xs font-bold text-orange-600 bg-orange-100 dark:bg-orange-800/40 px-2 py-0.5 rounded-full border border-orange-200 dark:border-orange-700/50">
+                                        {((adjustedCarbs / netWeight) * 100).toFixed(1)} g HC/100g
+                                    </div>
+                                )}
+                            </div>
                             {cachedRecipeName && (
                                 <div className="text-[10px] text-orange-400 mt-0.5">Receta: {cachedRecipeName}</div>
                             )}

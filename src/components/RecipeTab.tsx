@@ -1,5 +1,5 @@
 import React from 'react';
-import { ChefHat, Search, Plus, Trash2, Save, ChevronRight, Utensils, ArrowLeft, Sparkles, Mic, MicOff } from 'lucide-react';
+import { ChefHat, Search, Plus, Trash2, Save, ChevronRight, Utensils, ArrowLeft, Sparkles, Mic, MicOff, AlertTriangle } from 'lucide-react';
 import { useVoiceRecognition } from '../hooks/useVoiceRecognition';
 import { motion } from 'motion/react';
 import { AppState } from '../hooks/useAppState';
@@ -375,19 +375,32 @@ export function RecipeTab({ state }: RecipeTabProps) {
                 {currentRecipeIngredients.map(ri => {
                     const ingredient = ingredients.find(i => i.id === ri.ingredientId);
                     if (!ingredient) return null;
+
+                    const history = ingredientWeightHistory[ri.ingredientId] || [];
+                    let isHighAmount = false;
+                    if (history.length >= 3 && ri.weight > 250) {
+                        const avg = history.reduce((a, b) => a + b, 0) / history.length;
+                        if (ri.weight > avg * 2.5) isHighAmount = true;
+                    }
+
                     return (
                         <motion.div
                             layout
                             initial={{ opacity: 0, y: 10 }}
                             animate={{ opacity: 1, y: 0 }}
                             key={ri.ingredientId}
-                            className="flex items-center gap-3 bg-white dark:bg-gray-800 p-3 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 transition-colors"
+                            className={`flex items-center gap-3 bg-white dark:bg-gray-800 p-3 rounded-xl shadow-sm border transition-colors ${isHighAmount ? 'border-yellow-300 dark:border-yellow-600' : 'border-gray-100 dark:border-gray-700'}`}
                         >
                             <div className="flex-1">
                                 <div className="font-medium text-sm dark:text-gray-200">{ingredient.name}</div>
                                 <div className="text-xs text-gray-500 dark:text-gray-400">{ingredient.carbsPer100g}g HC/100g</div>
                             </div>
                             <div className="flex items-center gap-2">
+                                {isHighAmount && (
+                                    <div className="text-yellow-500 animate-pulse" title="Cantidad inusualmente alta respecto a tu historial">
+                                        <AlertTriangle size={18} />
+                                    </div>
+                                )}
                                 <input
                                     type="number"
                                     value={ri.weight}
