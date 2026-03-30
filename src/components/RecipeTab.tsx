@@ -30,7 +30,7 @@ export function RecipeTab({ state }: RecipeTabProps) {
         removeIngredientFromRecipe,
         saveRecipe, saveAsNewRecipe, startNewRecipe, clearCookingState,
         filteredRecipes, recipeSearchTerm, setRecipeSearchTerm,
-        loadRecipe, deleteRecipe,
+        loadRecipe, deleteRecipe, mealHistory,
         setToast,
     } = state;
 
@@ -126,6 +126,70 @@ export function RecipeTab({ state }: RecipeTabProps) {
 
     }, [searchTerm, currentRecipeIngredients, recipes, ingredientWeightHistory, ingredients]);
 
+    const suggestedRecipes = React.useMemo(() => {
+        if (cookingMode || recipeSearchTerm || recipes.length === 0) return { list: [], title: '' };
+
+        const now = new Date();
+        const hour = now.getHours();
+
+        let timeSlot = '';
+        let title = '';
+
+        if (hour >= 6 && hour < 12) {
+            timeSlot = 'desayuno';
+            title = 'Sugerencias para desayunar';
+        } else if (hour >= 12 && hour < 16) {
+            timeSlot = 'almuerzo';
+            title = 'Sugerencias para el almuerzo';
+        } else if (hour >= 16 && hour < 20) {
+            timeSlot = 'merienda';
+            title = 'Sugerencias para merendar';
+        } else {
+            timeSlot = 'cena';
+            title = 'Sugerencias para cenar';
+        }
+
+        // Filter history from the last year
+        const oneYearAgo = now.getTime() - (365 * 24 * 60 * 60 * 1000);
+        const recipeCounts: Record<string, number> = {};
+
+        mealHistory.forEach(meal => {
+            if (meal.timestamp > oneYearAgo && meal.recipeName) {
+                const mealDate = new Date(meal.timestamp);
+                const mHour = mealDate.getHours();
+
+                let match = false;
+                if (timeSlot === 'desayuno' && mHour >= 6 && mHour < 12) match = true;
+                else if (timeSlot === 'almuerzo' && mHour >= 12 && mHour < 16) match = true;
+                else if (timeSlot === 'merienda' && mHour >= 16 && mHour < 20) match = true;
+                else if (timeSlot === 'cena' && (mHour >= 20 || mHour < 6)) match = true;
+
+                if (match) {
+                    recipeCounts[meal.recipeName] = (recipeCounts[meal.recipeName] || 0) + 1;
+                }
+            }
+        });
+
+        // Sort by frequency
+        const sortedNames = Object.entries(recipeCounts)
+            .sort((a, b) => b[1] - a[1])
+            .map(e => e[0]);
+
+        // Find matching saved recipes
+        let matchedRecipes = sortedNames
+            .map(name => recipes.find(r => r.name === name))
+            .filter((r): r is NonNullable<typeof r> => !!r)
+            .slice(0, 4);
+
+        if (matchedRecipes.length === 0) {
+            matchedRecipes = [...recipes].reverse().slice(0, 4);
+            title = 'Tus últimas recetas';
+        }
+
+        return { list: matchedRecipes, title };
+
+    }, [cookingMode, recipeSearchTerm, mealHistory, recipes]);
+
     // ---- Saved Recipes View (default) ----
     if (!cookingMode) {
         return (
@@ -152,11 +216,33 @@ export function RecipeTab({ state }: RecipeTabProps) {
                     <input
                         type="text"
                         placeholder="Buscar receta guardada..."
-                        className="w-full pl-10 pr-4 py-2 bg-white dark:bg-gray-800 border border-gray-100 dark:border-gray-700 rounded-xl outline-none focus:ring-2 focus:ring-orange-200 dark:focus:ring-orange-800 text-sm transition-colors"
+                        className="w-full pl-10 pr-4 py-2 bg-white dark:bg-gray-800 border border-gray-100 dark:border-gray-700 rounded-xl outline-none focus:ring-2 focus:ring-orange-200 dark:focus:ring-orange-800 text-sm transition-colors dark:text-gray-100"
                         value={recipeSearchTerm}
                         onChange={(e) => setRecipeSearchTerm(e.target.value)}
                     />
                 </div>
+
+                {/* Recipe Suggestions */}
+                {!recipeSearchTerm && suggestedRecipes.list.length > 0 && (
+                    <div className="mb-4 space-y-2">
+                        <div className="flex items-center gap-1.5 text-xs font-bold text-orange-500 uppercase tracking-wider">
+                            <Sparkles size={14} />
+                            {suggestedRecipes.title}
+                        </div>
+                        <div className="grid grid-cols-2 gap-2">
+                            {suggestedRecipes.list.map(recipe => (
+                                <button
+                                    key={`sug-${recipe.id}`}
+                                    onClick={() => loadRecipe(recipe)}
+                                    className="p-3 bg-orange-50/50 dark:bg-orange-900/20 border border-orange-100 dark:border-orange-800/50 rounded-xl text-left hover:bg-orange-100 dark:hover:bg-orange-900/40 transition-colors shadow-sm active:scale-95"
+                                >
+                                    <div className="font-bold text-sm text-gray-800 dark:text-gray-200 line-clamp-1" title={recipe.name}>{recipe.name}</div>
+                                    <div className="text-[10px] text-gray-500">{recipe.ingredients.length} ingr.</div>
+                                </button>
+                            ))}
+                        </div>
+                    </div>
+                )}
 
                 {/* Saved recipes list */}
                 {filteredRecipes.length === 0 ? (
