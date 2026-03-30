@@ -1,5 +1,6 @@
 import React from 'react';
-import { ChefHat, Search, Plus, Trash2, Save, ChevronRight, Utensils, ArrowLeft, Sparkles } from 'lucide-react';
+import { ChefHat, Search, Plus, Trash2, Save, ChevronRight, Utensils, ArrowLeft, Sparkles, Mic, MicOff } from 'lucide-react';
+import { useVoiceRecognition } from '../hooks/useVoiceRecognition';
 import { motion } from 'motion/react';
 import { AppState } from '../hooks/useAppState';
 
@@ -30,7 +31,36 @@ export function RecipeTab({ state }: RecipeTabProps) {
         saveRecipe, saveAsNewRecipe, startNewRecipe, clearCookingState,
         filteredRecipes, recipeSearchTerm, setRecipeSearchTerm,
         loadRecipe, deleteRecipe,
+        setToast,
     } = state;
+
+    const { isListening, isSupported, startListening, stopListening, error: voiceError } = useVoiceRecognition();
+
+    const handleVoiceResult = React.useCallback((result: any) => {
+        if (!result.ingredientName) return;
+
+        // Find best matching ingredient
+        const lowerSearched = result.ingredientName.toLowerCase();
+        const matches = ingredients.filter(i => i.name.toLowerCase().includes(lowerSearched));
+
+        if (matches.length > 0) {
+            // Pick the first match or exact match if possible
+            const exact = matches.find(i => i.name.toLowerCase() === lowerSearched) || matches[0];
+            const weight = typeof result.amount === 'number' && !isNaN(result.amount) ? result.amount : undefined;
+            addIngredientToRecipe(exact, weight);
+            setToast(`Añadido por voz: ${exact.name} ${weight ? `(${weight}g)` : ''}`);
+        } else {
+            // Not found, launch creation UI
+            setNewIngredientName(result.ingredientName);
+            if (typeof result.amount === 'number' && !isNaN(result.amount)) {
+                // If they dictated an amount, we could theoretically put it somewhere, but new form only asks for HC/100g.
+                // We'll just pre-fill the name.
+            }
+            setShowAddIngredient(true);
+            setSearchTerm('');
+            setToast(`No se encontró "${result.ingredientName}". Puedes crearlo ahora.`);
+        }
+    }, [ingredients, addIngredientToRecipe, setToast, setNewIngredientName, setShowAddIngredient, setSearchTerm]);
 
     // Calculate effective carbs considering set-aside food
     const setAsideAmount = typeof setAsideValue === 'number' && setAsideValue > 0 ? setAsideValue : 0;
@@ -216,16 +246,34 @@ export function RecipeTab({ state }: RecipeTabProps) {
             </div>
 
             <div className="relative">
-                <div className="flex items-center bg-white dark:bg-gray-800 rounded-2xl p-1 border-2 border-orange-200 dark:border-orange-800/60 shadow-sm focus-within:border-orange-400 dark:focus-within:border-orange-500 transition-colors">
-                    <Search className="text-orange-400 ml-3" size={20} />
+                <div className={`flex items-center bg-white dark:bg-gray-800 rounded-2xl p-1 border-2 shadow-sm transition-colors ${isListening ? 'border-red-400 dark:border-red-600 shadow-red-100 dark:shadow-red-900/30 ring-2 ring-red-100 dark:ring-red-900/40' : 'border-orange-200 dark:border-orange-800/60 focus-within:border-orange-400 dark:focus-within:border-orange-500'}`}>
+                    <Search className={`${isListening ? 'text-red-400' : 'text-orange-400'} ml-3 transition-colors`} size={20} />
                     <input
                         type="text"
-                        placeholder="Buscar ingrediente para añadir..."
+                        placeholder={isListening ? 'Escuchando... Di "Añadir 150 gramos de arroz"' : 'Buscar ingrediente para añadir...'}
                         className="w-full px-3 py-2.5 bg-transparent outline-none text-gray-800 dark:text-gray-100 placeholder:text-gray-400 font-medium"
                         value={searchTerm}
                         onChange={(e) => setSearchTerm(e.target.value)}
                     />
+                    {isSupported && (
+                        <button
+                            onClick={() => {
+                                if (isListening) {
+                                    stopListening();
+                                } else {
+                                    startListening(handleVoiceResult);
+                                }
+                            }}
+                            className={`p-2 rounded-xl transition-all ${isListening ? 'bg-red-500 text-white animate-pulse' : 'bg-gray-50 dark:bg-gray-700 text-gray-400 dark:text-gray-500 hover:text-orange-500 hover:bg-orange-50 dark:hover:bg-orange-900/30'} mr-1`}
+                            title="Añadir por voz"
+                        >
+                            {isListening ? <Mic size={18} /> : <MicOff size={18} />}
+                        </button>
+                    )}
                 </div>
+                {voiceError && (
+                    <div className="text-xs text-red-500 px-2 mt-1">{voiceError}</div>
+                )}
                 {searchTerm && (
                     <div className="absolute z-10 w-full mt-1 bg-white dark:bg-gray-800 border border-gray-100 dark:border-gray-700 rounded-xl shadow-lg max-h-60 overflow-y-auto">
                         {filteredIngredients.map(i => (

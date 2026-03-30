@@ -459,10 +459,10 @@ export function useAppState() {
     }, []);
 
     // --- Handlers ---
-    const addIngredientToRecipe = (ingredient: Ingredient) => {
+    const addIngredientToRecipe = (ingredient: Ingredient, initialWeight?: number) => {
         const existing = currentRecipeIngredients.find(ri => ri.ingredientId === ingredient.id);
         if (existing) return;
-        const defaultWeight = getAdaptiveWeight(ingredient.id);
+        const defaultWeight = initialWeight !== undefined ? initialWeight : getAdaptiveWeight(ingredient.id);
         setCurrentRecipeIngredients([...currentRecipeIngredients, { ingredientId: ingredient.id, weight: defaultWeight }]);
         setSearchTerm('');
     };
