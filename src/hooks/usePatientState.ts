@@ -21,6 +21,7 @@ export interface PatientSettings {
         exercise: number; // Ej. -30 (%)
         illness: number;  // Ej. +20 (%)
     };
+    bolusHistory: { mealId: string; timestamp: string; dose: number }[];
 }
 
 const DEFAULT_SETTINGS: PatientSettings = {
@@ -37,7 +38,8 @@ const DEFAULT_SETTINGS: PatientSettings = {
     modifiers: {
         exercise: -30,
         illness: 20
-    }
+    },
+    bolusHistory: []
 };
 
 const migrateSettings = (data: any): PatientSettings => {
@@ -54,7 +56,8 @@ const migrateSettings = (data: any): PatientSettings => {
                 { time: '12:00', ratio: data.ratios.lunch || 1.0, isf: data.isf || 50 },
                 { time: '16:00', ratio: data.ratios.snack || 1.0, isf: data.isf || 50 },
                 { time: '21:00', ratio: data.ratios.dinner || 1.0, isf: data.isf || 50 }
-            ]
+            ],
+            bolusHistory: []
         };
     }
 
@@ -62,6 +65,7 @@ const migrateSettings = (data: any): PatientSettings => {
         ...DEFAULT_SETTINGS,
         ...data,
         profiles: data.profiles ?? DEFAULT_SETTINGS.profiles,
+        bolusHistory: data.bolusHistory ?? [],
         modifiers: {
             ...DEFAULT_SETTINGS.modifiers,
             ...(data.modifiers || {})

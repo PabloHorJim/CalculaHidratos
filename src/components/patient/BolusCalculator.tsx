@@ -4,11 +4,12 @@ import { usePatientState } from '../../hooks/usePatientState';
 import { useAppState } from '../../hooks/useAppState';
 
 export function BolusCalculator() {
-    const { settings, getActiveProfile } = usePatientState();
+    const { settings, getActiveProfile, saveSettings } = usePatientState();
     const { mealHistory, family } = useAppState();
 
     const [currentGlucose, setCurrentGlucose] = useState<number | ''>('');
     const [selectedCarbs, setSelectedCarbs] = useState<number | null>(null);
+    const [selectedMealId, setSelectedMealId] = useState<string | null>(null);
     const [extraCarbs, setExtraCarbs] = useState<number>(0);
     const [iob, setIob] = useState<number>(0);
 
@@ -19,24 +20,33 @@ export function BolusCalculator() {
     useEffect(() => {
         const twoHoursAgo = Date.now() - 2 * 60 * 60 * 1000;
         const recent = [...mealHistory].filter(m => m.timestamp > twoHoursAgo).sort((a, b) => b.timestamp - a.timestamp);
-        if (recent.length > 0 && selectedCarbs === null) {
-            // Find the first non-zero portion
-            const firstPortion = recent[0].portions?.find(p => p.portionCarbs > 0);
-            if (firstPortion) {
-                setSelectedCarbs(firstPortion.portionCarbs);
-            } else if (recent[0].totalCarbs > 0) {
-                // Not split yet! Infer patient's theoretical portion.
-                const activeProportions = family.filter(f => f.isActive).reduce((sum, f) => sum + f.proportion, 0);
+
+        if (recent.length > 0 && selectedCarbs === null && !selectedMealId) {
+            const latestMeal = recent[0];
+            const alreadyBolused = settings.bolusHistory?.some(b => b.mealId === latestMeal.id);
+
+            if (!alreadyBolused) {
                 const me = family.find(f => f.isDiabetic && f.isActive);
-                if (me && activeProportions > 0) {
-                    const theoreticalCarbs = recent[0].totalCarbs * (me.proportion / activeProportions);
-                    setSelectedCarbs(Math.round(theoreticalCarbs * 10) / 10);
-                } else {
-                    setSelectedCarbs(recent[0].totalCarbs);
+                const myPortion = latestMeal.portions?.find(p => p.memberName === me?.name && p.portionCarbs > 0);
+
+                if (myPortion) {
+                    setSelectedCarbs(myPortion.portionCarbs);
+                    setSelectedMealId(latestMeal.id);
+                } else if (latestMeal.totalCarbs > 0) {
+                    // Not split yet! Infer patient's theoretical portion.
+                    const activeProportions = family.filter(f => f.isActive).reduce((sum, f) => sum + f.proportion, 0);
+                    if (me && activeProportions > 0) {
+                        const theoreticalCarbs = latestMeal.totalCarbs * (me.proportion / activeProportions);
+                        setSelectedCarbs(Math.round(theoreticalCarbs * 10) / 10);
+                        setSelectedMealId(latestMeal.id);
+                    } else {
+                        setSelectedCarbs(latestMeal.totalCarbs);
+                        setSelectedMealId(latestMeal.id);
+                    }
                 }
             }
         }
-    }, [mealHistory]); // selectedCarbs deliberate omission to only auto-set once
+    }, [mealHistory, settings.bolusHistory, family]); // selectedCarbs deliberate omission to only auto-set once
 
     const recentMeals = useMemo(() => {
         const fourHoursAgo = Date.now() - 4 * 60 * 60 * 1000;
@@ -68,6 +78,24 @@ export function BolusCalculator() {
     const netBolus = Math.max(0, grossBolus - iob);
     // Apply Precision Rounding
     const recommendedDose = Math.round(netBolus / settings.precision) * settings.precision;
+
+    const handleRegisterBolus = () => {
+        if (!selectedMealId || recommendedDose <= 0) return;
+        const newRecord = {
+            mealId: selectedMealId,
+            timestamp: new Date().toISOString(),
+            dose: Number(recommendedDose.toFixed(1))
+        };
+        saveSettings({
+            ...settings,
+            bolusHistory: [newRecord, ...(settings.bolusHistory || [])].slice(0, 50)
+        });
+        setSelectedMealId(null);
+        setSelectedCarbs(null);
+        setExtraCarbs(0);
+        setCurrentGlucose('');
+        setIob(0);
+    };
 
     const isDangerousCorrection = correctionBolus < 0 && Math.abs(correctionBolus) > foodBolus;
 
@@ -124,21 +152,26 @@ export function BolusCalculator() {
                         <div className="text-[10px] text-slate-500 font-bold uppercase">Inferencia del Chef</div>
                         <div className="flex gap-2 overflow-x-auto pb-2 pb-1 snap-x">
                             {recentMeals.map(meal => {
-                                if (meal.portions && meal.portions.length > 0) {
-                                    return meal.portions.filter(p => p.portionCarbs > 0).map((p, i) => (
+                                const isBolused = settings.bolusHistory?.some(b => b.mealId === meal.id);
+                                if (isBolused) return null;
+
+                                const me = family.find(f => f.isDiabetic && f.isActive);
+                                const myPortion = meal.portions?.find(p => p.memberName === me?.name && p.portionCarbs > 0);
+
+                                if (myPortion) {
+                                    return (
                                         <button
-                                            key={`${meal.id}-${i}`}
-                                            onClick={() => setSelectedCarbs(p.portionCarbs)}
-                                            className={`snap-start shrink-0 px-3 py-2 rounded-xl text-left border transition-all ${selectedCarbs === p.portionCarbs ? 'bg-cyan-900 border-cyan-500' : 'bg-slate-900 border-slate-700 hover:border-slate-500'}`}
+                                            key={`${meal.id}-portion`}
+                                            onClick={() => { setSelectedCarbs(myPortion.portionCarbs); setSelectedMealId(meal.id); }}
+                                            className={`snap-start shrink-0 px-3 py-2 rounded-xl text-left border transition-all ${selectedMealId === meal.id ? 'bg-cyan-900 border-cyan-500' : 'bg-slate-900 border-slate-700 hover:border-slate-500'}`}
                                         >
                                             <div className="text-[10px] text-slate-400 truncate max-w-[80px]">{meal.recipeName}</div>
-                                            <div className="font-black text-slate-100">{p.portionCarbs.toFixed(1)}g</div>
+                                            <div className="font-black text-slate-100">{myPortion.portionCarbs.toFixed(1)}g</div>
                                         </button>
-                                    ));
+                                    );
                                 } else if (meal.totalCarbs > 0) {
                                     // Predict based on family proportion
                                     const activeProportions = family.filter(f => f.isActive).reduce((sum, f) => sum + f.proportion, 0);
-                                    const me = family.find(f => f.isDiabetic && f.isActive);
                                     let predictedCarbs = meal.totalCarbs;
                                     if (me && activeProportions > 0) {
                                         predictedCarbs = meal.totalCarbs * (me.proportion / activeProportions);
@@ -147,8 +180,8 @@ export function BolusCalculator() {
                                     return (
                                         <button
                                             key={`${meal.id}-predicted`}
-                                            onClick={() => setSelectedCarbs(val)}
-                                            className={`snap-start shrink-0 px-3 py-2 rounded-xl text-left border transition-all ${selectedCarbs === val ? 'bg-yellow-900/40 border-yellow-600' : 'bg-slate-900 border-slate-700 hover:border-slate-500'}`}
+                                            onClick={() => { setSelectedCarbs(val); setSelectedMealId(meal.id); }}
+                                            className={`snap-start shrink-0 px-3 py-2 rounded-xl text-left border transition-all ${selectedMealId === meal.id ? 'bg-yellow-900/40 border-yellow-600' : 'bg-slate-900 border-slate-700 hover:border-slate-500'}`}
                                         >
                                             <div className="text-[10px] text-yellow-500/80 truncate max-w-[80px] font-bold">Cocinando...</div>
                                             <div className="font-black text-slate-100">~{val.toFixed(1)}g</div>
@@ -262,6 +295,17 @@ export function BolusCalculator() {
                     </div>
                 )}
             </div>
+
+            {/* Registrar Bolo Button */}
+            {!isDangerousCorrection && recommendedDose > 0 && selectedMealId && (
+                <button
+                    onClick={handleRegisterBolus}
+                    className="w-full mt-4 py-4 bg-gradient-to-r from-cyan-600 to-cyan-500 hover:from-cyan-500 hover:to-cyan-400 text-white rounded-2xl font-black text-lg transition-colors shadow-[0_0_20px_rgba(8,145,178,0.4)] flex items-center justify-center gap-2"
+                >
+                    <Droplets size={20} />
+                    Registrar Bolo de {recommendedDose.toFixed(1)}U
+                </button>
+            )}
 
         </div>
     );
