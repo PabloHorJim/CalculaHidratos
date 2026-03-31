@@ -500,6 +500,33 @@ export function useAppState() {
         setCurrentRecipeIngredients(prev => prev.filter(ri => ri.ingredientId !== id));
     };
 
+    const recordEarlyMeal = (name: string, carbs: number) => {
+        setMealHistory(prevMeals => {
+            const now = Date.now();
+            const TWO_HOURS = 2 * 60 * 60 * 1000;
+            const recentDuplicateIndex = prevMeals.findIndex(
+                m => m.recipeName === name && (now - new Date(m.timestamp).getTime()) < TWO_HOURS
+            );
+
+            const newEntry: MealHistoryEntry = {
+                id: recentDuplicateIndex >= 0 ? prevMeals[recentDuplicateIndex].id : now.toString(),
+                timestamp: new Date().toISOString(),
+                recipeName: name,
+                totalCarbs: carbs,
+                netWeight: 0,
+                portions: []
+            };
+
+            if (recentDuplicateIndex >= 0) {
+                const updated = [...prevMeals];
+                updated[recentDuplicateIndex] = newEntry;
+                return updated;
+            } else {
+                return [newEntry, ...prevMeals].slice(0, 50);
+            }
+        });
+    };
+
     const saveRecipe = () => {
         if (!currentRecipeName || currentRecipeIngredients.length === 0) return;
 
@@ -528,6 +555,7 @@ export function useAppState() {
             setToast('Receta guardada');
         }
 
+        recordEarlyMeal(currentRecipeName, totalCarbs);
         // Do NOT clear recipe data — user explicitly requested this
         // Stay in cooking mode, do NOT switch tabs
     };
@@ -548,6 +576,7 @@ export function useAppState() {
         setRecipes(prev => [...prev, newRecipe]);
         setToast('Guardada como nueva receta');
         setEditingRecipeId(newRecipe.id);
+        recordEarlyMeal(currentRecipeName, totalCarbs);
         // Do NOT clear or switch tabs
     };
 

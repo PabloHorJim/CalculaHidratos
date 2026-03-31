@@ -5,7 +5,7 @@ import { useAppState } from '../../hooks/useAppState';
 
 export function BolusCalculator() {
     const { settings, getActiveProfile } = usePatientState();
-    const { mealHistory } = useAppState();
+    const { mealHistory, family } = useAppState();
 
     const [currentGlucose, setCurrentGlucose] = useState<number | ''>('');
     const [selectedCarbs, setSelectedCarbs] = useState<number | null>(null);
@@ -24,6 +24,16 @@ export function BolusCalculator() {
             const firstPortion = recent[0].portions?.find(p => p.portionCarbs > 0);
             if (firstPortion) {
                 setSelectedCarbs(firstPortion.portionCarbs);
+            } else if (recent[0].totalCarbs > 0) {
+                // Not split yet! Infer patient's theoretical portion.
+                const activeProportions = family.filter(f => f.isActive).reduce((sum, f) => sum + f.proportion, 0);
+                const me = family.find(f => f.isDiabetic && f.isActive);
+                if (me && activeProportions > 0) {
+                    const theoreticalCarbs = recent[0].totalCarbs * (me.proportion / activeProportions);
+                    setSelectedCarbs(Math.round(theoreticalCarbs * 10) / 10);
+                } else {
+                    setSelectedCarbs(recent[0].totalCarbs);
+                }
             }
         }
     }, [mealHistory]); // selectedCarbs deliberate omission to only auto-set once
@@ -113,18 +123,40 @@ export function BolusCalculator() {
                     <div className="space-y-2 pt-2 border-t border-slate-700/50">
                         <div className="text-[10px] text-slate-500 font-bold uppercase">Inferencia del Chef</div>
                         <div className="flex gap-2 overflow-x-auto pb-2 pb-1 snap-x">
-                            {recentMeals.map(meal => (
-                                meal.portions?.filter(p => p.portionCarbs > 0).map((p, i) => (
-                                    <button
-                                        key={`${meal.id}-${i}`}
-                                        onClick={() => setSelectedCarbs(p.portionCarbs)}
-                                        className={`snap-start shrink-0 px-3 py-2 rounded-xl text-left border transition-all ${selectedCarbs === p.portionCarbs ? 'bg-cyan-900 border-cyan-500' : 'bg-slate-900 border-slate-700 hover:border-slate-500'}`}
-                                    >
-                                        <div className="text-[10px] text-slate-400 truncate max-w-[80px]">{meal.recipeName}</div>
-                                        <div className="font-black text-slate-100">{p.portionCarbs.toFixed(1)}g</div>
-                                    </button>
-                                ))
-                            ))}
+                            {recentMeals.map(meal => {
+                                if (meal.portions && meal.portions.length > 0) {
+                                    return meal.portions.filter(p => p.portionCarbs > 0).map((p, i) => (
+                                        <button
+                                            key={`${meal.id}-${i}`}
+                                            onClick={() => setSelectedCarbs(p.portionCarbs)}
+                                            className={`snap-start shrink-0 px-3 py-2 rounded-xl text-left border transition-all ${selectedCarbs === p.portionCarbs ? 'bg-cyan-900 border-cyan-500' : 'bg-slate-900 border-slate-700 hover:border-slate-500'}`}
+                                        >
+                                            <div className="text-[10px] text-slate-400 truncate max-w-[80px]">{meal.recipeName}</div>
+                                            <div className="font-black text-slate-100">{p.portionCarbs.toFixed(1)}g</div>
+                                        </button>
+                                    ));
+                                } else if (meal.totalCarbs > 0) {
+                                    // Predict based on family proportion
+                                    const activeProportions = family.filter(f => f.isActive).reduce((sum, f) => sum + f.proportion, 0);
+                                    const me = family.find(f => f.isDiabetic && f.isActive);
+                                    let predictedCarbs = meal.totalCarbs;
+                                    if (me && activeProportions > 0) {
+                                        predictedCarbs = meal.totalCarbs * (me.proportion / activeProportions);
+                                    }
+                                    const val = Math.round(predictedCarbs * 10) / 10;
+                                    return (
+                                        <button
+                                            key={`${meal.id}-predicted`}
+                                            onClick={() => setSelectedCarbs(val)}
+                                            className={`snap-start shrink-0 px-3 py-2 rounded-xl text-left border transition-all ${selectedCarbs === val ? 'bg-yellow-900/40 border-yellow-600' : 'bg-slate-900 border-slate-700 hover:border-slate-500'}`}
+                                        >
+                                            <div className="text-[10px] text-yellow-500/80 truncate max-w-[80px] font-bold">Cocinando...</div>
+                                            <div className="font-black text-slate-100">~{val.toFixed(1)}g</div>
+                                        </button>
+                                    );
+                                }
+                                return null;
+                            })}
                         </div>
                     </div>
                 )}
