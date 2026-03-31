@@ -40,6 +40,35 @@ const DEFAULT_SETTINGS: PatientSettings = {
     }
 };
 
+const migrateSettings = (data: any): PatientSettings => {
+    if (!data) return DEFAULT_SETTINGS;
+
+    if (data.ratios && !data.profiles) {
+        return {
+            ...DEFAULT_SETTINGS,
+            targetBg: data.targetBg ?? DEFAULT_SETTINGS.targetBg,
+            dia: data.dia ?? DEFAULT_SETTINGS.dia,
+            profiles: [
+                { time: '00:00', ratio: data.ratios.dinner || 1.0, isf: data.isf || 50 },
+                { time: '06:00', ratio: data.ratios.breakfast || 1.0, isf: data.isf || 50 },
+                { time: '12:00', ratio: data.ratios.lunch || 1.0, isf: data.isf || 50 },
+                { time: '16:00', ratio: data.ratios.snack || 1.0, isf: data.isf || 50 },
+                { time: '21:00', ratio: data.ratios.dinner || 1.0, isf: data.isf || 50 }
+            ]
+        };
+    }
+
+    return {
+        ...DEFAULT_SETTINGS,
+        ...data,
+        profiles: data.profiles ?? DEFAULT_SETTINGS.profiles,
+        modifiers: {
+            ...DEFAULT_SETTINGS.modifiers,
+            ...(data.modifiers || {})
+        }
+    };
+};
+
 export function usePatientState() {
     const [settings, setSettings] = useState<PatientSettings>(DEFAULT_SETTINGS);
     const [user, setUser] = useState<User | null>(null);
@@ -51,7 +80,7 @@ export function usePatientState() {
         const local = localStorage.getItem(PATIENT_SETTINGS_KEY);
         if (local) {
             try {
-                setSettings(JSON.parse(local));
+                setSettings(migrateSettings(JSON.parse(local)));
             } catch (e) {
                 console.error("Failed to parse local patient settings", e);
             }
@@ -71,8 +100,9 @@ export function usePatientState() {
                     if (snap.exists()) {
                         const data = snap.data();
                         if (data.patientSettings) {
-                            setSettings(data.patientSettings);
-                            localStorage.setItem(PATIENT_SETTINGS_KEY, JSON.stringify(data.patientSettings));
+                            const migrated = migrateSettings(data.patientSettings);
+                            setSettings(migrated);
+                            localStorage.setItem(PATIENT_SETTINGS_KEY, JSON.stringify(migrated));
                         }
                     }
                 } catch (e) {
