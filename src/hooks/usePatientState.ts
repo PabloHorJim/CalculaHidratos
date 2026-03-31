@@ -151,7 +151,10 @@ export function usePatientState() {
 
         const range = nMins - cMins;
         const elapsed = evalMins - cMins;
-        const progress = Math.max(0, Math.min(1, elapsed / range));
+        const t = Math.max(0, Math.min(1, elapsed / range));
+
+        // Quadratic ease-in-out interpolation
+        const progress = t < 0.5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) / 2;
 
         const exactRatio = currentP.ratio + (nextP.ratio - currentP.ratio) * progress;
         const exactIsf = currentP.isf + (nextP.isf - currentP.isf) * progress;

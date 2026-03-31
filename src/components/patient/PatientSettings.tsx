@@ -46,12 +46,26 @@ export function PatientSettings() {
             local.profiles.forEach((p, i) => {
                 const x = getX(p.time);
                 const y = getY(p.ratio);
-                path += `${x},${y} `;
+
+                if (i === 0) {
+                    path += `M ${x},${y} `;
+                } else {
+                    const prevP = local.profiles[i - 1];
+                    const prevX = getX(prevP.time);
+                    const prevY = getY(prevP.ratio);
+                    // Control points for ease-in-out (flat tangents)
+                    const cp1x = prevX + (x - prevX) / 2;
+                    const cp2x = x - (x - prevX) / 2;
+                    path += `C ${cp1x},${prevY} ${cp2x},${y} ${x},${y} `;
+                }
+
                 // wrap around point for visually closing the 24h cycle
                 if (i === local.profiles.length - 1) {
                     const firstX = getX(local.profiles[0].time) + width;
                     const firstY = getY(local.profiles[0].ratio);
-                    path += `${firstX},${firstY} `;
+                    const cp1x = x + (firstX - x) / 2;
+                    const cp2x = firstX - (firstX - x) / 2;
+                    path += `C ${cp1x},${y} ${cp2x},${firstY} ${firstX},${firstY} `;
                 }
             });
         } else {
@@ -59,11 +73,16 @@ export function PatientSettings() {
             local.profiles.forEach((p, i) => {
                 const x = getX(p.time);
                 const y = getY(p.ratio);
+
+                if (i === 0) {
+                    path += `M ${x},${y} `;
+                }
+
                 const nextP = local.profiles[(i + 1) % local.profiles.length];
                 let nextX = getX(nextP.time);
                 if (nextX <= x) nextX += width;
 
-                path += `${x},${y} ${nextX},${y} `;
+                path += `L ${nextX},${y} L ${nextX},${getY(nextP.ratio)} `;
             });
         }
 
@@ -105,8 +124,8 @@ export function PatientSettings() {
                         <line x1="120" y1="0" x2="120" y2="100" stroke="#334155" strokeWidth="0.5" strokeDasharray="2" />
                         <line x1="180" y1="0" x2="180" y2="100" stroke="#334155" strokeWidth="0.5" strokeDasharray="2" />
 
-                        <polyline
-                            points={polylinePoints}
+                        <path
+                            d={polylinePoints}
                             fill="none"
                             stroke="#22d3ee"
                             strokeWidth="3"
