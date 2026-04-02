@@ -28,7 +28,7 @@ const TUTORIAL_KEY = 'carbcalc_tutorial_done';
 const DARK_MODE_KEY = 'carbcalc_dark_mode';
 const CONSENT_KEY = 'carbcalc_consent';
 
-export type TabType = 'recipe' | 'split' | 'family' | 'cookware' | 'history' | 'group' | 'stats' | 'legal';
+export type TabType = 'recipe' | 'split' | 'family' | 'cookware' | 'history' | 'group' | 'stats' | 'legal' | 'ingredients';
 
 // Ordered tabs for swipe navigation (main nav bar tabs only)
 export const MAIN_TABS: TabType[] = ['recipe', 'split', 'family'];
@@ -496,6 +496,23 @@ export function useAppState() {
         setToast('Ingrediente creado y añadido');
     };
 
+    const createCustomIngredient = (name: string, carbs: number) => {
+        const newIngredient: Ingredient = {
+            id: Date.now().toString(),
+            name,
+            carbsPer100g: carbs
+        };
+        setIngredients(prev => [...prev, newIngredient]);
+    };
+
+    const removeCustomIngredient = (id: string) => {
+        setIngredients(prev => prev.filter(i => i.id !== id));
+    };
+
+    const updateCustomIngredient = (id: string, updates: Partial<Ingredient>) => {
+        setIngredients(prev => prev.map(i => i.id === id ? { ...i, ...updates } : i));
+    };
+
     const updateIngredientWeight = (id: string, weight: number) => {
         setCurrentRecipeIngredients(prev =>
             prev.map(ri => ri.ingredientId === id ? { ...ri, weight } : ri)
@@ -939,6 +956,7 @@ export function useAppState() {
 
         // Handlers
         addIngredientToRecipe, createAndAddIngredient,
+        createCustomIngredient, removeCustomIngredient, updateCustomIngredient,
         updateIngredientWeight, removeIngredientFromRecipe,
         saveRecipe, saveAsNewRecipe, loadRecipe, startNewRecipe, clearCookingState, deleteRecipe,
         toggleFamilyMember, updateFamilyMember, addFamilyMember, removeFamilyMember,

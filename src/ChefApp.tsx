@@ -16,6 +16,7 @@ import { RecipeTab } from './components/RecipeTab';
 import { SplitTab } from './components/SplitTab';
 import { FamilyTab } from './components/FamilyTab';
 import { CookwareTab } from './components/CookwareTab';
+import { IngredientsTab } from './components/IngredientsTab';
 import { HistoryTab } from './components/HistoryTab';
 import { StatsTab } from './components/StatsTab';
 import { LegalNotice } from './components/LegalNotice';
@@ -132,6 +133,7 @@ export default function ChefApp() {
             {activeTab === 'split' && <SplitTab state={state} />}
             {activeTab === 'family' && <FamilyTab state={state} />}
             {activeTab === 'cookware' && <CookwareTab state={state} />}
+            {activeTab === 'ingredients' && <IngredientsTab state={state} />}
             {activeTab === 'history' && <HistoryTab state={state} />}
             {activeTab === 'stats' && <StatsTab state={state} />}
             {activeTab === 'legal' && <LegalNotice />}

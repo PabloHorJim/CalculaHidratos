@@ -2,7 +2,7 @@ import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
     Calculator, History, Utensils, Percent, Download,
-    LogIn, LogOut, BarChart3, Shield, Mail, Moon, Sun, FileDown
+    LogIn, LogOut, BarChart3, Shield, Mail, Moon, Sun, FileDown, Database
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { SidebarButton } from './SidebarButton';
@@ -91,8 +91,14 @@ export function Sidebar({ state }: SidebarProps) {
                                 description="Datos para diabéticos"
                             />
 
-                            {/* Settings Section */}
                             <div className="text-[9px] font-black text-gray-300 dark:text-gray-600 uppercase tracking-widest px-3 pt-4 pb-1">Configuración</div>
+                            <SidebarButton
+                                active={activeTab === 'ingredients'}
+                                onClick={() => { setActiveTab('ingredients'); setIsSidebarOpen(false); }}
+                                icon={<Database size={20} />}
+                                label="Base de Datos"
+                                description="Gestionar ingredientes"
+                            />
                             <SidebarButton
                                 active={activeTab === 'cookware'}
                                 onClick={() => { setActiveTab('cookware'); setIsSidebarOpen(false); }}
