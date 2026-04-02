@@ -3,6 +3,7 @@ import { BarChart3, Menu } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { PatientSettings } from './PatientSettings';
 import { BolusCalculator } from './BolusCalculator';
+import { PatientStats } from './PatientStats';
 import { PatientSidebar } from './PatientSidebar';
 import { usePatientState } from '../../hooks/usePatientState';
 import { useAppState } from '../../hooks/useAppState';
@@ -54,13 +55,7 @@ export default function PatientApp() {
                 >
                     {currentView === 'calculator' && <BolusCalculator patientState={patientState} appState={appState} />}
                     {currentView === 'therapy' && <PatientSettings patientState={patientState} />}
-                    {currentView === 'stats' && (
-                        <div className="p-8 text-center text-slate-500">
-                            <BarChart3 className="w-16 h-16 mx-auto mb-4 opacity-50" />
-                            <h3 className="text-lg font-bold text-slate-300">Estadísticas Clínicas</h3>
-                            <p className="text-sm mt-2">Detección de patrones y métricas de control (Próximamente)</p>
-                        </div>
-                    )}
+                    {currentView === 'stats' && <PatientStats patientState={patientState} />}
                 </motion.div>
             </AnimatePresence>
         </div>

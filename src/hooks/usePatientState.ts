@@ -21,7 +21,16 @@ export interface PatientSettings {
         exercise: number; // Ej. -30 (%)
         illness: number;  // Ej. +20 (%)
     };
-    bolusHistory: { mealId: string; timestamp: string; dose: number }[];
+    bolusHistory: {
+        mealId: string;
+        timestamp: string;
+        dose?: number; // legacy
+        suggestedDose?: number;
+        administeredDose?: number;
+        glucose?: number;
+        carbs?: number;
+        iob?: number
+    }[];
 }
 
 const DEFAULT_SETTINGS: PatientSettings = {

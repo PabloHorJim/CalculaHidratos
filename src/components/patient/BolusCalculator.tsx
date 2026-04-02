@@ -22,6 +22,7 @@ export function BolusCalculator({ patientState, appState }: BolusCalculatorProps
     const [isIllness, setIsIllness] = useState(false);
 
     const [hasInferredThisSession, setHasInferredThisSession] = useState(false);
+    const [overrideDose, setOverrideDose] = useState<number | null>(null);
 
     // Auto-infer carbs from the most recent meal in the last 2 hours
     useEffect(() => {
@@ -93,12 +94,24 @@ export function BolusCalculator({ patientState, appState }: BolusCalculatorProps
     const precisionDecimals = settings.precision < 0.1 ? 2 : 1;
     const recommendedDose = Number(rawRecommended.toFixed(precisionDecimals));
 
+    // Clear override if underlying recommendation changes due to inputs changing
+    useEffect(() => {
+        setOverrideDose(null);
+    }, [recommendedDose]);
+
+    const finalDose = overrideDose !== null ? overrideDose : recommendedDose;
+
     const handleRegisterBolus = () => {
-        if (!selectedMealId || recommendedDose <= 0) return;
+        if (!selectedMealId || finalDose <= 0) return;
         const newRecord = {
             mealId: selectedMealId,
             timestamp: new Date().toISOString(),
-            dose: Number(recommendedDose.toFixed(1))
+            dose: Number(finalDose.toFixed(precisionDecimals)), // legacy
+            suggestedDose: Number(recommendedDose.toFixed(precisionDecimals)),
+            administeredDose: Number(finalDose.toFixed(precisionDecimals)),
+            glucose: bg,
+            carbs: totalCarbs,
+            iob: iob
         };
         saveSettings({
             ...settings,
@@ -109,6 +122,7 @@ export function BolusCalculator({ patientState, appState }: BolusCalculatorProps
         setExtraCarbs(0);
         setCurrentGlucose('');
         setIob(0);
+        setOverrideDose(null);
     };
 
     const isDangerousCorrection = correctionBolus < 0 && Math.abs(correctionBolus) > foodBolus;
@@ -277,8 +291,23 @@ export function BolusCalculator({ patientState, appState }: BolusCalculatorProps
             {/* Final Target */}
             <div className="bg-gradient-to-br from-cyan-900 to-slate-900 border border-cyan-800 p-6 rounded-3xl shadow-xl mt-4">
                 <div className="text-center mb-6">
-                    <div className="text-xs text-cyan-300/70 font-bold uppercase tracking-widest mb-1">Dosis Recomendada</div>
-                    <div className="text-6xl font-black text-white">{recommendedDose.toFixed(precisionDecimals)} <span className="text-2xl text-cyan-400">U</span></div>
+                    <div className="text-xs text-cyan-300/70 font-bold uppercase tracking-widest mb-1">Dosis Administrada</div>
+                    <div className="flex items-center justify-center gap-4">
+                        <button
+                            onClick={() => setOverrideDose(Math.max(0, finalDose - settings.precision))}
+                            className="w-12 h-12 rounded-full bg-slate-800 text-cyan-400 font-bold text-2xl flex items-center justify-center border border-cyan-700 shadow-md hover:bg-slate-700 active:scale-95 transition-all"
+                        >-</button>
+                        <div className="text-6xl font-black text-white w-32">{finalDose.toFixed(precisionDecimals)} <span className="text-2xl text-cyan-400">U</span></div>
+                        <button
+                            onClick={() => setOverrideDose(finalDose + settings.precision)}
+                            className="w-12 h-12 rounded-full bg-slate-800 text-cyan-400 font-bold text-2xl flex items-center justify-center border border-cyan-700 shadow-md hover:bg-slate-700 active:scale-95 transition-all"
+                        >+</button>
+                    </div>
+                    {overrideDose !== null && overrideDose !== recommendedDose && (
+                        <div className="text-[10px] text-yellow-500/90 font-bold mt-3 uppercase tracking-widest">
+                            Sugerencia original: {recommendedDose.toFixed(precisionDecimals)}U
+                        </div>
+                    )}
                 </div>
 
                 <div className="space-y-2 text-[10px] uppercase font-bold text-slate-300">
@@ -315,13 +344,13 @@ export function BolusCalculator({ patientState, appState }: BolusCalculatorProps
             </div>
 
             {/* Registrar Bolo Button */}
-            {!isDangerousCorrection && recommendedDose > 0 && selectedMealId && (
+            {!isDangerousCorrection && finalDose > 0 && selectedMealId && (
                 <button
                     onClick={handleRegisterBolus}
                     className="w-full mt-4 py-4 bg-gradient-to-r from-cyan-600 to-cyan-500 hover:from-cyan-500 hover:to-cyan-400 text-white rounded-2xl font-black text-lg transition-colors shadow-[0_0_20px_rgba(8,145,178,0.4)] flex items-center justify-center gap-2"
                 >
                     <Droplets size={20} />
-                    Registrar Bolo de {recommendedDose.toFixed(precisionDecimals)}U
+                    Registrar Bolo de {finalDose.toFixed(precisionDecimals)}U
                 </button>
             )}
 
