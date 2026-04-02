@@ -28,7 +28,9 @@ export function BolusCalculator({ patientState, appState }: BolusCalculatorProps
         if (hasInferredThisSession) return;
 
         const twoHoursAgo = Date.now() - 2 * 60 * 60 * 1000;
-        const recent = [...mealHistory].filter(m => m.timestamp > twoHoursAgo).sort((a, b) => b.timestamp - a.timestamp);
+        const recent = [...mealHistory]
+            .filter(m => new Date(m.timestamp).getTime() > twoHoursAgo)
+            .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
 
         if (recent.length > 0 && selectedCarbs === null && !selectedMealId) {
             setHasInferredThisSession(true);
@@ -37,10 +39,10 @@ export function BolusCalculator({ patientState, appState }: BolusCalculatorProps
 
             if (!alreadyBolused) {
                 const me = family.find(f => f.isDiabetic && f.isActive);
-                const myPortion = latestMeal.portions?.find(p => p.memberName === me?.name && p.portionCarbs > 0);
+                const myPortion = latestMeal.portions?.find(p => p.memberName === me?.name && p.carbs > 0);
 
                 if (myPortion) {
-                    setSelectedCarbs(myPortion.portionCarbs);
+                    setSelectedCarbs(myPortion.carbs);
                     setSelectedMealId(latestMeal.id);
                 } else if (latestMeal.totalCarbs > 0) {
                     // Not split yet! Infer patient's theoretical portion.
@@ -61,8 +63,8 @@ export function BolusCalculator({ patientState, appState }: BolusCalculatorProps
     const recentMeals = useMemo(() => {
         const fourHoursAgo = Date.now() - 4 * 60 * 60 * 1000;
         return [...mealHistory]
-            .filter(m => m.timestamp > fourHoursAgo)
-            .reverse()
+            .filter(m => new Date(m.timestamp).getTime() > fourHoursAgo)
+            .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime())
             .slice(0, 3);
     }, [mealHistory]);
 
@@ -172,17 +174,17 @@ export function BolusCalculator({ patientState, appState }: BolusCalculatorProps
                                 if (isBolused) return null;
 
                                 const me = family.find(f => f.isDiabetic && f.isActive);
-                                const myPortion = meal.portions?.find(p => p.memberName === me?.name && p.portionCarbs > 0);
+                                const myPortion = meal.portions?.find(p => p.memberName === me?.name && p.carbs > 0);
 
                                 if (myPortion) {
                                     return (
                                         <button
                                             key={`${meal.id}-portion`}
-                                            onClick={() => { setSelectedCarbs(myPortion.portionCarbs); setSelectedMealId(meal.id); }}
+                                            onClick={() => { setSelectedCarbs(myPortion.carbs); setSelectedMealId(meal.id); }}
                                             className={`snap-start shrink-0 px-3 py-2 rounded-xl text-left border transition-all ${selectedMealId === meal.id ? 'bg-cyan-900 border-cyan-500' : 'bg-slate-900 border-slate-700 hover:border-slate-500'}`}
                                         >
                                             <div className="text-[10px] text-slate-400 truncate max-w-[80px]">{meal.recipeName}</div>
-                                            <div className="font-black text-slate-100">{myPortion.portionCarbs.toFixed(1)}g</div>
+                                            <div className="font-black text-slate-100">{myPortion.carbs.toFixed(1)}g</div>
                                         </button>
                                     );
                                 } else if (meal.totalCarbs > 0) {
