@@ -11,11 +11,12 @@ interface PatientSidebarProps {
     setIsOpen: (open: boolean) => void;
     currentView: 'calculator' | 'stats' | 'therapy';
     setCurrentView: (view: 'calculator' | 'stats' | 'therapy') => void;
+    patientState: ReturnType<typeof usePatientState>;
 }
 
-export function PatientSidebar({ isOpen, setIsOpen, currentView, setCurrentView }: PatientSidebarProps) {
+export function PatientSidebar({ isOpen, setIsOpen, currentView, setCurrentView, patientState }: PatientSidebarProps) {
     const navigate = useNavigate();
-    const { user } = usePatientState();
+    const { user } = patientState;
 
     if (!isOpen) return null;
 

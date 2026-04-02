@@ -1,11 +1,16 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { Plus, Calculator, Utensils, AlertTriangle, Activity, Thermometer, Droplets } from 'lucide-react';
 import { usePatientState } from '../../hooks/usePatientState';
-import { useAppState } from '../../hooks/useAppState';
+import { AppState } from '../../hooks/useAppState';
 
-export function BolusCalculator() {
-    const { settings, getActiveProfile, saveSettings } = usePatientState();
-    const { mealHistory, family } = useAppState();
+interface BolusCalculatorProps {
+    patientState: ReturnType<typeof usePatientState>;
+    appState: AppState;
+}
+
+export function BolusCalculator({ patientState, appState }: BolusCalculatorProps) {
+    const { settings, getActiveProfile, saveSettings } = patientState;
+    const { mealHistory, family } = appState;
 
     const [currentGlucose, setCurrentGlucose] = useState<number | ''>('');
     const [selectedCarbs, setSelectedCarbs] = useState<number | null>(null);
@@ -16,12 +21,17 @@ export function BolusCalculator() {
     const [isExercise, setIsExercise] = useState(false);
     const [isIllness, setIsIllness] = useState(false);
 
+    const [hasInferredThisSession, setHasInferredThisSession] = useState(false);
+
     // Auto-infer carbs from the most recent meal in the last 2 hours
     useEffect(() => {
+        if (hasInferredThisSession) return;
+
         const twoHoursAgo = Date.now() - 2 * 60 * 60 * 1000;
         const recent = [...mealHistory].filter(m => m.timestamp > twoHoursAgo).sort((a, b) => b.timestamp - a.timestamp);
 
         if (recent.length > 0 && selectedCarbs === null && !selectedMealId) {
+            setHasInferredThisSession(true);
             const latestMeal = recent[0];
             const alreadyBolused = settings.bolusHistory?.some(b => b.mealId === latestMeal.id);
 
@@ -75,9 +85,11 @@ export function BolusCalculator() {
         grossBolus = grossBolus * (1 + (settings.modifiers.illness / 100)); // e.g. +20% -> * 1.20
     }
 
-    const netBolus = Math.max(0, grossBolus - iob);
+    const netBolus = foodBolus + Math.max(0, correctionBolus - iob);
     // Apply Precision Rounding
-    const recommendedDose = Math.round(netBolus / settings.precision) * settings.precision;
+    const rawRecommended = Math.round(netBolus / settings.precision) * settings.precision;
+    const precisionDecimals = settings.precision < 0.1 ? 2 : 1;
+    const recommendedDose = Number(rawRecommended.toFixed(precisionDecimals));
 
     const handleRegisterBolus = () => {
         if (!selectedMealId || recommendedDose <= 0) return;
@@ -136,8 +148,12 @@ export function BolusCalculator() {
                         <input
                             type="number"
                             id="manual-carbs"
+                            min="0"
                             value={selectedCarbs !== null ? Number(selectedCarbs).toString() : ''}
-                            onChange={(e) => setSelectedCarbs(e.target.value ? Number(e.target.value) : null)}
+                            onChange={(e) => {
+                                const val = e.target.value ? Number(e.target.value) : null;
+                                setSelectedCarbs(val !== null ? Math.max(0, val) : null);
+                            }}
                             placeholder="Ej. 45"
                             className="bg-transparent w-full text-slate-100 font-black text-2xl outline-none placeholder-slate-700"
                             aria-label="Gramos de carbohidratos"
@@ -260,7 +276,7 @@ export function BolusCalculator() {
             <div className="bg-gradient-to-br from-cyan-900 to-slate-900 border border-cyan-800 p-6 rounded-3xl shadow-xl mt-4">
                 <div className="text-center mb-6">
                     <div className="text-xs text-cyan-300/70 font-bold uppercase tracking-widest mb-1">Dosis Recomendada</div>
-                    <div className="text-6xl font-black text-white">{recommendedDose.toFixed(1)} <span className="text-2xl text-cyan-400">U</span></div>
+                    <div className="text-6xl font-black text-white">{recommendedDose.toFixed(precisionDecimals)} <span className="text-2xl text-cyan-400">U</span></div>
                 </div>
 
                 <div className="space-y-2 text-[10px] uppercase font-bold text-slate-300">
@@ -303,7 +319,7 @@ export function BolusCalculator() {
                     className="w-full mt-4 py-4 bg-gradient-to-r from-cyan-600 to-cyan-500 hover:from-cyan-500 hover:to-cyan-400 text-white rounded-2xl font-black text-lg transition-colors shadow-[0_0_20px_rgba(8,145,178,0.4)] flex items-center justify-center gap-2"
                 >
                     <Droplets size={20} />
-                    Registrar Bolo de {recommendedDose.toFixed(1)}U
+                    Registrar Bolo de {recommendedDose.toFixed(precisionDecimals)}U
                 </button>
             )}
 

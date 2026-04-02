@@ -2,8 +2,12 @@ import React, { useState, useMemo } from 'react';
 import { Save, AlertCircle, Target, Clock, Settings, Activity, Thermometer, Plus, Trash2 } from 'lucide-react';
 import { usePatientState, PatientSettings as SettingsType, TimeProfile } from '../../hooks/usePatientState';
 
-export function PatientSettings() {
-    const { settings, saveSettings, saveStatus } = usePatientState();
+interface PatientSettingsProps {
+    patientState: ReturnType<typeof usePatientState>;
+}
+
+export function PatientSettings({ patientState }: PatientSettingsProps) {
+    const { settings, saveSettings, saveStatus } = patientState;
     const [local, setLocal] = useState<SettingsType>(settings);
 
     const handleSave = () => saveSettings(local);
@@ -161,9 +165,9 @@ export function PatientSettings() {
                                 <div className="flex-1 bg-slate-800 rounded-lg px-2 py-1 flex items-center justify-between border border-slate-700 focus-within:border-cyan-500">
                                     <span className="text-[10px] text-slate-500 font-bold">R</span>
                                     <input
-                                        type="number" step="0.1"
+                                        type="number" step="0.1" min="0.1"
                                         value={profile.ratio}
-                                        onChange={(e) => updateProfile(i, 'ratio', Number(e.target.value))}
+                                        onChange={(e) => updateProfile(i, 'ratio', Math.max(0.1, Number(e.target.value)))}
                                         className="bg-transparent text-right w-12 text-slate-200 font-bold text-sm outline-none"
                                         aria-label="Ratio de hidratos en Unidades por 10g"
                                     />
@@ -171,9 +175,9 @@ export function PatientSettings() {
                                 <div className="flex-1 bg-slate-800 rounded-lg px-2 py-1 flex items-center justify-between border border-slate-700 focus-within:border-cyan-500">
                                     <span className="text-[10px] text-slate-500 font-bold">ISF</span>
                                     <input
-                                        type="number" step="1"
+                                        type="number" step="1" min="1"
                                         value={profile.isf}
-                                        onChange={(e) => updateProfile(i, 'isf', Number(e.target.value))}
+                                        onChange={(e) => updateProfile(i, 'isf', Math.max(1, Number(e.target.value)))}
                                         className="bg-transparent text-right w-12 text-slate-200 font-bold text-sm outline-none"
                                         aria-label="Sensibilidad (mg/dL por Unidad)"
                                     />

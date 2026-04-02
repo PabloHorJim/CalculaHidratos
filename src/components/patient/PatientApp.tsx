@@ -4,12 +4,18 @@ import { motion, AnimatePresence } from 'motion/react';
 import { PatientSettings } from './PatientSettings';
 import { BolusCalculator } from './BolusCalculator';
 import { PatientSidebar } from './PatientSidebar';
+import { usePatientState } from '../../hooks/usePatientState';
+import { useAppState } from '../../hooks/useAppState';
 
 type ViewMode = 'calculator' | 'stats' | 'therapy';
 
 export default function PatientApp() {
     const [currentView, setCurrentView] = useState<ViewMode>('calculator');
     const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+
+    // Lift state up to provide a single source of truth for the entire Patient routing subtree
+    const patientState = usePatientState();
+    const appState = useAppState();
 
     return (
         <div className="min-h-screen bg-slate-900 text-slate-100 font-sans selection:bg-cyan-500/30">
@@ -35,6 +41,7 @@ export default function PatientApp() {
                 setIsOpen={setIsSidebarOpen}
                 currentView={currentView}
                 setCurrentView={setCurrentView}
+                patientState={patientState}
             />
 
             <AnimatePresence mode="wait">
@@ -45,8 +52,8 @@ export default function PatientApp() {
                     exit={{ opacity: 0, scale: 0.98 }}
                     transition={{ duration: 0.2 }}
                 >
-                    {currentView === 'calculator' && <BolusCalculator />}
-                    {currentView === 'therapy' && <PatientSettings />}
+                    {currentView === 'calculator' && <BolusCalculator patientState={patientState} appState={appState} />}
+                    {currentView === 'therapy' && <PatientSettings patientState={patientState} />}
                     {currentView === 'stats' && (
                         <div className="p-8 text-center text-slate-500">
                             <BarChart3 className="w-16 h-16 mx-auto mb-4 opacity-50" />
