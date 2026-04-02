@@ -62,9 +62,8 @@ export function useAppState() {
     const [isInstallable, setIsInstallable] = useState(false);
     const [showTutorial, setShowTutorial] = useState(false);
 
-    // Dark mode
     const [isDarkMode, setIsDarkMode] = useState(() => {
-        return localStorage.getItem(DARK_MODE_KEY) === 'true';
+        return window.matchMedia('(prefers-color-scheme: dark)').matches;
     });
 
     // Cookie consent
@@ -95,7 +94,7 @@ export function useAppState() {
     const [cachedRecipeName, setCachedRecipeName] = useState('');
     const [setAsideMode, setSetAsideMode] = useState<'none' | 'percentage' | 'absolute'>('none');
     const [setAsideValue, setSetAsideValue] = useState<number | ''>('');
-    const [portionErrorPercent, setPortionErrorPercent] = useState(0);
+    const [portionErrorPercent, setPortionErrorPercent] = useState(5);
     const [isErrorDisabledForCurrentSplit, setIsErrorDisabledForCurrentSplit] = useState(false);
 
     // Auto-save state for reparto
@@ -109,17 +108,17 @@ export function useAppState() {
 
     // --- Dark mode effect ---
     useEffect(() => {
-        if (isDarkMode) {
-            document.documentElement.classList.add('dark');
-        } else {
-            document.documentElement.classList.remove('dark');
-        }
-        localStorage.setItem(DARK_MODE_KEY, String(isDarkMode));
+        const dmMq = window.matchMedia('(prefers-color-scheme: dark)');
+        const listener = (e: MediaQueryListEvent) => setIsDarkMode(e.matches);
+        dmMq.addEventListener('change', listener);
+
+        if (isDarkMode) document.documentElement.classList.add('dark');
+        else document.documentElement.classList.remove('dark');
+
+        return () => dmMq.removeEventListener('change', listener);
     }, [isDarkMode]);
 
-    const toggleDarkMode = useCallback(() => {
-        setIsDarkMode(prev => !prev);
-    }, []);
+    const toggleDarkMode = useCallback(() => { }, []);
 
     const acceptConsent = useCallback(() => {
         setHasConsent(true);
@@ -179,16 +178,22 @@ export function useAppState() {
         if (cookingSaved) {
             try {
                 const parsed = JSON.parse(cookingSaved);
-                if (parsed.currentRecipeName) setCurrentRecipeName(parsed.currentRecipeName);
-                if (parsed.currentRecipeIngredients) setCurrentRecipeIngredients(parsed.currentRecipeIngredients);
-                if (parsed.editingRecipeId) setEditingRecipeId(parsed.editingRecipeId);
-                if (parsed.cookingMode) setCookingMode(parsed.cookingMode);
-                if (parsed.selectedCookwareId) setSelectedCookwareId(parsed.selectedCookwareId);
-                if (typeof parsed.totalWeightWithCookware === 'number') setTotalWeightWithCookware(parsed.totalWeightWithCookware);
-                if (typeof parsed.cachedTotalCarbs === 'number') setCachedTotalCarbs(parsed.cachedTotalCarbs);
-                if (parsed.cachedRecipeName) setCachedRecipeName(parsed.cachedRecipeName);
-                if (parsed.setAsideMode) setSetAsideMode(parsed.setAsideMode);
-                if (typeof parsed.setAsideValue === 'number') setSetAsideValue(parsed.setAsideValue);
+                const isDraftExpired = parsed.lastModified && (Date.now() - parsed.lastModified > 60 * 60 * 1000);
+
+                if (!isDraftExpired) {
+                    if (parsed.currentRecipeName) setCurrentRecipeName(parsed.currentRecipeName);
+                    if (parsed.currentRecipeIngredients) setCurrentRecipeIngredients(parsed.currentRecipeIngredients);
+                    if (parsed.editingRecipeId) setEditingRecipeId(parsed.editingRecipeId);
+                    if (parsed.cookingMode) setCookingMode(parsed.cookingMode);
+                    if (parsed.selectedCookwareId) setSelectedCookwareId(parsed.selectedCookwareId);
+                    if (typeof parsed.totalWeightWithCookware === 'number') setTotalWeightWithCookware(parsed.totalWeightWithCookware);
+                    if (typeof parsed.cachedTotalCarbs === 'number') setCachedTotalCarbs(parsed.cachedTotalCarbs);
+                    if (parsed.cachedRecipeName) setCachedRecipeName(parsed.cachedRecipeName);
+                    if (parsed.setAsideMode) setSetAsideMode(parsed.setAsideMode);
+                    if (typeof parsed.setAsideValue === 'number') setSetAsideValue(parsed.setAsideValue);
+                } else {
+                    localStorage.removeItem(COOKING_STATE_KEY);
+                }
             } catch (e) {
                 console.error('Failed to load cooking state', e);
             }
@@ -211,6 +216,7 @@ export function useAppState() {
             cachedRecipeName,
             setAsideMode,
             setAsideValue,
+            lastModified: Date.now()
         };
         localStorage.setItem(COOKING_STATE_KEY, JSON.stringify(cookingState));
     }, [currentRecipeName, currentRecipeIngredients, editingRecipeId, cookingMode,

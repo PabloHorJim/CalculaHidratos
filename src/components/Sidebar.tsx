@@ -101,20 +101,6 @@ export function Sidebar({ state }: SidebarProps) {
                                 description="Ollas, sartenes y pesos"
                             />
 
-                            {/* Dark mode toggle */}
-                            <button
-                                onClick={toggleDarkMode}
-                                className="w-full flex items-center gap-3 p-3 text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 rounded-2xl transition-all"
-                                aria-label={`Cambiar a modo ${isDarkMode ? 'claro' : 'oscuro'}`}
-                            >
-                                <div className="text-gray-400 dark:text-gray-500">
-                                    {isDarkMode ? <Sun size={20} /> : <Moon size={20} />}
-                                </div>
-                                <div className="text-left">
-                                    <div className="text-sm font-bold leading-none mb-1">{isDarkMode ? 'Modo claro' : 'Modo oscuro'}</div>
-                                    <div className="text-[10px] text-gray-400 dark:text-gray-500 font-medium">Cambiar apariencia</div>
-                                </div>
-                            </button>
 
                             {/* Portion Error Config */}
                             <div className="pt-2">
@@ -133,7 +119,7 @@ export function Sidebar({ state }: SidebarProps) {
                                             type="range"
                                             id="portion-error-percent"
                                             min="0"
-                                            max="20"
+                                            max="10"
                                             step="1"
                                             value={portionErrorPercent}
                                             onChange={(e) => setPortionErrorPercent(Number(e.target.value))}

@@ -201,14 +201,27 @@ export function RecipeTab({ state }: RecipeTabProps) {
                     </h2>
                 </div>
 
-                {/* Quick cook button */}
-                <button
-                    onClick={startNewRecipe}
-                    className="w-full py-4 bg-gradient-to-r from-orange-500 to-amber-500 text-white rounded-2xl font-bold text-base shadow-lg shadow-orange-200 dark:shadow-orange-900/30 hover:shadow-xl transition-all flex items-center justify-center gap-2 active:scale-[0.98]"
-                >
-                    <Plus size={20} />
-                    Cocinar sin receta
-                </button>
+                <div className="space-y-2">
+                    {/* Quick cook button */}
+                    <button
+                        onClick={startNewRecipe}
+                        className="w-full py-4 bg-gradient-to-r from-orange-500 to-amber-500 text-white rounded-2xl font-bold text-base shadow-lg shadow-orange-200 dark:shadow-orange-900/30 hover:shadow-xl transition-all flex items-center justify-center gap-2 active:scale-[0.98]"
+                    >
+                        <Plus size={20} />
+                        Cocinar sin receta
+                    </button>
+
+                    {/* Resume cooking button (if there's an active recipe) */}
+                    {currentRecipeIngredients.length > 0 && (
+                        <button
+                            onClick={() => setCookingMode(true)}
+                            className="w-full py-3 bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 rounded-xl font-bold text-sm border border-blue-100 dark:border-blue-800 hover:bg-blue-100 dark:hover:bg-blue-900/50 transition-colors flex items-center justify-center gap-2"
+                        >
+                            <ChefHat size={18} />
+                            Continuar cocinando{currentRecipeName ? `: ${currentRecipeName}` : ''}
+                        </button>
+                    )}
+                </div>
 
                 {/* Recipe search */}
                 <div className="relative">
@@ -281,16 +294,7 @@ export function RecipeTab({ state }: RecipeTabProps) {
                     </div>
                 )}
 
-                {/* Resume cooking button (if there's an active recipe) */}
-                {currentRecipeIngredients.length > 0 && (
-                    <button
-                        onClick={() => setCookingMode(true)}
-                        className="w-full py-3 bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 rounded-xl font-bold text-sm border border-blue-100 dark:border-blue-800 hover:bg-blue-100 dark:hover:bg-blue-900/50 transition-colors flex items-center justify-center gap-2"
-                    >
-                        <ChefHat size={18} />
-                        Continuar cocinando{currentRecipeName ? `: ${currentRecipeName}` : ''}
-                    </button>
-                )}
+
             </div>
         );
     }
