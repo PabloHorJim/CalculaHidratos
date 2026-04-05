@@ -1,5 +1,5 @@
 import React, { useEffect, useRef } from 'react';
-import { Scale, Save, Share2, MessageSquare, X, Clock, Trash2, AlertTriangle } from 'lucide-react';
+import { Scale, Save, Share2, MessageSquare, Trash2, AlertTriangle } from 'lucide-react';
 import { motion } from 'motion/react';
 import { AppState } from '../hooks/useAppState';
 
@@ -18,7 +18,7 @@ export function SplitTab({ state }: SplitTabProps) {
         portionErrorPercent,
         isErrorDisabledForCurrentSplit, setIsErrorDisabledForCurrentSplit,
         currentRecipeName,
-        saveMealToHistory, sharePortion, copyPortionToClipboard, shareFullMeal,
+        saveMealToHistory, shareFullMeal,
         clearReparto, mealHistory
     } = state;
 
@@ -296,31 +296,14 @@ export function SplitTab({ state }: SplitTabProps) {
                                 </div>
                                 <div className="text-[10px] text-gray-400">Prop: {member.proportion}</div>
                             </div>
-                            <div className="flex items-center gap-4">
-                                <div className="text-right">
-                                    <div className="text-lg font-black text-gray-900 dark:text-gray-100 leading-none">{portion.toFixed(0)} <span className="text-xs font-normal">g</span></div>
-                                    {adjustedCarbs > 0 && (
-                                        <div className="text-xs font-bold text-orange-600 dark:text-orange-400 mt-0.5">{portionCarbs.toFixed(1)} <span className="text-[10px] font-normal">g HC</span></div>
-                                    )}
-                                </div>
-                                <div className="flex gap-2">
-                                    <button
-                                        onClick={() => copyPortionToClipboard(member.name, portion, portionCarbs, member.isDiabetic)}
-                                        className="p-2 text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-full transition-colors"
-                                        title="Copiar al portapapeles"
-                                    >
-                                        <Share2 size={18} />
-                                    </button>
-                                    <button
-                                        onClick={() => sharePortion(member.name, portion, portionCarbs, member.isDiabetic)}
-                                        className="p-2 text-green-500 hover:bg-green-50 dark:hover:bg-green-900/30 rounded-full transition-colors"
-                                        title="Compartir por WhatsApp"
-                                    >
-                                        <MessageSquare size={18} />
-                                    </button>
-                                </div>
+                            <div className="text-right">
+                                <div className="text-lg font-black text-gray-900 dark:text-gray-100 leading-none">{portion.toFixed(0)} <span className="text-xs font-normal">g</span></div>
+                                {adjustedCarbs > 0 && (
+                                    <div className="text-xs font-bold text-orange-600 dark:text-orange-400 mt-0.5">{portionCarbs.toFixed(1)} <span className="text-[10px] font-normal">g HC</span></div>
+                                )}
                             </div>
                         </motion.div>
+
                     ))}
 
                     <div className="flex gap-2 pt-2">

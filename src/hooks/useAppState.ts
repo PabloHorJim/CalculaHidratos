@@ -104,6 +104,9 @@ export function useAppState() {
     const autoSaveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
     const countdownRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
+    // Ref to guard save effect against writing back data that just arrived from Firestore
+    const isSyncingFromRemote = useRef(false);
+
     // Adaptive ingredient weights
     const [ingredientWeightHistory, setIngredientWeightHistory] = useState<Record<string, number[]>>({});
 
@@ -155,9 +158,18 @@ export function useAppState() {
         return [...INITIAL_INGREDIENTS, ...customIngredients];
     }, []);
 
+    // Helper to determine meal slot from an hour
+    const getMealSlot = (hour: number): string => {
+        if (hour >= 6 && hour < 12) return 'breakfast';
+        if (hour >= 12 && hour < 16) return 'lunch';
+        if (hour >= 16 && hour < 23) return 'dinner';
+        return 'night';
+    };
+
     // Load initial data from localStorage
     useEffect(() => {
         const saved = localStorage.getItem(STORAGE_KEY);
+        let loadedMealHistory: MealHistoryEntry[] = [];
         if (saved) {
             try {
                 const parsed = JSON.parse(saved);
@@ -165,7 +177,10 @@ export function useAppState() {
                 if (parsed.recipes) setRecipes(parsed.recipes);
                 if (parsed.family) setFamily(parsed.family);
                 if (parsed.cookware) setCookware(parsed.cookware);
-                if (parsed.mealHistory) setMealHistory(parsed.mealHistory);
+                if (parsed.mealHistory) {
+                    setMealHistory(parsed.mealHistory);
+                    loadedMealHistory = parsed.mealHistory;
+                }
                 if (parsed.groupId) setGroupId(parsed.groupId);
                 if (typeof parsed.portionErrorPercent === 'number') setPortionErrorPercent(parsed.portionErrorPercent);
                 if (parsed.ingredientWeightHistory) setIngredientWeightHistory(parsed.ingredientWeightHistory);
@@ -179,16 +194,36 @@ export function useAppState() {
         if (cookingSaved) {
             try {
                 const parsed = JSON.parse(cookingSaved);
-                if (parsed.currentRecipeName) setCurrentRecipeName(parsed.currentRecipeName);
-                if (parsed.currentRecipeIngredients) setCurrentRecipeIngredients(parsed.currentRecipeIngredients);
-                if (parsed.editingRecipeId) setEditingRecipeId(parsed.editingRecipeId);
-                if (parsed.cookingMode) setCookingMode(parsed.cookingMode);
-                if (parsed.selectedCookwareId) setSelectedCookwareId(parsed.selectedCookwareId);
-                if (typeof parsed.totalWeightWithCookware === 'number') setTotalWeightWithCookware(parsed.totalWeightWithCookware);
-                if (typeof parsed.cachedTotalCarbs === 'number') setCachedTotalCarbs(parsed.cachedTotalCarbs);
-                if (parsed.cachedRecipeName) setCachedRecipeName(parsed.cachedRecipeName);
-                if (parsed.setAsideMode) setSetAsideMode(parsed.setAsideMode);
-                if (typeof parsed.setAsideValue === 'number') setSetAsideValue(parsed.setAsideValue);
+
+                // Auto-clear session if the cached recipe was already saved in a different meal slot
+                const cachedName: string = parsed.cachedRecipeName || '';
+                const shouldAutoClear = (() => {
+                    if (!cachedName) return false;
+                    const currentSlot = getMealSlot(new Date().getHours());
+                    // Find the most recent history entry for this recipe name
+                    const lastEntry = [...loadedMealHistory]
+                        .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime())
+                        .find(m => m.recipeName === cachedName);
+                    if (!lastEntry) return false;
+                    const entrySlot = getMealSlot(new Date(lastEntry.timestamp).getHours());
+                    return entrySlot !== currentSlot;
+                })();
+
+                if (shouldAutoClear) {
+                    // Clear the persisted cooking state too
+                    localStorage.removeItem(COOKING_STATE_KEY);
+                } else {
+                    if (parsed.currentRecipeName) setCurrentRecipeName(parsed.currentRecipeName);
+                    if (parsed.currentRecipeIngredients) setCurrentRecipeIngredients(parsed.currentRecipeIngredients);
+                    if (parsed.editingRecipeId) setEditingRecipeId(parsed.editingRecipeId);
+                    if (parsed.cookingMode) setCookingMode(parsed.cookingMode);
+                    if (parsed.selectedCookwareId) setSelectedCookwareId(parsed.selectedCookwareId);
+                    if (typeof parsed.totalWeightWithCookware === 'number') setTotalWeightWithCookware(parsed.totalWeightWithCookware);
+                    if (typeof parsed.cachedTotalCarbs === 'number') setCachedTotalCarbs(parsed.cachedTotalCarbs);
+                    if (parsed.cachedRecipeName) setCachedRecipeName(parsed.cachedRecipeName);
+                    if (parsed.setAsideMode) setSetAsideMode(parsed.setAsideMode);
+                    if (typeof parsed.setAsideValue === 'number') setSetAsideValue(parsed.setAsideValue);
+                }
             } catch (e) {
                 console.error('Failed to load cooking state', e);
             }
@@ -283,6 +318,7 @@ export function useAppState() {
         const unsubscribeGroup = onSnapshot(groupDocRef, (snapshot) => {
             if (!snapshot.metadata.hasPendingWrites && snapshot.exists()) {
                 const data = snapshot.data();
+                isSyncingFromRemote.current = true;
                 setIsSyncing(true);
                 setFamilyGroup({
                     id: data.id,
@@ -295,7 +331,10 @@ export function useAppState() {
                 if (data.family) setFamily(data.family);
                 if (data.cookware) setCookware(data.cookware);
                 if (data.mealHistory) setMealHistory(data.mealHistory);
-                setTimeout(() => setIsSyncing(false), 500);
+                setTimeout(() => {
+                    setIsSyncing(false);
+                    isSyncingFromRemote.current = false;
+                }, 1500);
             }
         }, (err) => {
             handleFirestoreError(err, OperationType.GET, `groups/${groupId}`);
@@ -313,13 +352,17 @@ export function useAppState() {
         const unsubscribeUser = onSnapshot(userDocRef, (snapshot) => {
             if (!snapshot.metadata.hasPendingWrites && snapshot.exists()) {
                 const data = snapshot.data();
+                isSyncingFromRemote.current = true;
                 setIsSyncing(true);
                 if (data.ingredients) setIngredients(mergeIngredients(data.ingredients));
                 if (data.recipes) setRecipes(data.recipes);
                 if (data.family) setFamily(data.family);
                 if (data.cookware) setCookware(data.cookware);
                 if (data.mealHistory) setMealHistory(data.mealHistory);
-                setTimeout(() => setIsSyncing(false), 500);
+                setTimeout(() => {
+                    setIsSyncing(false);
+                    isSyncingFromRemote.current = false;
+                }, 1500);
             }
         }, (err) => {
             handleFirestoreError(err, OperationType.GET, `users/${user.uid}`);
@@ -330,7 +373,7 @@ export function useAppState() {
 
     // Save changes (Local + Cloud)
     useEffect(() => {
-        if (!isLoaded || !isAuthReady || isSyncing) return;
+        if (!isLoaded || !isAuthReady || isSyncing || isSyncingFromRemote.current) return;
 
         setSaveStatus('saving');
         const timer = setTimeout(async () => {
@@ -794,6 +837,21 @@ export function useAppState() {
         });
     };
 
+    /**
+     * Share definitive HC count for a diabetic member via WhatsApp.
+     * Uses direct phone URL if member.phone is set, otherwise generic wa.me.
+     * The HC count is proportion-based and independent of serving weight.
+     */
+    const shareDiabeticCarbs = (member: FamilyMember, carbs: number) => {
+        const message = `🩺 *HC para ${member.name}*: *${carbs.toFixed(1)}g HC*\n\nCalculado con CarbCalc 💙`;
+        const encoded = encodeURIComponent(message);
+        const phone = member.phone ? member.phone.replace(/[^0-9+]/g, '') : '';
+        const url = phone
+            ? `https://wa.me/${phone}?text=${encoded}`
+            : `https://wa.me/?text=${encoded}`;
+        window.open(url, '_blank');
+    };
+
     const shareFullMeal = (recipeName: string, totalMealCarbs: number, netW: number, portions: { memberName: string; weight: number; carbs: number; isDiabetic: boolean }[], via: 'whatsapp' | 'clipboard') => {
         const portionLines = portions.map(p =>
             `- ${p.memberName}: ${p.weight.toFixed(0)}g (${p.carbs.toFixed(1)}g HC)${p.isDiabetic ? ' ⚠️' : ''}`
@@ -908,7 +966,7 @@ export function useAppState() {
         handleLogin, handleLogout,
         createGroup, joinGroup, leaveGroup,
         deleteMealHistoryEntry, updateMealHistoryEntry, saveMealToHistory,
-        sharePortion, copyPortionToClipboard, shareFullMeal,
+        sharePortion, copyPortionToClipboard, shareFullMeal, shareDiabeticCarbs,
         exportMealData,
     };
 }

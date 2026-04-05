@@ -72,6 +72,19 @@ export function FamilyTab({ state }: FamilyTabProps) {
                                     </button>
                                 </div>
                             </div>
+                            {member.isDiabetic && (
+                                <div className="mt-2">
+                                    <label className="text-[9px] uppercase font-bold text-blue-400 block mb-0.5">WhatsApp (para compartir HC)</label>
+                                    <input
+                                        type="tel"
+                                        placeholder="+34600000000"
+                                        value={member.phone || ''}
+                                        onChange={(e) => updateFamilyMember(member.id, { phone: e.target.value })}
+                                        className="w-full px-2 py-1 bg-blue-50 dark:bg-blue-900/20 border border-blue-100 dark:border-blue-800 rounded text-sm outline-none focus:ring-2 focus:ring-blue-200 dark:focus:ring-blue-800 dark:text-gray-100"
+                                    />
+                                </div>
+                            )}
+
                         </div>
                     ))}
                 </div>

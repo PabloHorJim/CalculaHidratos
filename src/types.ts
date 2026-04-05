@@ -21,6 +21,7 @@ export interface FamilyMember {
   proportion: number;
   isDiabetic: boolean;
   isActive: boolean;
+  phone?: string; // WhatsApp number for diabetic members (e.g. "+34600000000")
 }
 
 export interface Cookware {
