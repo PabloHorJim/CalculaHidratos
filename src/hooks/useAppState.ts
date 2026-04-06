@@ -1,6 +1,7 @@
 import { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import { Ingredient, Recipe, RecipeIngredient, FamilyMember, Cookware, MealHistoryEntry, FamilyGroup } from '../types';
 import { INITIAL_INGREDIENTS } from '../data/ingredients';
+import { getMealSlot } from '../utils/dateUtils';
 import {
     auth,
     db,
@@ -154,13 +155,6 @@ export function useAppState() {
         return [...INITIAL_INGREDIENTS, ...customIngredients];
     }, []);
 
-    // Helper to determine meal slot from an hour
-    const getMealSlot = (hour: number): string => {
-        if (hour >= 6 && hour < 12) return 'breakfast';
-        if (hour >= 12 && hour < 16) return 'lunch';
-        if (hour >= 16 && hour < 23) return 'dinner';
-        return 'night';
-    };
 
     // Load initial data from localStorage
     useEffect(() => {

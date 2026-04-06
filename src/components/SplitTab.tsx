@@ -2,6 +2,7 @@ import React, { useEffect, useRef } from 'react';
 import { Scale, Save, Share2, MessageSquare, Trash2, AlertTriangle } from 'lucide-react';
 import { motion } from 'motion/react';
 import { AppState } from '../hooks/useAppState';
+import { getMealSlot } from '../utils/dateUtils';
 
 interface SplitTabProps {
     state: AppState;
@@ -60,10 +61,16 @@ export function SplitTab({ state }: SplitTabProps) {
 
     const historicalWarnings = React.useMemo(() => {
         const warnings: string[] = [];
+        const currentSlot = getMealSlot(new Date().getHours());
 
-        // 1. Check historical HC/100g for this recipe
+        // Filter history by the current meal slot (breakfast, lunch, dinner, night)
+        const sameSlotHistory = mealHistory.filter(m =>
+            getMealSlot(new Date(m.timestamp).getHours()) === currentSlot
+        );
+
+        // 1. Check historical HC/100g for this recipe (within same slot)
         if (cachedRecipeName && netWeight > 0) {
-            const lastSimilarMeal = [...mealHistory]
+            const lastSimilarMeal = [...sameSlotHistory]
                 .reverse()
                 .find(m => m.recipeName === cachedRecipeName && m.totalCarbs && m.netWeight);
 
@@ -71,26 +78,30 @@ export function SplitTab({ state }: SplitTabProps) {
                 const lastHc100g = (lastSimilarMeal.totalCarbs / lastSimilarMeal.netWeight) * 100;
                 const currentHc100g = (adjustedCarbs / netWeight) * 100;
 
-                if (Math.abs(lastHc100g - currentHc100g) > 2 && Math.max(lastHc100g, currentHc100g) / Math.min(lastHc100g, currentHc100g) > 1.3) {
-                    warnings.push(`La receta ha cambiado: antes tenía ${lastHc100g.toFixed(1)}g HC/100g, ahora ${currentHc100g.toFixed(1)}g HC/100g.`);
+                if (Math.max(lastHc100g, currentHc100g) / Math.min(lastHc100g, currentHc100g) > 1.5) {
+                    warnings.push(`La receta ha cambiado para esta franja horaria: antes tenía ${lastHc100g.toFixed(1)}g HC/100g, ahora ${currentHc100g.toFixed(1)}g HC/100g.`);
                 }
             }
         }
 
-        // 2. Check for abnormally large portions
+        // 2. Check for abnormally large portions (within same slot)
         let portionWarning = false;
         calculatedPortions.forEach(cp => {
-            const memberRecentMeals = mealHistory.slice(-20).map(m => m.portions?.find(p => p.memberName === cp.member.name)).filter((p): p is NonNullable<typeof p> => !!p && p.weight > 0);
+            const memberRecentMeals = sameSlotHistory
+                .slice(-15) // Look at slightly fewer recent meals since they are slot-specific
+                .map(m => m.portions?.find(p => p.memberName === cp.member.name))
+                .filter((p): p is NonNullable<typeof p> => !!p && p.weight > 0);
+
             if (memberRecentMeals.length >= 3) {
                 const avgWeight = memberRecentMeals.reduce((sum, p) => sum + p.weight, 0) / memberRecentMeals.length;
-                if (cp.portion > 150 && cp.portion > avgWeight * 1.5) {
+                if (cp.portion > 300 && cp.portion > avgWeight * 1.5) {
                     portionWarning = true;
                 }
             }
         });
 
         if (portionWarning) {
-            warnings.push('Se ha detectado una ración calculada inusualmente alta (>50% sobre la media). Revisa el peso final o el recipiente seleccionado.');
+            warnings.push('Se ha detectado una ración inusualmente alta para este momento del día (>50% sobre tu media en esta franja).');
         }
 
         return warnings;
