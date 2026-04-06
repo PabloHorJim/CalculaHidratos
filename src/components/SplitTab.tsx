@@ -18,9 +18,10 @@ export function SplitTab({ state }: SplitTabProps) {
         portionErrorPercent,
         isErrorDisabledForCurrentSplit, setIsErrorDisabledForCurrentSplit,
         currentRecipeName,
-        saveMealToHistory, shareFullMeal,
+        saveMealToHistory, shareFullMeal, autoUpdateHistory,
         clearReparto, mealHistory
     } = state;
+
 
     const selectedItem = cookware.find(c => c.id === selectedCookwareId);
     const cookwareMass = selectedCookwareId === 'none' ? 0 : (selectedItem?.mass ?? 0);
@@ -103,6 +104,24 @@ export function SplitTab({ state }: SplitTabProps) {
     }));
 
     const displayRecipeName = currentRecipeName || cachedRecipeName || 'Comida sin nombre';
+
+    // ---- auto-update history on split changes (debounced 800ms) ----
+    const autoUpdateRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+    useEffect(() => {
+        if (autoUpdateRef.current) clearTimeout(autoUpdateRef.current);
+        autoUpdateRef.current = setTimeout(() => {
+            if (netWeight > 0) {
+                autoUpdateHistory(
+                    displayRecipeName,
+                    effectiveCarbs,
+                    netWeight,
+                    portionsForSharing
+                );
+            }
+        }, 800);
+        return () => { if (autoUpdateRef.current) clearTimeout(autoUpdateRef.current); };
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [netWeight, adjustedCarbs, portionsForSharing.map(p => p.weight + p.carbs).join(',')]);
 
     // Auto-save is disabled per user request, using explicit save only
     // Meals with identical names saved within 2 hours will be silently upserted by useAppState.

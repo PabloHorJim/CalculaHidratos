@@ -62,10 +62,7 @@ export function useAppState() {
     const [isInstallable, setIsInstallable] = useState(false);
     const [showTutorial, setShowTutorial] = useState(false);
 
-    // Dark mode
-    const [isDarkMode, setIsDarkMode] = useState(() => {
-        return localStorage.getItem(DARK_MODE_KEY) === 'true';
-    });
+    // Dark mode — system preference only
 
     // Cookie consent
     const [hasConsent, setHasConsent] = useState(() => {
@@ -110,18 +107,17 @@ export function useAppState() {
     // Adaptive ingredient weights
     const [ingredientWeightHistory, setIngredientWeightHistory] = useState<Record<string, number[]>>({});
 
-    // --- Dark mode effect ---
+    // Dark mode — follow system preference, no manual toggle
     useEffect(() => {
-        if (isDarkMode) {
-            document.documentElement.classList.add('dark');
-        } else {
-            document.documentElement.classList.remove('dark');
-        }
-        localStorage.setItem(DARK_MODE_KEY, String(isDarkMode));
-    }, [isDarkMode]);
-
-    const toggleDarkMode = useCallback(() => {
-        setIsDarkMode(prev => !prev);
+        const mq = window.matchMedia('(prefers-color-scheme: dark)');
+        const apply = (dark: boolean) => {
+            if (dark) document.documentElement.classList.add('dark');
+            else document.documentElement.classList.remove('dark');
+        };
+        apply(mq.matches);
+        const handler = (e: MediaQueryListEvent) => apply(e.matches);
+        mq.addEventListener('change', handler);
+        return () => mq.removeEventListener('change', handler);
     }, []);
 
     const acceptConsent = useCallback(() => {
@@ -556,6 +552,11 @@ export function useAppState() {
             recordIngredientWeight(ri.ingredientId, ri.weight);
         });
 
+        const computedCarbs = currentRecipeIngredients.reduce((total, ri) => {
+            const ingredient = ingredients.find(i => i.id === ri.ingredientId);
+            return total + (ingredient ? ingredient.carbsPer100g * ri.weight / 100 : 0);
+        }, 0);
+
         if (editingRecipeId) {
             setRecipes(prev => prev.map(r =>
                 r.id === editingRecipeId ? { ...r, ...recipeData } : r
@@ -571,6 +572,31 @@ export function useAppState() {
             setToast('Receta guardada');
         }
 
+        // Create/update a preliminary history entry (no split data yet)
+        if (computedCarbs > 0) {
+            setMealHistory(prevMeals => {
+                const now = Date.now();
+                const TWO_HOURS = 2 * 60 * 60 * 1000;
+                const existingIdx = prevMeals.findIndex(
+                    m => m.recipeName === currentRecipeName && (now - new Date(m.timestamp).getTime()) < TWO_HOURS
+                );
+                const entry = {
+                    id: existingIdx >= 0 ? prevMeals[existingIdx].id : now.toString(),
+                    timestamp: new Date().toISOString(),
+                    recipeName: currentRecipeName,
+                    totalCarbs: computedCarbs,
+                    netWeight: existingIdx >= 0 ? prevMeals[existingIdx].netWeight : 0,
+                    portions: existingIdx >= 0 ? prevMeals[existingIdx].portions : [],
+                };
+                if (existingIdx >= 0) {
+                    const updated = [...prevMeals];
+                    updated[existingIdx] = entry;
+                    return updated;
+                }
+                return [entry, ...prevMeals].slice(0, 50);
+            });
+        }
+
         // Do NOT clear recipe data — user explicitly requested this
         // Stay in cooking mode, do NOT switch tabs
     };
@@ -583,6 +609,11 @@ export function useAppState() {
             recordIngredientWeight(ri.ingredientId, ri.weight);
         });
 
+        const computedCarbs = currentRecipeIngredients.reduce((total, ri) => {
+            const ingredient = ingredients.find(i => i.id === ri.ingredientId);
+            return total + (ingredient ? ingredient.carbsPer100g * ri.weight / 100 : 0);
+        }, 0);
+
         const newRecipe: Recipe = {
             id: Date.now().toString(),
             name: currentRecipeName,
@@ -591,6 +622,32 @@ export function useAppState() {
         setRecipes(prev => [...prev, newRecipe]);
         setToast('Guardada como nueva receta');
         setEditingRecipeId(newRecipe.id);
+
+        // Preliminary history entry
+        if (computedCarbs > 0) {
+            setMealHistory(prevMeals => {
+                const now = Date.now();
+                const TWO_HOURS = 2 * 60 * 60 * 1000;
+                const existingIdx = prevMeals.findIndex(
+                    m => m.recipeName === currentRecipeName && (now - new Date(m.timestamp).getTime()) < TWO_HOURS
+                );
+                const entry = {
+                    id: existingIdx >= 0 ? prevMeals[existingIdx].id : now.toString(),
+                    timestamp: new Date().toISOString(),
+                    recipeName: currentRecipeName,
+                    totalCarbs: computedCarbs,
+                    netWeight: existingIdx >= 0 ? prevMeals[existingIdx].netWeight : 0,
+                    portions: existingIdx >= 0 ? prevMeals[existingIdx].portions : [],
+                };
+                if (existingIdx >= 0) {
+                    const updated = [...prevMeals];
+                    updated[existingIdx] = entry;
+                    return updated;
+                }
+                return [entry, ...prevMeals].slice(0, 50);
+            });
+        }
+
         // Do NOT clear or switch tabs
     };
 
@@ -808,6 +865,42 @@ export function useAppState() {
         setToast('Guardado en el historial');
     };
 
+    /**
+     * Silently upserts the current history entry whenever the split changes.
+     * Does NOT show a toast — called automatically from SplitTab.
+     * The timestamp is always set to now (last split change time).
+     */
+    const autoUpdateHistory = useCallback((
+        recipeName: string,
+        totalCarbs: number,
+        netWeight: number,
+        portions: { memberName: string; weight: number; carbs: number; isDiabetic: boolean }[]
+    ) => {
+        if (!recipeName || netWeight <= 0) return;
+        const finalName = recipeName;
+        setMealHistory(prevMeals => {
+            const now = Date.now();
+            const TWO_HOURS = 2 * 60 * 60 * 1000;
+            const existingIdx = prevMeals.findIndex(
+                m => m.recipeName === finalName && (now - new Date(m.timestamp).getTime()) < TWO_HOURS
+            );
+            const entry = {
+                id: existingIdx >= 0 ? prevMeals[existingIdx].id : now.toString(),
+                timestamp: new Date().toISOString(),
+                recipeName: finalName,
+                totalCarbs,
+                netWeight,
+                portions,
+            };
+            if (existingIdx >= 0) {
+                const updated = [...prevMeals];
+                updated[existingIdx] = entry;
+                return updated;
+            }
+            return [entry, ...prevMeals].slice(0, 50);
+        });
+    }, []);
+
     const cancelAutoSave = useCallback(() => {
         // Kept for signature compatibility if still called elsewhere, though no longer needed
         setPendingAutoSave(false);
@@ -922,7 +1015,6 @@ export function useAppState() {
         isSidebarOpen, setIsSidebarOpen,
         isInstallable, handleInstallClick,
         showTutorial, dismissTutorial,
-        isDarkMode, toggleDarkMode,
         hasConsent, acceptConsent,
 
         // Recipe builder
@@ -965,7 +1057,7 @@ export function useAppState() {
         addCookware, updateCookware, removeCookware,
         handleLogin, handleLogout,
         createGroup, joinGroup, leaveGroup,
-        deleteMealHistoryEntry, updateMealHistoryEntry, saveMealToHistory,
+        deleteMealHistoryEntry, updateMealHistoryEntry, saveMealToHistory, autoUpdateHistory,
         sharePortion, copyPortionToClipboard, shareFullMeal, shareDiabeticCarbs,
         exportMealData,
     };

@@ -26,7 +26,7 @@ import { CookieConsent } from './components/CookieConsent';
 
 export default function App() {
   const state = useAppState();
-  const { activeTab, setActiveTab, isSidebarOpen, setIsSidebarOpen, user, saveStatus, toast, showTutorial, dismissTutorial, hasConsent, isDarkMode } = state;
+  const { activeTab, setActiveTab, isSidebarOpen, setIsSidebarOpen, user, saveStatus, toast, showTutorial, dismissTutorial, hasConsent } = state;
 
   const currentTabIndex = MAIN_TABS.indexOf(activeTab);
 

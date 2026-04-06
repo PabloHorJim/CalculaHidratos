@@ -1,7 +1,7 @@
 import React from 'react';
 import {
     Calculator, History, Utensils, Percent, Download,
-    LogIn, LogOut, BarChart3, Shield, Mail, Moon, Sun, FileDown
+    LogIn, LogOut, BarChart3, Shield, Mail, FileDown
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { SidebarButton } from './SidebarButton';
@@ -18,7 +18,6 @@ export function Sidebar({ state }: SidebarProps) {
         user, handleLogin, handleLogout,
         portionErrorPercent, setPortionErrorPercent,
         isInstallable, handleInstallClick,
-        isDarkMode, toggleDarkMode,
         exportMealData,
     } = state;
 
@@ -79,20 +78,6 @@ export function Sidebar({ state }: SidebarProps) {
                                 label="Mis Utensilios"
                                 description="Ollas, sartenes y pesos"
                             />
-
-                            {/* Dark mode toggle */}
-                            <button
-                                onClick={toggleDarkMode}
-                                className="w-full flex items-center gap-3 p-3 text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 rounded-2xl transition-all"
-                            >
-                                <div className="text-gray-400 dark:text-gray-500">
-                                    {isDarkMode ? <Sun size={20} /> : <Moon size={20} />}
-                                </div>
-                                <div className="text-left">
-                                    <div className="text-sm font-bold leading-none mb-1">{isDarkMode ? 'Modo claro' : 'Modo oscuro'}</div>
-                                    <div className="text-[10px] text-gray-400 dark:text-gray-500 font-medium">Cambiar apariencia</div>
-                                </div>
-                            </button>
 
                             {/* Portion Error Config */}
                             <div className="pt-2">
