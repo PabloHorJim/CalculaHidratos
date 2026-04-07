@@ -298,12 +298,36 @@ def process_pdf_catalog(pdf_url, category_name):
                 food_name = re.sub(r'\s+', ' ', food_name_match.group(1)).strip()
             else:
                 food_name = f"Unknown (Page {page_num + 1})"
-            # Extract Carbs: Grabs the first number after the label, corresponding to the 100g column
-            carb_match = re.search(r"Hidratos de carbono[^\d]*([\d]+(?:[,.]\d+)?)", text, re.IGNORECASE)
-            
-            if carb_match:
+            # Extract Carbs: Grabs the number associated with Hidratos de carbono, 
+            # specifically skipping values clearly labeled as energy (kJ/kcal)
+            # FEN tables typically list Energía (kJ), Energía (kcal), Proteínas, then Hidratos de carbono.
+            carb_match = re.search(r"Hidratos de carbono\s*([\d]+(?:[,.]\d+)?)", text, re.IGNORECASE)
+            # If not found adjacent, try searching more broadly but avoid the kJ/kcal lines
+            if not carb_match:
+                # Look for 'Hidratos de carbono' then find the first number that isn't clearly ENERGY
+                parts = re.split(r"Hidratos de carbono", text, flags=re.IGNORECASE)
+                if len(parts) > 1:
+                    # Look in the text immediately AFTER 'Hidratos de carbono'
+                    subtext = parts[1][:100]
+                    # First number that isn't energy
+                    num_matches = re.findall(r"([\d]+(?:[,.]\d+)?)", subtext)
+                    if num_matches:
+                        for val in num_matches:
+                           # Skip common energy values if they appear near by (loose check)
+                           fval = float(val.replace(',', '.'))
+                           if fval < 100: # Carbs per 100g cannot be > 100
+                               carbs_str = val.replace(',', '.')
+                               break
+                        else:
+                            carbs_str = num_matches[0].replace(',', '.')
+                    else:
+                        carb_match = None
+                else:
+                    carb_match = None
+            else:
                 carbs_str = carb_match.group(1).replace(',', '.')
-                
+            
+            if carbs_str:
                 results.append({
                     "category": category_name,
                     "food": food_name,

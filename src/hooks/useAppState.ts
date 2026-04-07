@@ -87,6 +87,7 @@ export function useAppState() {
     const [showAddIngredient, setShowAddIngredient] = useState(false);
     const [newIngredientName, setNewIngredientName] = useState('');
     const [newIngredientCarbs, setNewIngredientCarbs] = useState<number | ''>('');
+    const [newIngredientCategory, setNewIngredientCategory] = useState('');
     const [inviteInput, setInviteInput] = useState('');
     const [groupNameInput, setGroupNameInput] = useState('');
 
@@ -523,12 +524,14 @@ export function useAppState() {
         const newIngredient: Ingredient = {
             id: Date.now().toString(),
             name: newIngredientName,
-            carbsPer100g: Number(newIngredientCarbs)
+            carbsPer100g: Number(newIngredientCarbs),
+            category: newIngredientCategory || undefined
         };
         setCustomIngredients(prev => [...prev, newIngredient]);
         addIngredientToRecipe(newIngredient);
         setNewIngredientName('');
         setNewIngredientCarbs('');
+        setNewIngredientCategory('');
         setShowAddIngredient(false);
         setToast('Ingrediente creado y añadido');
     };
@@ -1029,6 +1032,7 @@ export function useAppState() {
         showAddIngredient, setShowAddIngredient,
         newIngredientName, setNewIngredientName,
         newIngredientCarbs, setNewIngredientCarbs,
+        newIngredientCategory, setNewIngredientCategory,
         inviteInput, setInviteInput,
         groupNameInput, setGroupNameInput,
 

@@ -3,6 +3,7 @@ import { ChefHat, Search, Plus, Trash2, Save, ChevronRight, Utensils, ArrowLeft,
 import { useVoiceRecognition } from '../hooks/useVoiceRecognition';
 import { motion } from 'motion/react';
 import { AppState } from '../hooks/useAppState';
+import { getCategoryColor } from '../utils/categoryColors';
 
 interface RecipeTabProps {
     state: AppState;
@@ -19,6 +20,7 @@ export function RecipeTab({ state }: RecipeTabProps) {
         showAddIngredient, setShowAddIngredient,
         newIngredientName, setNewIngredientName,
         newIngredientCarbs, setNewIngredientCarbs,
+        newIngredientCategory, setNewIngredientCategory,
         totalCarbs,
         editingRecipeId,
         diabeticMembers, activeFamilyProportionSum,
@@ -362,16 +364,22 @@ export function RecipeTab({ state }: RecipeTabProps) {
                 )}
                 {searchTerm && (
                     <div className="absolute z-10 w-full mt-1 bg-white dark:bg-gray-800 border border-gray-100 dark:border-gray-700 rounded-xl shadow-lg max-h-60 overflow-y-auto">
-                        {filteredIngredients.map(i => (
-                            <button
-                                key={i.id}
-                                onClick={() => addIngredientToRecipe(i)}
-                                className="w-full px-4 py-3 text-left hover:bg-orange-50 dark:hover:bg-orange-900/20 flex justify-between items-center border-b border-gray-50 dark:border-gray-700 last:border-0"
-                            >
-                                <span className="font-medium dark:text-gray-200">{i.name}</span>
-                                <span className="text-xs text-gray-500 dark:text-gray-400">{i.carbsPer100g}g HC/100g</span>
-                            </button>
-                        ))}
+                        {filteredIngredients.map(i => {
+                            const colors = getCategoryColor(i.category);
+                            return (
+                                <button
+                                    key={i.id}
+                                    onClick={() => addIngredientToRecipe(i)}
+                                    className={`w-full px-4 py-3 text-left ${colors.bg} hover:opacity-80 transition-opacity flex justify-between items-center border-b ${colors.border} last:border-0`}
+                                >
+                                    <div>
+                                        <span className={`font-medium ${colors.text} block`}>{i.name}</span>
+                                        {i.category && <span className={`text-[10px] ${colors.text} uppercase font-bold tracking-tight opacity-70`}>{i.category}</span>}
+                                    </div>
+                                    <span className={`text-xs ${colors.text} shrink-0 font-mono tracking-tighter ml-2 ${colors.badge} px-1.5 py-0.5 rounded-md border ${colors.border}`}>{i.carbsPer100g}g <span className="text-[10px]">HC</span></span>
+                                </button>
+                            );
+                        })}
                         {filteredIngredients.length === 0 && (
                             <div className="p-4 text-center">
                                 <p className="text-gray-500 dark:text-gray-400 mb-3 text-sm">
@@ -402,15 +410,18 @@ export function RecipeTab({ state }: RecipeTabProps) {
                         Sugerencias rápidas
                     </div>
                     <div className="flex flex-wrap gap-2">
-                        {suggestedIngredients.map(ingredient => (
-                            <button
-                                key={`suggest-${ingredient.id}`}
-                                onClick={() => addIngredientToRecipe(ingredient)}
-                                className="px-3 py-1.5 bg-orange-50/80 dark:bg-orange-900/20 text-orange-700 dark:text-orange-300 rounded-full text-xs font-semibold border border-orange-200/50 dark:border-orange-800/50 shadow-sm hover:scale-105 transition-transform active:scale-95"
-                            >
-                                + {ingredient.name}
-                            </button>
-                        ))}
+                        {suggestedIngredients.map(ingredient => {
+                            const colors = getCategoryColor(ingredient.category);
+                            return (
+                                <button
+                                    key={`suggest-${ingredient.id}`}
+                                    onClick={() => addIngredientToRecipe(ingredient)}
+                                    className={`px-3 py-1.5 ${colors.badge} rounded-full text-xs font-semibold border ${colors.border} shadow-sm hover:scale-105 transition-transform active:scale-95`}
+                                >
+                                    + {ingredient.name}
+                                </button>
+                            );
+                        })}
                     </div>
                 </div>
             )}
@@ -440,9 +451,16 @@ export function RecipeTab({ state }: RecipeTabProps) {
                                 value={newIngredientCarbs}
                                 onChange={(e) => setNewIngredientCarbs(e.target.value === '' ? '' : Number(e.target.value))}
                             />
+                            <input
+                                type="text"
+                                placeholder="Categoría (opcional)"
+                                className="flex-1 px-3 py-2 bg-white dark:bg-gray-800 rounded-lg text-sm outline-none dark:text-gray-100"
+                                value={newIngredientCategory}
+                                onChange={(e) => setNewIngredientCategory(e.target.value)}
+                            />
                             <button
                                 onClick={createAndAddIngredient}
-                                className="bg-orange-500 text-white px-4 py-2 rounded-lg text-sm font-bold"
+                                className="bg-orange-500 text-white px-4 py-2 rounded-lg text-sm font-bold shadow-md hover:bg-orange-600 transition-colors"
                             >
                                 Añadir
                             </button>
@@ -468,6 +486,7 @@ export function RecipeTab({ state }: RecipeTabProps) {
                         const avg = history.reduce((a, b) => a + b, 0) / history.length;
                         if (ri.weight > avg * 2.5) isHighAmount = true;
                     }
+                    const colors = getCategoryColor(ingredient.category);
 
                     return (
                         <motion.div
@@ -475,11 +494,14 @@ export function RecipeTab({ state }: RecipeTabProps) {
                             initial={{ opacity: 0, y: 10 }}
                             animate={{ opacity: 1, y: 0 }}
                             key={ri.ingredientId}
-                            className={`flex items-center gap-3 bg-white dark:bg-gray-800 p-3 rounded-xl shadow-sm border transition-colors ${isHighAmount ? 'border-yellow-300 dark:border-yellow-600' : 'border-gray-100 dark:border-gray-700'}`}
+                            className={`flex items-center gap-3 ${colors.bg} p-3 rounded-xl shadow-sm border transition-colors ${isHighAmount ? 'border-yellow-300 dark:border-yellow-600 ring-2 ring-yellow-400' : colors.border}`}
                         >
                             <div className="flex-1">
-                                <div className="font-medium text-sm dark:text-gray-200">{ingredient.name}</div>
-                                <div className="text-xs text-gray-500 dark:text-gray-400">{ingredient.carbsPer100g}g HC/100g</div>
+                                <div className={`font-medium text-sm ${colors.text}`}>{ingredient.name}</div>
+                                <div className={`text-[10px] opacity-80 ${colors.text} flex items-center gap-2 mt-0.5`}>
+                                    {ingredient.category && <span className={`uppercase font-bold tracking-tight text-[9px] ${colors.badge} border ${colors.border} px-1 rounded-sm`}>{ingredient.category}</span>}
+                                    <span>{ingredient.carbsPer100g}g HC/100g</span>
+                                </div>
                             </div>
                             <div className="flex items-center gap-2">
                                 {isHighAmount && (

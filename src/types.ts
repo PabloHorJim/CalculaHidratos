@@ -2,6 +2,7 @@ export interface Ingredient {
   id: string;
   name: string;
   carbsPer100g: number;
+  category?: string;
 }
 
 export interface RecipeIngredient {

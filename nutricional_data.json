@@ -14,7 +14,7 @@
     {
         "category": "Cereales y Derivados",
         "food": "CHURROS",
-        "hc_g_100g": 2013.0,
+        "hc_g_100g": 84.0,
         "source_url": "https://www.fen.org.es/storage/app/media/flipbook/mercado-alimentos-fen/001-Cereales-Derivados.pdf#page=8"
     },
     {
@@ -170,7 +170,7 @@
     {
         "category": "Huevos",
         "food": "HUEVO DE GALLINA",
-        "hc_g_100g": 375.0,
+        "hc_g_100g": 0.0,
         "source_url": "https://www.fen.org.es/storage/app/media/flipbook/mercado-alimentos-fen/003-Huevos.pdf#page=4"
     },
     {
@@ -182,7 +182,7 @@
     {
         "category": "Azúcares y Dulces",
         "food": "BOLLERÍA",
-        "hc_g_100g": 2013.0,
+        "hc_g_100g": 99.5,
         "source_url": "https://www.fen.org.es/storage/app/media/flipbook/mercado-alimentos-fen/004-Azucares-Dulces.pdf#page=6"
     },
     {
@@ -254,7 +254,7 @@
     {
         "category": "Aceites y Grasas",
         "food": "MANTEQUILLA",
-        "hc_g_100g": 375.0,
+        "hc_g_100g": 0.0,
         "source_url": "https://www.fen.org.es/storage/app/media/flipbook/mercado-alimentos-fen/005-Aceites-Grasas.pdf#page=16"
     },
     {
@@ -926,7 +926,7 @@
     {
         "category": "Carnes y Productos carnicos",
         "food": "SESOS DE CORDERO",
-        "hc_g_100g": 375.0,
+        "hc_g_100g": 0.0,
         "source_url": "https://www.fen.org.es/storage/app/media/flipbook/mercado-alimentos-fen/010-Carnes.pdf#page=48"
     },
     {
@@ -1052,7 +1052,7 @@
     {
         "category": "Carnes y Productos carnicos",
         "food": "SALCHICHAS FRESCAS",
-        "hc_g_100g": 375.0,
+        "hc_g_100g": 0.0,
         "source_url": "https://www.fen.org.es/storage/app/media/flipbook/mercado-alimentos-fen/010-Carnes.pdf#page=90"
     },
     {
@@ -1064,7 +1064,7 @@
     {
         "category": "Carnes y Productos carnicos",
         "food": "SANGRE DE CERDO",
-        "hc_g_100g": 375.0,
+        "hc_g_100g": 0.0,
         "source_url": "https://www.fen.org.es/storage/app/media/flipbook/mercado-alimentos-fen/010-Carnes.pdf#page=94"
     },
     {
@@ -1382,7 +1382,7 @@
     {
         "category": "Crustáceos y Moluscos",
         "food": "BÍGARO HERVIDO",
-        "hc_g_100g": 375.0,
+        "hc_g_100g": 0.0,
         "source_url": "https://www.fen.org.es/storage/app/media/flipbook/mercado-alimentos-fen/012-Crustaceos.pdf#page=8"
     },
     {
@@ -1484,7 +1484,7 @@
     {
         "category": "Crustáceos y Moluscos",
         "food": "MEJILLÓN EN ESCABECHE",
-        "hc_g_100g": 375.0,
+        "hc_g_100g": 0.0,
         "source_url": "https://www.fen.org.es/storage/app/media/flipbook/mercado-alimentos-fen/012-Crustaceos.pdf#page=42"
     },
     {
@@ -1544,7 +1544,7 @@
     {
         "category": "Condimentos y Aperitivos",
         "food": "CANELA MOLIDA",
-        "hc_g_100g": 375.0,
+        "hc_g_100g": 35.0,
         "source_url": "https://www.fen.org.es/storage/app/media/flipbook/mercado-alimentos-fen/013-Condimentos.pdf#page=8"
     },
     {
@@ -1580,7 +1580,7 @@
     {
         "category": "Condimentos y Aperitivos",
         "food": "NUEZ MOSCADA",
-        "hc_g_100g": 375.0,
+        "hc_g_100g": 35.0,
         "source_url": "https://www.fen.org.es/storage/app/media/flipbook/mercado-alimentos-fen/013-Condimentos.pdf#page=20"
     },
     {
@@ -1616,7 +1616,7 @@
     {
         "category": "Condimentos y Aperitivos",
         "food": "PIMIENTA NEGRA",
-        "hc_g_100g": 375.0,
+        "hc_g_100g": 35.0,
         "source_url": "https://www.fen.org.es/storage/app/media/flipbook/mercado-alimentos-fen/013-Condimentos.pdf#page=32"
     },
     {
@@ -1670,7 +1670,7 @@
     {
         "category": "Bebidas",
         "food": "CERVEZA",
-        "hc_g_100g": 12.0,
+        "hc_g_100g": 0.8,
         "source_url": "https://www.fen.org.es/storage/app/media/flipbook/mercado-alimentos-fen/014-Bebidas.pdf#page=10"
     },
     {
