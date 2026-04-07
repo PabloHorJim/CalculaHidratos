@@ -62,6 +62,14 @@ export function LegalNotice() {
                 </div>
 
                 <div>
+                    <h3 className="text-sm font-black text-gray-800 dark:text-gray-200 uppercase mb-2">Origen de los Datos Nutricionales</h3>
+                    <p className="text-xs text-gray-600 dark:text-gray-400 leading-relaxed">
+                        La base de datos original contiene información nutricional sobre los alimentos (Carbohidratos por 100g) que ha sido extraída de fuentes confiables y públicas, en particular la Fundación Española de la Nutrición (FEN).
+                        Los usuarios pueden posteriormente añadir o modificar los alimentos según su propio criterio para adaptarlo a su tratamiento familiar.
+                    </p>
+                </div>
+
+                <div>
                     <h3 className="text-sm font-black text-gray-800 dark:text-gray-200 uppercase mb-2">Cookies y Rastreo</h3>
                     <p className="text-xs text-gray-600 dark:text-gray-400 leading-relaxed">
                         CarbCalc no utiliza cookies de terceros ni rastreadores publicitarios. Solo se utiliza localStorage para la persistencia local de datos.

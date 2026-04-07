@@ -37,7 +37,11 @@ export const MAIN_TABS: TabType[] = ['recipe', 'split', 'family'];
 export function useAppState() {
     // --- State ---
     const [activeTab, setActiveTab] = useState<TabType>('recipe');
-    const [ingredients, setIngredients] = useState<Ingredient[]>(INITIAL_INGREDIENTS);
+    const [customIngredients, setCustomIngredients] = useState<Ingredient[]>([]);
+
+    const ingredients = useMemo(() => {
+        return [...INITIAL_INGREDIENTS, ...customIngredients];
+    }, [customIngredients]);
     const [recipes, setRecipes] = useState<Recipe[]>([]);
     const [family, setFamily] = useState<FamilyMember[]>([
         { id: '1', name: 'Pablo', proportion: 0.25, isDiabetic: true, isActive: true },
@@ -147,12 +151,15 @@ export function useAppState() {
         localStorage.setItem(TUTORIAL_KEY, 'true');
     };
 
-    // Helper to merge official ingredients with user's custom ingredients
-    const mergeIngredients = useCallback((savedIngredients: Ingredient[]) => {
-        const customIngredients = savedIngredients.filter(
-            saved => !INITIAL_INGREDIENTS.some(init => init.id === saved.id)
-        );
-        return [...INITIAL_INGREDIENTS, ...customIngredients];
+    // Helper to extract custom ingredients from legacy or new saved arrays
+    const extractCustomIngredients = useCallback((savedIngredients: Ingredient[], savedCustomIngredients?: Ingredient[]) => {
+        if (savedCustomIngredients) {
+            return savedCustomIngredients;
+        }
+        // Legacy migration: filter out old standard ingredients but KEEP custom ones if we wanted to
+        // HOWEVER, user requested a FULL wipe of custom ingredients.
+        // Therefore, we just return empty array for everyone right now, ignoring the old ingredients completely.
+        return [];
     }, []);
 
 
@@ -163,7 +170,8 @@ export function useAppState() {
         if (saved) {
             try {
                 const parsed = JSON.parse(saved);
-                if (parsed.ingredients) setIngredients(mergeIngredients(parsed.ingredients));
+                if (parsed.customIngredients) setCustomIngredients(parsed.customIngredients);
+                else setCustomIngredients([]); // Force reset of legacy ingredients
                 if (parsed.recipes) setRecipes(parsed.recipes);
                 if (parsed.family) setFamily(parsed.family);
                 if (parsed.cookware) setCookware(parsed.cookware);
@@ -316,7 +324,8 @@ export function useAppState() {
                     adminUid: data.adminUid,
                     inviteCode: data.inviteCode
                 });
-                if (data.ingredients) setIngredients(mergeIngredients(data.ingredients));
+                if (data.customIngredients) setCustomIngredients(data.customIngredients);
+                else setCustomIngredients([]);
                 if (data.recipes) setRecipes(data.recipes);
                 if (data.family) setFamily(data.family);
                 if (data.cookware) setCookware(data.cookware);
@@ -344,7 +353,8 @@ export function useAppState() {
                 const data = snapshot.data();
                 isSyncingFromRemote.current = true;
                 setIsSyncing(true);
-                if (data.ingredients) setIngredients(mergeIngredients(data.ingredients));
+                if (data.customIngredients) setCustomIngredients(data.customIngredients);
+                else setCustomIngredients([]);
                 if (data.recipes) setRecipes(data.recipes);
                 if (data.family) setFamily(data.family);
                 if (data.cookware) setCookware(data.cookware);
@@ -367,7 +377,7 @@ export function useAppState() {
 
         setSaveStatus('saving');
         const timer = setTimeout(async () => {
-            const state = { ingredients, recipes, family, cookware, mealHistory, groupId, portionErrorPercent, ingredientWeightHistory };
+            const state = { customIngredients, recipes, family, cookware, mealHistory, groupId, portionErrorPercent, ingredientWeightHistory };
 
             localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
 
@@ -399,7 +409,7 @@ export function useAppState() {
         }, 1000);
 
         return () => clearTimeout(timer);
-    }, [ingredients, recipes, family, cookware, mealHistory, groupId, portionErrorPercent, ingredientWeightHistory, isLoaded, user, isAuthReady, isSyncing, hasConsent]);
+    }, [customIngredients, recipes, family, cookware, mealHistory, groupId, portionErrorPercent, ingredientWeightHistory, isLoaded, user, isAuthReady, isSyncing, hasConsent]);
 
     useEffect(() => {
         if (toast) {
@@ -515,7 +525,7 @@ export function useAppState() {
             name: newIngredientName,
             carbsPer100g: Number(newIngredientCarbs)
         };
-        setIngredients(prev => [...prev, newIngredient]);
+        setCustomIngredients(prev => [...prev, newIngredient]);
         addIngredientToRecipe(newIngredient);
         setNewIngredientName('');
         setNewIngredientCarbs('');
@@ -755,7 +765,7 @@ export function useAppState() {
         try {
             await setDoc(doc(db, 'groups', newGroupId), {
                 ...newGroup,
-                ingredients,
+                customIngredients,
                 recipes,
                 family,
                 cookware,

@@ -1,0 +1,1712 @@
+[
+    {
+        "category": "Cereales y Derivados",
+        "food": "ARROZ BLANCO",
+        "hc_g_100g": 86.0,
+        "source_url": "https://www.fen.org.es/storage/app/media/flipbook/mercado-alimentos-fen/001-Cereales-Derivados.pdf#page=4"
+    },
+    {
+        "category": "Cereales y Derivados",
+        "food": "CEREALES DE DESAYUNO",
+        "hc_g_100g": 84.0,
+        "source_url": "https://www.fen.org.es/storage/app/media/flipbook/mercado-alimentos-fen/001-Cereales-Derivados.pdf#page=6"
+    },
+    {
+        "category": "Cereales y Derivados",
+        "food": "CHURROS",
+        "hc_g_100g": 2013.0,
+        "source_url": "https://www.fen.org.es/storage/app/media/flipbook/mercado-alimentos-fen/001-Cereales-Derivados.pdf#page=8"
+    },
+    {
+        "category": "Cereales y Derivados",
+        "food": "GALLETAS",
+        "hc_g_100g": 71.5,
+        "source_url": "https://www.fen.org.es/storage/app/media/flipbook/mercado-alimentos-fen/001-Cereales-Derivados.pdf#page=10"
+    },
+    {
+        "category": "Cereales y Derivados",
+        "food": "HARINA DE TRIGO BLANCA",
+        "hc_g_100g": 80.0,
+        "source_url": "https://www.fen.org.es/storage/app/media/flipbook/mercado-alimentos-fen/001-Cereales-Derivados.pdf#page=12"
+    },
+    {
+        "category": "Cereales y Derivados",
+        "food": "MAGDALENAS",
+        "hc_g_100g": 39.9,
+        "source_url": "https://www.fen.org.es/storage/app/media/flipbook/mercado-alimentos-fen/001-Cereales-Derivados.pdf#page=14"
+    },
+    {
+        "category": "Cereales y Derivados",
+        "food": "MAÍZ DESGRANADO EN CONSERVA",
+        "hc_g_100g": 10.7,
+        "source_url": "https://www.fen.org.es/storage/app/media/flipbook/mercado-alimentos-fen/001-Cereales-Derivados.pdf#page=16"
+    },
+    {
+        "category": "Cereales y Derivados",
+        "food": "MAÍZ EN MAZORCA, CRUDA, CONGELADA",
+        "hc_g_100g": 19.5,
+        "source_url": "https://www.fen.org.es/storage/app/media/flipbook/mercado-alimentos-fen/001-Cereales-Derivados.pdf#page=18"
+    },
+    {
+        "category": "Cereales y Derivados",
+        "food": "PAN BLANCO DE TRIGO",
+        "hc_g_100g": 58.0,
+        "source_url": "https://www.fen.org.es/storage/app/media/flipbook/mercado-alimentos-fen/001-Cereales-Derivados.pdf#page=20"
+    },
+    {
+        "category": "Cereales y Derivados",
+        "food": "PAN INTEGRAL DE TRIGO",
+        "hc_g_100g": 49.0,
+        "source_url": "https://www.fen.org.es/storage/app/media/flipbook/mercado-alimentos-fen/001-Cereales-Derivados.pdf#page=22"
+    },
+    {
+        "category": "Cereales y Derivados",
+        "food": "PAN BLANCO DE MOLDE",
+        "hc_g_100g": 52.0,
+        "source_url": "https://www.fen.org.es/storage/app/media/flipbook/mercado-alimentos-fen/001-Cereales-Derivados.pdf#page=24"
+    },
+    {
+        "category": "Cereales y Derivados",
+        "food": "PASTA",
+        "hc_g_100g": 75.8,
+        "source_url": "https://www.fen.org.es/storage/app/media/flipbook/mercado-alimentos-fen/001-Cereales-Derivados.pdf#page=26"
+    },
+    {
+        "category": "Leche y Productos Lácteos",
+        "food": "CUAJADA",
+        "hc_g_100g": 6.7,
+        "source_url": "https://www.fen.org.es/storage/app/media/flipbook/mercado-alimentos-fen/002-Leche-Productos-Lacteos.pdf#page=4"
+    },
+    {
+        "category": "Leche y Productos Lácteos",
+        "food": "FLAN DE HUEVO",
+        "hc_g_100g": 21.6,
+        "source_url": "https://www.fen.org.es/storage/app/media/flipbook/mercado-alimentos-fen/002-Leche-Productos-Lacteos.pdf#page=6"
+    },
+    {
+        "category": "Leche y Productos Lácteos",
+        "food": "HELADOS",
+        "hc_g_100g": 25.4,
+        "source_url": "https://www.fen.org.es/storage/app/media/flipbook/mercado-alimentos-fen/002-Leche-Productos-Lacteos.pdf#page=8"
+    },
+    {
+        "category": "Leche y Productos Lácteos",
+        "food": "LECHE CONDENSADA",
+        "hc_g_100g": 56.0,
+        "source_url": "https://www.fen.org.es/storage/app/media/flipbook/mercado-alimentos-fen/002-Leche-Productos-Lacteos.pdf#page=10"
+    },
+    {
+        "category": "Leche y Productos Lácteos",
+        "food": "LECHE DE CABRA",
+        "hc_g_100g": 4.5,
+        "source_url": "https://www.fen.org.es/storage/app/media/flipbook/mercado-alimentos-fen/002-Leche-Productos-Lacteos.pdf#page=12"
+    },
+    {
+        "category": "Leche y Productos Lácteos",
+        "food": "LECHE DE VACA DESNATADA",
+        "hc_g_100g": 5.0,
+        "source_url": "https://www.fen.org.es/storage/app/media/flipbook/mercado-alimentos-fen/002-Leche-Productos-Lacteos.pdf#page=14"
+    },
+    {
+        "category": "Leche y Productos Lácteos",
+        "food": "LECHE DE VACA ENTERA",
+        "hc_g_100g": 5.0,
+        "source_url": "https://www.fen.org.es/storage/app/media/flipbook/mercado-alimentos-fen/002-Leche-Productos-Lacteos.pdf#page=16"
+    },
+    {
+        "category": "Leche y Productos Lácteos",
+        "food": "MOZZARELLA",
+        "hc_g_100g": 0.0,
+        "source_url": "https://www.fen.org.es/storage/app/media/flipbook/mercado-alimentos-fen/002-Leche-Productos-Lacteos.pdf#page=18"
+    },
+    {
+        "category": "Leche y Productos Lácteos",
+        "food": "NATA",
+        "hc_g_100g": 2.0,
+        "source_url": "https://www.fen.org.es/storage/app/media/flipbook/mercado-alimentos-fen/002-Leche-Productos-Lacteos.pdf#page=20"
+    },
+    {
+        "category": "Leche y Productos Lácteos",
+        "food": "NATILLAS",
+        "hc_g_100g": 16.8,
+        "source_url": "https://www.fen.org.es/storage/app/media/flipbook/mercado-alimentos-fen/002-Leche-Productos-Lacteos.pdf#page=22"
+    },
+    {
+        "category": "Leche y Productos Lácteos",
+        "food": "QUESO DE BURGOS",
+        "hc_g_100g": 4.0,
+        "source_url": "https://www.fen.org.es/storage/app/media/flipbook/mercado-alimentos-fen/002-Leche-Productos-Lacteos.pdf#page=24"
+    },
+    {
+        "category": "Leche y Productos Lácteos",
+        "food": "QUESO DE CABRALES",
+        "hc_g_100g": 2.0,
+        "source_url": "https://www.fen.org.es/storage/app/media/flipbook/mercado-alimentos-fen/002-Leche-Productos-Lacteos.pdf#page=26"
+    },
+    {
+        "category": "Leche y Productos Lácteos",
+        "food": "QUESO EN PORCIONES",
+        "hc_g_100g": 2.5,
+        "source_url": "https://www.fen.org.es/storage/app/media/flipbook/mercado-alimentos-fen/002-Leche-Productos-Lacteos.pdf#page=28"
+    },
+    {
+        "category": "Leche y Productos Lácteos",
+        "food": "QUESO MANCHEGO CURADO",
+        "hc_g_100g": 1.0,
+        "source_url": "https://www.fen.org.es/storage/app/media/flipbook/mercado-alimentos-fen/002-Leche-Productos-Lacteos.pdf#page=30"
+    },
+    {
+        "category": "Leche y Productos Lácteos",
+        "food": "REQUESÓN",
+        "hc_g_100g": 1.8,
+        "source_url": "https://www.fen.org.es/storage/app/media/flipbook/mercado-alimentos-fen/002-Leche-Productos-Lacteos.pdf#page=32"
+    },
+    {
+        "category": "Leche y Productos Lácteos",
+        "food": "YOGUR ENTERO NATURAL",
+        "hc_g_100g": 4.4,
+        "source_url": "https://www.fen.org.es/storage/app/media/flipbook/mercado-alimentos-fen/002-Leche-Productos-Lacteos.pdf#page=34"
+    },
+    {
+        "category": "Huevos",
+        "food": "HUEVO DE GALLINA",
+        "hc_g_100g": 375.0,
+        "source_url": "https://www.fen.org.es/storage/app/media/flipbook/mercado-alimentos-fen/003-Huevos.pdf#page=4"
+    },
+    {
+        "category": "Azúcares y Dulces",
+        "food": "AZÚCAR BLANCO",
+        "hc_g_100g": 99.5,
+        "source_url": "https://www.fen.org.es/storage/app/media/flipbook/mercado-alimentos-fen/004-Azucares-Dulces.pdf#page=4"
+    },
+    {
+        "category": "Azúcares y Dulces",
+        "food": "BOLLERÍA",
+        "hc_g_100g": 2013.0,
+        "source_url": "https://www.fen.org.es/storage/app/media/flipbook/mercado-alimentos-fen/004-Azucares-Dulces.pdf#page=6"
+    },
+    {
+        "category": "Azúcares y Dulces",
+        "food": "Unknown (Page 8)",
+        "hc_g_100g": 67.1,
+        "source_url": "https://www.fen.org.es/storage/app/media/flipbook/mercado-alimentos-fen/004-Azucares-Dulces.pdf#page=8"
+    },
+    {
+        "category": "Azúcares y Dulces",
+        "food": "CHOCOLATE",
+        "hc_g_100g": 56.4,
+        "source_url": "https://www.fen.org.es/storage/app/media/flipbook/mercado-alimentos-fen/004-Azucares-Dulces.pdf#page=10"
+    },
+    {
+        "category": "Azúcares y Dulces",
+        "food": "MERMELADA",
+        "hc_g_100g": 70.0,
+        "source_url": "https://www.fen.org.es/storage/app/media/flipbook/mercado-alimentos-fen/004-Azucares-Dulces.pdf#page=12"
+    },
+    {
+        "category": "Azúcares y Dulces",
+        "food": "MIEL",
+        "hc_g_100g": 78.0,
+        "source_url": "https://www.fen.org.es/storage/app/media/flipbook/mercado-alimentos-fen/004-Azucares-Dulces.pdf#page=14"
+    },
+    {
+        "category": "Azúcares y Dulces",
+        "food": "TURRÓN",
+        "hc_g_100g": 57.4,
+        "source_url": "https://www.fen.org.es/storage/app/media/flipbook/mercado-alimentos-fen/004-Azucares-Dulces.pdf#page=16"
+    },
+    {
+        "category": "Aceites y Grasas",
+        "food": "OIL, CANOLA",
+        "hc_g_100g": 0.0,
+        "source_url": "https://www.fen.org.es/storage/app/media/flipbook/mercado-alimentos-fen/005-Aceites-Grasas.pdf#page=4"
+    },
+    {
+        "category": "Aceites y Grasas",
+        "food": "ACEITE DE GIRASOL",
+        "hc_g_100g": 0.0,
+        "source_url": "https://www.fen.org.es/storage/app/media/flipbook/mercado-alimentos-fen/005-Aceites-Grasas.pdf#page=6"
+    },
+    {
+        "category": "Aceites y Grasas",
+        "food": "ACEITE DE MAÍZ",
+        "hc_g_100g": 0.0,
+        "source_url": "https://www.fen.org.es/storage/app/media/flipbook/mercado-alimentos-fen/005-Aceites-Grasas.pdf#page=8"
+    },
+    {
+        "category": "Aceites y Grasas",
+        "food": "ACEITE DE OLIVA",
+        "hc_g_100g": 0.0,
+        "source_url": "https://www.fen.org.es/storage/app/media/flipbook/mercado-alimentos-fen/005-Aceites-Grasas.pdf#page=10"
+    },
+    {
+        "category": "Aceites y Grasas",
+        "food": "ACEITE DE COCO",
+        "hc_g_100g": 0.0,
+        "source_url": "https://www.fen.org.es/storage/app/media/flipbook/mercado-alimentos-fen/005-Aceites-Grasas.pdf#page=12"
+    },
+    {
+        "category": "Aceites y Grasas",
+        "food": "MANTECA DE CERDO",
+        "hc_g_100g": 0.0,
+        "source_url": "https://www.fen.org.es/storage/app/media/flipbook/mercado-alimentos-fen/005-Aceites-Grasas.pdf#page=14"
+    },
+    {
+        "category": "Aceites y Grasas",
+        "food": "MANTEQUILLA",
+        "hc_g_100g": 375.0,
+        "source_url": "https://www.fen.org.es/storage/app/media/flipbook/mercado-alimentos-fen/005-Aceites-Grasas.pdf#page=16"
+    },
+    {
+        "category": "Aceites y Grasas",
+        "food": "MARGARINA",
+        "hc_g_100g": 1.0,
+        "source_url": "https://www.fen.org.es/storage/app/media/flipbook/mercado-alimentos-fen/005-Aceites-Grasas.pdf#page=18"
+    },
+    {
+        "category": "Verduras y Hortalizas",
+        "food": "ACELGAS FRESCAS",
+        "hc_g_100g": 4.5,
+        "source_url": "https://www.fen.org.es/storage/app/media/flipbook/mercado-alimentos-fen/006-Verduras-Hortalizas.pdf#page=4"
+    },
+    {
+        "category": "Verduras y Hortalizas",
+        "food": "AJO",
+        "hc_g_100g": 23.0,
+        "source_url": "https://www.fen.org.es/storage/app/media/flipbook/mercado-alimentos-fen/006-Verduras-Hortalizas.pdf#page=6"
+    },
+    {
+        "category": "Verduras y Hortalizas",
+        "food": "ALCACHOFAS FRESCAS",
+        "hc_g_100g": 7.5,
+        "source_url": "https://www.fen.org.es/storage/app/media/flipbook/mercado-alimentos-fen/006-Verduras-Hortalizas.pdf#page=8"
+    },
+    {
+        "category": "Verduras y Hortalizas",
+        "food": "ALCAPARRAS",
+        "hc_g_100g": 4.9,
+        "source_url": "https://www.fen.org.es/storage/app/media/flipbook/mercado-alimentos-fen/006-Verduras-Hortalizas.pdf#page=10"
+    },
+    {
+        "category": "Verduras y Hortalizas",
+        "food": "APIO",
+        "hc_g_100g": 1.3,
+        "source_url": "https://www.fen.org.es/storage/app/media/flipbook/mercado-alimentos-fen/006-Verduras-Hortalizas.pdf#page=12"
+    },
+    {
+        "category": "Verduras y Hortalizas",
+        "food": "BATATA",
+        "hc_g_100g": 21.5,
+        "source_url": "https://www.fen.org.es/storage/app/media/flipbook/mercado-alimentos-fen/006-Verduras-Hortalizas.pdf#page=14"
+    },
+    {
+        "category": "Verduras y Hortalizas",
+        "food": "BERENJENA",
+        "hc_g_100g": 4.4,
+        "source_url": "https://www.fen.org.es/storage/app/media/flipbook/mercado-alimentos-fen/006-Verduras-Hortalizas.pdf#page=16"
+    },
+    {
+        "category": "Verduras y Hortalizas",
+        "food": "BERROS",
+        "hc_g_100g": 0.4,
+        "source_url": "https://www.fen.org.es/storage/app/media/flipbook/mercado-alimentos-fen/006-Verduras-Hortalizas.pdf#page=18"
+    },
+    {
+        "category": "Verduras y Hortalizas",
+        "food": "COLES",
+        "hc_g_100g": 3.4,
+        "source_url": "https://www.fen.org.es/storage/app/media/flipbook/mercado-alimentos-fen/006-Verduras-Hortalizas.pdf#page=20"
+    },
+    {
+        "category": "Verduras y Hortalizas",
+        "food": "BRÉCOL",
+        "hc_g_100g": 1.8,
+        "source_url": "https://www.fen.org.es/storage/app/media/flipbook/mercado-alimentos-fen/006-Verduras-Hortalizas.pdf#page=22"
+    },
+    {
+        "category": "Verduras y Hortalizas",
+        "food": "CALABACÍN",
+        "hc_g_100g": 2.2,
+        "source_url": "https://www.fen.org.es/storage/app/media/flipbook/mercado-alimentos-fen/006-Verduras-Hortalizas.pdf#page=24"
+    },
+    {
+        "category": "Verduras y Hortalizas",
+        "food": "CALABAZA",
+        "hc_g_100g": 2.2,
+        "source_url": "https://www.fen.org.es/storage/app/media/flipbook/mercado-alimentos-fen/006-Verduras-Hortalizas.pdf#page=26"
+    },
+    {
+        "category": "Verduras y Hortalizas",
+        "food": "CANÓNIGOS",
+        "hc_g_100g": 0.7,
+        "source_url": "https://www.fen.org.es/storage/app/media/flipbook/mercado-alimentos-fen/006-Verduras-Hortalizas.pdf#page=28"
+    },
+    {
+        "category": "Verduras y Hortalizas",
+        "food": "CARDO",
+        "hc_g_100g": 3.5,
+        "source_url": "https://www.fen.org.es/storage/app/media/flipbook/mercado-alimentos-fen/006-Verduras-Hortalizas.pdf#page=30"
+    },
+    {
+        "category": "Verduras y Hortalizas",
+        "food": "CEBOLLA BLANCA",
+        "hc_g_100g": 3.5,
+        "source_url": "https://www.fen.org.es/storage/app/media/flipbook/mercado-alimentos-fen/006-Verduras-Hortalizas.pdf#page=32"
+    },
+    {
+        "category": "Verduras y Hortalizas",
+        "food": "CEBOLLETA",
+        "hc_g_100g": 5.1,
+        "source_url": "https://www.fen.org.es/storage/app/media/flipbook/mercado-alimentos-fen/006-Verduras-Hortalizas.pdf#page=34"
+    },
+    {
+        "category": "Verduras y Hortalizas",
+        "food": "CEBOLLINO",
+        "hc_g_100g": 1.9,
+        "source_url": "https://www.fen.org.es/storage/app/media/flipbook/mercado-alimentos-fen/006-Verduras-Hortalizas.pdf#page=36"
+    },
+    {
+        "category": "Verduras y Hortalizas",
+        "food": "CHAMPIÑÓN",
+        "hc_g_100g": 4.0,
+        "source_url": "https://www.fen.org.es/storage/app/media/flipbook/mercado-alimentos-fen/006-Verduras-Hortalizas.pdf#page=38"
+    },
+    {
+        "category": "Verduras y Hortalizas",
+        "food": "COLES DE BRUSELAS",
+        "hc_g_100g": 4.1,
+        "source_url": "https://www.fen.org.es/storage/app/media/flipbook/mercado-alimentos-fen/006-Verduras-Hortalizas.pdf#page=40"
+    },
+    {
+        "category": "Verduras y Hortalizas",
+        "food": "COLIFLOR",
+        "hc_g_100g": 3.1,
+        "source_url": "https://www.fen.org.es/storage/app/media/flipbook/mercado-alimentos-fen/006-Verduras-Hortalizas.pdf#page=42"
+    },
+    {
+        "category": "Verduras y Hortalizas",
+        "food": "ENDIBIA",
+        "hc_g_100g": 3.6,
+        "source_url": "https://www.fen.org.es/storage/app/media/flipbook/mercado-alimentos-fen/006-Verduras-Hortalizas.pdf#page=44"
+    },
+    {
+        "category": "Verduras y Hortalizas",
+        "food": "ESCAROLA",
+        "hc_g_100g": 3.0,
+        "source_url": "https://www.fen.org.es/storage/app/media/flipbook/mercado-alimentos-fen/006-Verduras-Hortalizas.pdf#page=46"
+    },
+    {
+        "category": "Verduras y Hortalizas",
+        "food": "ESPÁRRAGO BLANCO FRESCO",
+        "hc_g_100g": 1.1,
+        "source_url": "https://www.fen.org.es/storage/app/media/flipbook/mercado-alimentos-fen/006-Verduras-Hortalizas.pdf#page=48"
+    },
+    {
+        "category": "Verduras y Hortalizas",
+        "food": "ESPINACAS",
+        "hc_g_100g": 1.2,
+        "source_url": "https://www.fen.org.es/storage/app/media/flipbook/mercado-alimentos-fen/006-Verduras-Hortalizas.pdf#page=50"
+    },
+    {
+        "category": "Verduras y Hortalizas",
+        "food": "GRELOS",
+        "hc_g_100g": 0.1,
+        "source_url": "https://www.fen.org.es/storage/app/media/flipbook/mercado-alimentos-fen/006-Verduras-Hortalizas.pdf#page=52"
+    },
+    {
+        "category": "Verduras y Hortalizas",
+        "food": "GUISANTES CONGELADOS",
+        "hc_g_100g": 10.0,
+        "source_url": "https://www.fen.org.es/storage/app/media/flipbook/mercado-alimentos-fen/006-Verduras-Hortalizas.pdf#page=54"
+    },
+    {
+        "category": "Verduras y Hortalizas",
+        "food": "HABAS FRESCAS DESGRANADAS",
+        "hc_g_100g": 8.6,
+        "source_url": "https://www.fen.org.es/storage/app/media/flipbook/mercado-alimentos-fen/006-Verduras-Hortalizas.pdf#page=56"
+    },
+    {
+        "category": "Verduras y Hortalizas",
+        "food": "JUDÍAS VERDES",
+        "hc_g_100g": 5.0,
+        "source_url": "https://www.fen.org.es/storage/app/media/flipbook/mercado-alimentos-fen/006-Verduras-Hortalizas.pdf#page=58"
+    },
+    {
+        "category": "Verduras y Hortalizas",
+        "food": "LECHUGA",
+        "hc_g_100g": 1.4,
+        "source_url": "https://www.fen.org.es/storage/app/media/flipbook/mercado-alimentos-fen/006-Verduras-Hortalizas.pdf#page=60"
+    },
+    {
+        "category": "Verduras y Hortalizas",
+        "food": "LOMBARDA",
+        "hc_g_100g": 3.7,
+        "source_url": "https://www.fen.org.es/storage/app/media/flipbook/mercado-alimentos-fen/006-Verduras-Hortalizas.pdf#page=62"
+    },
+    {
+        "category": "Verduras y Hortalizas",
+        "food": "NABOS",
+        "hc_g_100g": 5.0,
+        "source_url": "https://www.fen.org.es/storage/app/media/flipbook/mercado-alimentos-fen/006-Verduras-Hortalizas.pdf#page=64"
+    },
+    {
+        "category": "Verduras y Hortalizas",
+        "food": "NÍSCALO",
+        "hc_g_100g": 0.2,
+        "source_url": "https://www.fen.org.es/storage/app/media/flipbook/mercado-alimentos-fen/006-Verduras-Hortalizas.pdf#page=66"
+    },
+    {
+        "category": "Verduras y Hortalizas",
+        "food": "PATATA",
+        "hc_g_100g": 18.0,
+        "source_url": "https://www.fen.org.es/storage/app/media/flipbook/mercado-alimentos-fen/006-Verduras-Hortalizas.pdf#page=68"
+    },
+    {
+        "category": "Verduras y Hortalizas",
+        "food": "PEPINO",
+        "hc_g_100g": 1.9,
+        "source_url": "https://www.fen.org.es/storage/app/media/flipbook/mercado-alimentos-fen/006-Verduras-Hortalizas.pdf#page=70"
+    },
+    {
+        "category": "Verduras y Hortalizas",
+        "food": "PIMIENTO VERDE",
+        "hc_g_100g": 3.7,
+        "source_url": "https://www.fen.org.es/storage/app/media/flipbook/mercado-alimentos-fen/006-Verduras-Hortalizas.pdf#page=72"
+    },
+    {
+        "category": "Verduras y Hortalizas",
+        "food": "PIMIENTO MORRÓN",
+        "hc_g_100g": 7.0,
+        "source_url": "https://www.fen.org.es/storage/app/media/flipbook/mercado-alimentos-fen/006-Verduras-Hortalizas.pdf#page=74"
+    },
+    {
+        "category": "Verduras y Hortalizas",
+        "food": "PUERRO",
+        "hc_g_100g": 7.5,
+        "source_url": "https://www.fen.org.es/storage/app/media/flipbook/mercado-alimentos-fen/006-Verduras-Hortalizas.pdf#page=76"
+    },
+    {
+        "category": "Verduras y Hortalizas",
+        "food": "RÁBANOS",
+        "hc_g_100g": 2.7,
+        "source_url": "https://www.fen.org.es/storage/app/media/flipbook/mercado-alimentos-fen/006-Verduras-Hortalizas.pdf#page=78"
+    },
+    {
+        "category": "Verduras y Hortalizas",
+        "food": "REMOLACHA",
+        "hc_g_100g": 6.4,
+        "source_url": "https://www.fen.org.es/storage/app/media/flipbook/mercado-alimentos-fen/006-Verduras-Hortalizas.pdf#page=80"
+    },
+    {
+        "category": "Verduras y Hortalizas",
+        "food": "REPOLLO",
+        "hc_g_100g": 3.4,
+        "source_url": "https://www.fen.org.es/storage/app/media/flipbook/mercado-alimentos-fen/006-Verduras-Hortalizas.pdf#page=82"
+    },
+    {
+        "category": "Verduras y Hortalizas",
+        "food": "SETAS",
+        "hc_g_100g": 4.0,
+        "source_url": "https://www.fen.org.es/storage/app/media/flipbook/mercado-alimentos-fen/006-Verduras-Hortalizas.pdf#page=84"
+    },
+    {
+        "category": "Verduras y Hortalizas",
+        "food": "GUISANTES FRESCOS CON VAINA",
+        "hc_g_100g": 13.1,
+        "source_url": "https://www.fen.org.es/storage/app/media/flipbook/mercado-alimentos-fen/006-Verduras-Hortalizas.pdf#page=86"
+    },
+    {
+        "category": "Verduras y Hortalizas",
+        "food": "TOMATE",
+        "hc_g_100g": 3.5,
+        "source_url": "https://www.fen.org.es/storage/app/media/flipbook/mercado-alimentos-fen/006-Verduras-Hortalizas.pdf#page=88"
+    },
+    {
+        "category": "Verduras y Hortalizas",
+        "food": "ZANAHORIA",
+        "hc_g_100g": 7.3,
+        "source_url": "https://www.fen.org.es/storage/app/media/flipbook/mercado-alimentos-fen/006-Verduras-Hortalizas.pdf#page=90"
+    },
+    {
+        "category": "Legumbres",
+        "food": "ALUBIAS",
+        "hc_g_100g": 52.5,
+        "source_url": "https://www.fen.org.es/storage/app/media/flipbook/mercado-alimentos-fen/007-Legumbres.pdf#page=4"
+    },
+    {
+        "category": "Legumbres",
+        "food": "GARBANZOS",
+        "hc_g_100g": 55.0,
+        "source_url": "https://www.fen.org.es/storage/app/media/flipbook/mercado-alimentos-fen/007-Legumbres.pdf#page=6"
+    },
+    {
+        "category": "Legumbres",
+        "food": "LENTEJAS",
+        "hc_g_100g": 54.0,
+        "source_url": "https://www.fen.org.es/storage/app/media/flipbook/mercado-alimentos-fen/007-Legumbres.pdf#page=8"
+    },
+    {
+        "category": "Legumbres",
+        "food": "SOJA SECA",
+        "hc_g_100g": 15.8,
+        "source_url": "https://www.fen.org.es/storage/app/media/flipbook/mercado-alimentos-fen/007-Legumbres.pdf#page=10"
+    },
+    {
+        "category": "Frutas",
+        "food": "AGUACATE",
+        "hc_g_100g": 5.9,
+        "source_url": "https://www.fen.org.es/storage/app/media/flipbook/mercado-alimentos-fen/008-Frutas.pdf#page=4"
+    },
+    {
+        "category": "Frutas",
+        "food": "ALBARICOQUE",
+        "hc_g_100g": 9.5,
+        "source_url": "https://www.fen.org.es/storage/app/media/flipbook/mercado-alimentos-fen/008-Frutas.pdf#page=6"
+    },
+    {
+        "category": "Frutas",
+        "food": "CAQUI",
+        "hc_g_100g": 16.0,
+        "source_url": "https://www.fen.org.es/storage/app/media/flipbook/mercado-alimentos-fen/008-Frutas.pdf#page=8"
+    },
+    {
+        "category": "Frutas",
+        "food": "CEREZAS, GUINDAS",
+        "hc_g_100g": 13.5,
+        "source_url": "https://www.fen.org.es/storage/app/media/flipbook/mercado-alimentos-fen/008-Frutas.pdf#page=10"
+    },
+    {
+        "category": "Frutas",
+        "food": "CHIRIMOYA",
+        "hc_g_100g": 20.0,
+        "source_url": "https://www.fen.org.es/storage/app/media/flipbook/mercado-alimentos-fen/008-Frutas.pdf#page=12"
+    },
+    {
+        "category": "Frutas",
+        "food": "CIRUELA",
+        "hc_g_100g": 11.0,
+        "source_url": "https://www.fen.org.es/storage/app/media/flipbook/mercado-alimentos-fen/008-Frutas.pdf#page=14"
+    },
+    {
+        "category": "Frutas",
+        "food": "COCO FRESCO",
+        "hc_g_100g": 3.7,
+        "source_url": "https://www.fen.org.es/storage/app/media/flipbook/mercado-alimentos-fen/008-Frutas.pdf#page=16"
+    },
+    {
+        "category": "Frutas",
+        "food": "FRAMBUESA",
+        "hc_g_100g": 4.6,
+        "source_url": "https://www.fen.org.es/storage/app/media/flipbook/mercado-alimentos-fen/008-Frutas.pdf#page=18"
+    },
+    {
+        "category": "Frutas",
+        "food": "FRESA, FRESÓN",
+        "hc_g_100g": 7.0,
+        "source_url": "https://www.fen.org.es/storage/app/media/flipbook/mercado-alimentos-fen/008-Frutas.pdf#page=20"
+    },
+    {
+        "category": "Frutas",
+        "food": "GRANADA",
+        "hc_g_100g": 7.5,
+        "source_url": "https://www.fen.org.es/storage/app/media/flipbook/mercado-alimentos-fen/008-Frutas.pdf#page=22"
+    },
+    {
+        "category": "Frutas",
+        "food": "GROSELLA ROJA",
+        "hc_g_100g": 4.8,
+        "source_url": "https://www.fen.org.es/storage/app/media/flipbook/mercado-alimentos-fen/008-Frutas.pdf#page=24"
+    },
+    {
+        "category": "Frutas",
+        "food": "HIGOS, BREVAS",
+        "hc_g_100g": 16.0,
+        "source_url": "https://www.fen.org.es/storage/app/media/flipbook/mercado-alimentos-fen/008-Frutas.pdf#page=26"
+    },
+    {
+        "category": "Frutas",
+        "food": "KIWI",
+        "hc_g_100g": 10.6,
+        "source_url": "https://www.fen.org.es/storage/app/media/flipbook/mercado-alimentos-fen/008-Frutas.pdf#page=28"
+    },
+    {
+        "category": "Frutas",
+        "food": "LIMÓN",
+        "hc_g_100g": 9.0,
+        "source_url": "https://www.fen.org.es/storage/app/media/flipbook/mercado-alimentos-fen/008-Frutas.pdf#page=30"
+    },
+    {
+        "category": "Frutas",
+        "food": "MANDARINA",
+        "hc_g_100g": 9.0,
+        "source_url": "https://www.fen.org.es/storage/app/media/flipbook/mercado-alimentos-fen/008-Frutas.pdf#page=32"
+    },
+    {
+        "category": "Frutas",
+        "food": "MANZANA",
+        "hc_g_100g": 12.0,
+        "source_url": "https://www.fen.org.es/storage/app/media/flipbook/mercado-alimentos-fen/008-Frutas.pdf#page=34"
+    },
+    {
+        "category": "Frutas",
+        "food": "MELOCOTÓN",
+        "hc_g_100g": 9.0,
+        "source_url": "https://www.fen.org.es/storage/app/media/flipbook/mercado-alimentos-fen/008-Frutas.pdf#page=36"
+    },
+    {
+        "category": "Frutas",
+        "food": "MELOCOTÓN EN ALMÍBAR",
+        "hc_g_100g": 22.0,
+        "source_url": "https://www.fen.org.es/storage/app/media/flipbook/mercado-alimentos-fen/008-Frutas.pdf#page=38"
+    },
+    {
+        "category": "Frutas",
+        "food": "MELÓN",
+        "hc_g_100g": 6.0,
+        "source_url": "https://www.fen.org.es/storage/app/media/flipbook/mercado-alimentos-fen/008-Frutas.pdf#page=40"
+    },
+    {
+        "category": "Frutas",
+        "food": "MEMBRILLO",
+        "hc_g_100g": 6.8,
+        "source_url": "https://www.fen.org.es/storage/app/media/flipbook/mercado-alimentos-fen/008-Frutas.pdf#page=42"
+    },
+    {
+        "category": "Frutas",
+        "food": "MORA",
+        "hc_g_100g": 5.1,
+        "source_url": "https://www.fen.org.es/storage/app/media/flipbook/mercado-alimentos-fen/008-Frutas.pdf#page=44"
+    },
+    {
+        "category": "Frutas",
+        "food": "NARANJA",
+        "hc_g_100g": 8.6,
+        "source_url": "https://www.fen.org.es/storage/app/media/flipbook/mercado-alimentos-fen/008-Frutas.pdf#page=46"
+    },
+    {
+        "category": "Frutas",
+        "food": "NÍSPERO",
+        "hc_g_100g": 10.6,
+        "source_url": "https://www.fen.org.es/storage/app/media/flipbook/mercado-alimentos-fen/008-Frutas.pdf#page=48"
+    },
+    {
+        "category": "Frutas",
+        "food": "PERA",
+        "hc_g_100g": 10.6,
+        "source_url": "https://www.fen.org.es/storage/app/media/flipbook/mercado-alimentos-fen/008-Frutas.pdf#page=50"
+    },
+    {
+        "category": "Frutas",
+        "food": "PIÑA",
+        "hc_g_100g": 11.5,
+        "source_url": "https://www.fen.org.es/storage/app/media/flipbook/mercado-alimentos-fen/008-Frutas.pdf#page=52"
+    },
+    {
+        "category": "Frutas",
+        "food": "PLÁTANO",
+        "hc_g_100g": 20.0,
+        "source_url": "https://www.fen.org.es/storage/app/media/flipbook/mercado-alimentos-fen/008-Frutas.pdf#page=54"
+    },
+    {
+        "category": "Frutas",
+        "food": "POMELO",
+        "hc_g_100g": 6.8,
+        "source_url": "https://www.fen.org.es/storage/app/media/flipbook/mercado-alimentos-fen/008-Frutas.pdf#page=56"
+    },
+    {
+        "category": "Frutas",
+        "food": "SANDÍA",
+        "hc_g_100g": 4.5,
+        "source_url": "https://www.fen.org.es/storage/app/media/flipbook/mercado-alimentos-fen/008-Frutas.pdf#page=58"
+    },
+    {
+        "category": "Frutas",
+        "food": "UVAS BLANCAS",
+        "hc_g_100g": 16.1,
+        "source_url": "https://www.fen.org.es/storage/app/media/flipbook/mercado-alimentos-fen/008-Frutas.pdf#page=60"
+    },
+    {
+        "category": "Frutos Secos",
+        "food": "ALMENDRA SIN CÁSCARA",
+        "hc_g_100g": 3.5,
+        "source_url": "https://www.fen.org.es/storage/app/media/flipbook/mercado-alimentos-fen/009-Frutos-Secos.pdf#page=4"
+    },
+    {
+        "category": "Frutos Secos",
+        "food": "AVELLANA SIN CÁSCARA",
+        "hc_g_100g": 5.3,
+        "source_url": "https://www.fen.org.es/storage/app/media/flipbook/mercado-alimentos-fen/009-Frutos-Secos.pdf#page=6"
+    },
+    {
+        "category": "Frutos Secos",
+        "food": "CACAHUETE SIN CÁSCARA",
+        "hc_g_100g": 8.5,
+        "source_url": "https://www.fen.org.es/storage/app/media/flipbook/mercado-alimentos-fen/009-Frutos-Secos.pdf#page=8"
+    },
+    {
+        "category": "Frutos Secos",
+        "food": "CASTAÑA",
+        "hc_g_100g": 40.0,
+        "source_url": "https://www.fen.org.es/storage/app/media/flipbook/mercado-alimentos-fen/009-Frutos-Secos.pdf#page=10"
+    },
+    {
+        "category": "Frutos Secos",
+        "food": "DÁTIL SECO CON HUESO",
+        "hc_g_100g": 71.0,
+        "source_url": "https://www.fen.org.es/storage/app/media/flipbook/mercado-alimentos-fen/009-Frutos-Secos.pdf#page=12"
+    },
+    {
+        "category": "Frutos Secos",
+        "food": "NUECES SIN CÁSCARA",
+        "hc_g_100g": 3.3,
+        "source_url": "https://www.fen.org.es/storage/app/media/flipbook/mercado-alimentos-fen/009-Frutos-Secos.pdf#page=14"
+    },
+    {
+        "category": "Frutos Secos",
+        "food": "PASAS",
+        "hc_g_100g": 66.0,
+        "source_url": "https://www.fen.org.es/storage/app/media/flipbook/mercado-alimentos-fen/009-Frutos-Secos.pdf#page=16"
+    },
+    {
+        "category": "Frutos Secos",
+        "food": "PIÑONES SIN CÁSCARA",
+        "hc_g_100g": 4.0,
+        "source_url": "https://www.fen.org.es/storage/app/media/flipbook/mercado-alimentos-fen/009-Frutos-Secos.pdf#page=18"
+    },
+    {
+        "category": "Frutos Secos",
+        "food": "PIPAS DE GIRASOL SIN CÁSCARA",
+        "hc_g_100g": 20.0,
+        "source_url": "https://www.fen.org.es/storage/app/media/flipbook/mercado-alimentos-fen/009-Frutos-Secos.pdf#page=20"
+    },
+    {
+        "category": "Frutos Secos",
+        "food": "PISTACHO CON CÁSCARA",
+        "hc_g_100g": 15.7,
+        "source_url": "https://www.fen.org.es/storage/app/media/flipbook/mercado-alimentos-fen/009-Frutos-Secos.pdf#page=22"
+    },
+    {
+        "category": "Frutos Secos",
+        "food": "SÉSAMO SEMILLA DE AJONJOLÍ",
+        "hc_g_100g": 0.9,
+        "source_url": "https://www.fen.org.es/storage/app/media/flipbook/mercado-alimentos-fen/009-Frutos-Secos.pdf#page=24"
+    },
+    {
+        "category": "Carnes y Productos carnicos",
+        "food": "AVESTRUZ, FILETE",
+        "hc_g_100g": 0.0,
+        "source_url": "https://www.fen.org.es/storage/app/media/flipbook/mercado-alimentos-fen/010-Carnes.pdf#page=4"
+    },
+    {
+        "category": "Carnes y Productos carnicos",
+        "food": "BUEY, SOLOMILLO",
+        "hc_g_100g": 0.0,
+        "source_url": "https://www.fen.org.es/storage/app/media/flipbook/mercado-alimentos-fen/010-Carnes.pdf#page=6"
+    },
+    {
+        "category": "Carnes y Productos carnicos",
+        "food": "BUTIFARRA",
+        "hc_g_100g": 5.5,
+        "source_url": "https://www.fen.org.es/storage/app/media/flipbook/mercado-alimentos-fen/010-Carnes.pdf#page=8"
+    },
+    {
+        "category": "Carnes y Productos carnicos",
+        "food": "CARNE DE CABALLO",
+        "hc_g_100g": 0.0,
+        "source_url": "https://www.fen.org.es/storage/app/media/flipbook/mercado-alimentos-fen/010-Carnes.pdf#page=10"
+    },
+    {
+        "category": "Carnes y Productos carnicos",
+        "food": "CABRITO",
+        "hc_g_100g": 0.0,
+        "source_url": "https://www.fen.org.es/storage/app/media/flipbook/mercado-alimentos-fen/010-Carnes.pdf#page=12"
+    },
+    {
+        "category": "Carnes y Productos carnicos",
+        "food": "CALLOS DE TERNERA",
+        "hc_g_100g": 0.0,
+        "source_url": "https://www.fen.org.es/storage/app/media/flipbook/mercado-alimentos-fen/010-Carnes.pdf#page=14"
+    },
+    {
+        "category": "Carnes y Productos carnicos",
+        "food": "CAPÓN ASADO",
+        "hc_g_100g": 0.0,
+        "source_url": "https://www.fen.org.es/storage/app/media/flipbook/mercado-alimentos-fen/010-Carnes.pdf#page=16"
+    },
+    {
+        "category": "Carnes y Productos carnicos",
+        "food": "CECINA",
+        "hc_g_100g": 0.0,
+        "source_url": "https://www.fen.org.es/storage/app/media/flipbook/mercado-alimentos-fen/010-Carnes.pdf#page=18"
+    },
+    {
+        "category": "Carnes y Productos carnicos",
+        "food": "CERDO, CARNE SEMIGRASA",
+        "hc_g_100g": 0.0,
+        "source_url": "https://www.fen.org.es/storage/app/media/flipbook/mercado-alimentos-fen/010-Carnes.pdf#page=20"
+    },
+    {
+        "category": "Carnes y Productos carnicos",
+        "food": "OREJA DE CERDO",
+        "hc_g_100g": 0.0,
+        "source_url": "https://www.fen.org.es/storage/app/media/flipbook/mercado-alimentos-fen/010-Carnes.pdf#page=22"
+    },
+    {
+        "category": "Carnes y Productos carnicos",
+        "food": "BEICON O PANCETA AHUMADA",
+        "hc_g_100g": 0.5,
+        "source_url": "https://www.fen.org.es/storage/app/media/flipbook/mercado-alimentos-fen/010-Carnes.pdf#page=24"
+    },
+    {
+        "category": "Carnes y Productos carnicos",
+        "food": "Unknown (Page 26)",
+        "hc_g_100g": 5.0,
+        "source_url": "https://www.fen.org.es/storage/app/media/flipbook/mercado-alimentos-fen/010-Carnes.pdf#page=26"
+    },
+    {
+        "category": "Carnes y Productos carnicos",
+        "food": "CHISTORRA",
+        "hc_g_100g": 0.9,
+        "source_url": "https://www.fen.org.es/storage/app/media/flipbook/mercado-alimentos-fen/010-Carnes.pdf#page=28"
+    },
+    {
+        "category": "Carnes y Productos carnicos",
+        "food": "CHÓPED",
+        "hc_g_100g": 3.0,
+        "source_url": "https://www.fen.org.es/storage/app/media/flipbook/mercado-alimentos-fen/010-Carnes.pdf#page=30"
+    },
+    {
+        "category": "Carnes y Productos carnicos",
+        "food": "Unknown (Page 32)",
+        "hc_g_100g": 2.0,
+        "source_url": "https://www.fen.org.es/storage/app/media/flipbook/mercado-alimentos-fen/010-Carnes.pdf#page=32"
+    },
+    {
+        "category": "Carnes y Productos carnicos",
+        "food": "CIERVO",
+        "hc_g_100g": 0.0,
+        "source_url": "https://www.fen.org.es/storage/app/media/flipbook/mercado-alimentos-fen/010-Carnes.pdf#page=34"
+    },
+    {
+        "category": "Carnes y Productos carnicos",
+        "food": "PROCOSE",
+        "hc_g_100g": 0.0,
+        "source_url": "https://www.fen.org.es/storage/app/media/flipbook/mercado-alimentos-fen/010-Carnes.pdf#page=36"
+    },
+    {
+        "category": "Carnes y Productos carnicos",
+        "food": "CODORNIZ",
+        "hc_g_100g": 0.0,
+        "source_url": "https://www.fen.org.es/storage/app/media/flipbook/mercado-alimentos-fen/010-Carnes.pdf#page=38"
+    },
+    {
+        "category": "Carnes y Productos carnicos",
+        "food": "CONEJO, LIEBRE",
+        "hc_g_100g": 0.0,
+        "source_url": "https://www.fen.org.es/storage/app/media/flipbook/mercado-alimentos-fen/010-Carnes.pdf#page=40"
+    },
+    {
+        "category": "Carnes y Productos carnicos",
+        "food": "CORDERO, CHULETA",
+        "hc_g_100g": 0.0,
+        "source_url": "https://www.fen.org.es/storage/app/media/flipbook/mercado-alimentos-fen/010-Carnes.pdf#page=42"
+    },
+    {
+        "category": "Carnes y Productos carnicos",
+        "food": "MOLLEJAS DE CORDERO",
+        "hc_g_100g": 0.0,
+        "source_url": "https://www.fen.org.es/storage/app/media/flipbook/mercado-alimentos-fen/010-Carnes.pdf#page=44"
+    },
+    {
+        "category": "Carnes y Productos carnicos",
+        "food": "CORDERO, PALETILLA",
+        "hc_g_100g": 0.0,
+        "source_url": "https://www.fen.org.es/storage/app/media/flipbook/mercado-alimentos-fen/010-Carnes.pdf#page=46"
+    },
+    {
+        "category": "Carnes y Productos carnicos",
+        "food": "SESOS DE CORDERO",
+        "hc_g_100g": 375.0,
+        "source_url": "https://www.fen.org.es/storage/app/media/flipbook/mercado-alimentos-fen/010-Carnes.pdf#page=48"
+    },
+    {
+        "category": "Carnes y Productos carnicos",
+        "food": "CORZO",
+        "hc_g_100g": 0.0,
+        "source_url": "https://www.fen.org.es/storage/app/media/flipbook/mercado-alimentos-fen/010-Carnes.pdf#page=50"
+    },
+    {
+        "category": "Carnes y Productos carnicos",
+        "food": "FAISÁN",
+        "hc_g_100g": 0.0,
+        "source_url": "https://www.fen.org.es/storage/app/media/flipbook/mercado-alimentos-fen/010-Carnes.pdf#page=52"
+    },
+    {
+        "category": "Carnes y Productos carnicos",
+        "food": "GALLINA",
+        "hc_g_100g": 0.0,
+        "source_url": "https://www.fen.org.es/storage/app/media/flipbook/mercado-alimentos-fen/010-Carnes.pdf#page=54"
+    },
+    {
+        "category": "Carnes y Productos carnicos",
+        "food": "JABALÍ, CARNE DE",
+        "hc_g_100g": 0.0,
+        "source_url": "https://www.fen.org.es/storage/app/media/flipbook/mercado-alimentos-fen/010-Carnes.pdf#page=56"
+    },
+    {
+        "category": "Carnes y Productos carnicos",
+        "food": "CABEZA DE JABALÍ",
+        "hc_g_100g": 0.8,
+        "source_url": "https://www.fen.org.es/storage/app/media/flipbook/mercado-alimentos-fen/010-Carnes.pdf#page=58"
+    },
+    {
+        "category": "Carnes y Productos carnicos",
+        "food": "JAMÓN COCIDO",
+        "hc_g_100g": 1.0,
+        "source_url": "https://www.fen.org.es/storage/app/media/flipbook/mercado-alimentos-fen/010-Carnes.pdf#page=60"
+    },
+    {
+        "category": "Carnes y Productos carnicos",
+        "food": "JAMÓN SERRANO",
+        "hc_g_100g": 0.0,
+        "source_url": "https://www.fen.org.es/storage/app/media/flipbook/mercado-alimentos-fen/010-Carnes.pdf#page=62"
+    },
+    {
+        "category": "Carnes y Productos carnicos",
+        "food": "LACÓN",
+        "hc_g_100g": 0.0,
+        "source_url": "https://www.fen.org.es/storage/app/media/flipbook/mercado-alimentos-fen/010-Carnes.pdf#page=64"
+    },
+    {
+        "category": "Carnes y Productos carnicos",
+        "food": "CONEJO, LIEBRE",
+        "hc_g_100g": 0.0,
+        "source_url": "https://www.fen.org.es/storage/app/media/flipbook/mercado-alimentos-fen/010-Carnes.pdf#page=66"
+    },
+    {
+        "category": "Carnes y Productos carnicos",
+        "food": "LOMO EMBUCHADO",
+        "hc_g_100g": 0.0,
+        "source_url": "https://www.fen.org.es/storage/app/media/flipbook/mercado-alimentos-fen/010-Carnes.pdf#page=68"
+    },
+    {
+        "category": "Carnes y Productos carnicos",
+        "food": "MORCILLA",
+        "hc_g_100g": 3.0,
+        "source_url": "https://www.fen.org.es/storage/app/media/flipbook/mercado-alimentos-fen/010-Carnes.pdf#page=70"
+    },
+    {
+        "category": "Carnes y Productos carnicos",
+        "food": "MORTADELA",
+        "hc_g_100g": 3.0,
+        "source_url": "https://www.fen.org.es/storage/app/media/flipbook/mercado-alimentos-fen/010-Carnes.pdf#page=72"
+    },
+    {
+        "category": "Carnes y Productos carnicos",
+        "food": "PALOMA",
+        "hc_g_100g": 0.0,
+        "source_url": "https://www.fen.org.es/storage/app/media/flipbook/mercado-alimentos-fen/010-Carnes.pdf#page=74"
+    },
+    {
+        "category": "Carnes y Productos carnicos",
+        "food": "PATO",
+        "hc_g_100g": 0.0,
+        "source_url": "https://www.fen.org.es/storage/app/media/flipbook/mercado-alimentos-fen/010-Carnes.pdf#page=76"
+    },
+    {
+        "category": "Carnes y Productos carnicos",
+        "food": "PAVO DESHUESADO SIN PIEL",
+        "hc_g_100g": 0.0,
+        "source_url": "https://www.fen.org.es/storage/app/media/flipbook/mercado-alimentos-fen/010-Carnes.pdf#page=78"
+    },
+    {
+        "category": "Carnes y Productos carnicos",
+        "food": "PERDIZ",
+        "hc_g_100g": 0.0,
+        "source_url": "https://www.fen.org.es/storage/app/media/flipbook/mercado-alimentos-fen/010-Carnes.pdf#page=80"
+    },
+    {
+        "category": "Carnes y Productos carnicos",
+        "food": "POLLO",
+        "hc_g_100g": 0.0,
+        "source_url": "https://www.fen.org.es/storage/app/media/flipbook/mercado-alimentos-fen/010-Carnes.pdf#page=82"
+    },
+    {
+        "category": "Carnes y Productos carnicos",
+        "food": "RIÑONES",
+        "hc_g_100g": 0.0,
+        "source_url": "https://www.fen.org.es/storage/app/media/flipbook/mercado-alimentos-fen/010-Carnes.pdf#page=84"
+    },
+    {
+        "category": "Carnes y Productos carnicos",
+        "food": "SALAMI",
+        "hc_g_100g": 1.8,
+        "source_url": "https://www.fen.org.es/storage/app/media/flipbook/mercado-alimentos-fen/010-Carnes.pdf#page=86"
+    },
+    {
+        "category": "Carnes y Productos carnicos",
+        "food": "Unknown (Page 88)",
+        "hc_g_100g": 3.0,
+        "source_url": "https://www.fen.org.es/storage/app/media/flipbook/mercado-alimentos-fen/010-Carnes.pdf#page=88"
+    },
+    {
+        "category": "Carnes y Productos carnicos",
+        "food": "SALCHICHAS FRESCAS",
+        "hc_g_100g": 375.0,
+        "source_url": "https://www.fen.org.es/storage/app/media/flipbook/mercado-alimentos-fen/010-Carnes.pdf#page=90"
+    },
+    {
+        "category": "Carnes y Productos carnicos",
+        "food": "SALCHICHÓN",
+        "hc_g_100g": 2.0,
+        "source_url": "https://www.fen.org.es/storage/app/media/flipbook/mercado-alimentos-fen/010-Carnes.pdf#page=92"
+    },
+    {
+        "category": "Carnes y Productos carnicos",
+        "food": "SANGRE DE CERDO",
+        "hc_g_100g": 375.0,
+        "source_url": "https://www.fen.org.es/storage/app/media/flipbook/mercado-alimentos-fen/010-Carnes.pdf#page=94"
+    },
+    {
+        "category": "Carnes y Productos carnicos",
+        "food": "SOBRASADA",
+        "hc_g_100g": 0.0,
+        "source_url": "https://www.fen.org.es/storage/app/media/flipbook/mercado-alimentos-fen/010-Carnes.pdf#page=96"
+    },
+    {
+        "category": "Carnes y Productos carnicos",
+        "food": "CARNE DE TERNERA MAGRA",
+        "hc_g_100g": 0.0,
+        "source_url": "https://www.fen.org.es/storage/app/media/flipbook/mercado-alimentos-fen/010-Carnes.pdf#page=98"
+    },
+    {
+        "category": "Carnes y Productos carnicos",
+        "food": "HÍGADO DE TERNERA",
+        "hc_g_100g": 1.6,
+        "source_url": "https://www.fen.org.es/storage/app/media/flipbook/mercado-alimentos-fen/010-Carnes.pdf#page=100"
+    },
+    {
+        "category": "Carnes y Productos carnicos",
+        "food": "TOCINO",
+        "hc_g_100g": 0.0,
+        "source_url": "https://www.fen.org.es/storage/app/media/flipbook/mercado-alimentos-fen/010-Carnes.pdf#page=102"
+    },
+    {
+        "category": "Carnes y Productos carnicos",
+        "food": "RABO DE TORO",
+        "hc_g_100g": 0.0,
+        "source_url": "https://www.fen.org.es/storage/app/media/flipbook/mercado-alimentos-fen/010-Carnes.pdf#page=104"
+    },
+    {
+        "category": "Carnes y Productos carnicos",
+        "food": "LENGUA DE TERNERA",
+        "hc_g_100g": 0.0,
+        "source_url": "https://www.fen.org.es/storage/app/media/flipbook/mercado-alimentos-fen/010-Carnes.pdf#page=106"
+    },
+    {
+        "category": "Pescados",
+        "food": "ABADEJO",
+        "hc_g_100g": 0.0,
+        "source_url": "https://www.fen.org.es/storage/app/media/flipbook/mercado-alimentos-fen/011-Pescados.pdf#page=4"
+    },
+    {
+        "category": "Pescados",
+        "food": "ANCHOAS EN ACEITE",
+        "hc_g_100g": 0.4,
+        "source_url": "https://www.fen.org.es/storage/app/media/flipbook/mercado-alimentos-fen/011-Pescados.pdf#page=6"
+    },
+    {
+        "category": "Pescados",
+        "food": "ANGUILA",
+        "hc_g_100g": 0.0,
+        "source_url": "https://www.fen.org.es/storage/app/media/flipbook/mercado-alimentos-fen/011-Pescados.pdf#page=8"
+    },
+    {
+        "category": "Pescados",
+        "food": "ANGULA",
+        "hc_g_100g": 0.0,
+        "source_url": "https://www.fen.org.es/storage/app/media/flipbook/mercado-alimentos-fen/011-Pescados.pdf#page=10"
+    },
+    {
+        "category": "Pescados",
+        "food": "ARENQUE",
+        "hc_g_100g": 0.0,
+        "source_url": "https://www.fen.org.es/storage/app/media/flipbook/mercado-alimentos-fen/011-Pescados.pdf#page=12"
+    },
+    {
+        "category": "Pescados",
+        "food": "ARENQUE Y OTROS PESCADOS RICOS EN GRASAS, SALADOS O AHUMADOS",
+        "hc_g_100g": 0.0,
+        "source_url": "https://www.fen.org.es/storage/app/media/flipbook/mercado-alimentos-fen/011-Pescados.pdf#page=14"
+    },
+    {
+        "category": "Pescados",
+        "food": "ATÚN",
+        "hc_g_100g": 0.0,
+        "source_url": "https://www.fen.org.es/storage/app/media/flipbook/mercado-alimentos-fen/011-Pescados.pdf#page=16"
+    },
+    {
+        "category": "Pescados",
+        "food": "BACALADILLA",
+        "hc_g_100g": 0.0,
+        "source_url": "https://www.fen.org.es/storage/app/media/flipbook/mercado-alimentos-fen/011-Pescados.pdf#page=18"
+    },
+    {
+        "category": "Pescados",
+        "food": "BACALAO FRESCO",
+        "hc_g_100g": 0.0,
+        "source_url": "https://www.fen.org.es/storage/app/media/flipbook/mercado-alimentos-fen/011-Pescados.pdf#page=20"
+    },
+    {
+        "category": "Pescados",
+        "food": "BESUGO",
+        "hc_g_100g": 0.0,
+        "source_url": "https://www.fen.org.es/storage/app/media/flipbook/mercado-alimentos-fen/011-Pescados.pdf#page=22"
+    },
+    {
+        "category": "Pescados",
+        "food": "BONITO",
+        "hc_g_100g": 0.0,
+        "source_url": "https://www.fen.org.es/storage/app/media/flipbook/mercado-alimentos-fen/011-Pescados.pdf#page=24"
+    },
+    {
+        "category": "Pescados",
+        "food": "BOQUERÓN",
+        "hc_g_100g": 0.0,
+        "source_url": "https://www.fen.org.es/storage/app/media/flipbook/mercado-alimentos-fen/011-Pescados.pdf#page=26"
+    },
+    {
+        "category": "Pescados",
+        "food": "CABALLA",
+        "hc_g_100g": 0.0,
+        "source_url": "https://www.fen.org.es/storage/app/media/flipbook/mercado-alimentos-fen/011-Pescados.pdf#page=28"
+    },
+    {
+        "category": "Pescados",
+        "food": "CABRACHO",
+        "hc_g_100g": 0.0,
+        "source_url": "https://www.fen.org.es/storage/app/media/flipbook/mercado-alimentos-fen/011-Pescados.pdf#page=30"
+    },
+    {
+        "category": "Pescados",
+        "food": "FISH, CARP, RAW",
+        "hc_g_100g": 0.0,
+        "source_url": "https://www.fen.org.es/storage/app/media/flipbook/mercado-alimentos-fen/011-Pescados.pdf#page=32"
+    },
+    {
+        "category": "Pescados",
+        "food": "CAVIAR",
+        "hc_g_100g": 0.0,
+        "source_url": "https://www.fen.org.es/storage/app/media/flipbook/mercado-alimentos-fen/011-Pescados.pdf#page=34"
+    },
+    {
+        "category": "Pescados",
+        "food": "CAZÓN",
+        "hc_g_100g": 0.0,
+        "source_url": "https://www.fen.org.es/storage/app/media/flipbook/mercado-alimentos-fen/011-Pescados.pdf#page=36"
+    },
+    {
+        "category": "Pescados",
+        "food": "CONGRIO",
+        "hc_g_100g": 0.0,
+        "source_url": "https://www.fen.org.es/storage/app/media/flipbook/mercado-alimentos-fen/011-Pescados.pdf#page=38"
+    },
+    {
+        "category": "Pescados",
+        "food": "DORADA",
+        "hc_g_100g": 0.0,
+        "source_url": "https://www.fen.org.es/storage/app/media/flipbook/mercado-alimentos-fen/011-Pescados.pdf#page=40"
+    },
+    {
+        "category": "Pescados",
+        "food": "GALLO",
+        "hc_g_100g": 0.0,
+        "source_url": "https://www.fen.org.es/storage/app/media/flipbook/mercado-alimentos-fen/011-Pescados.pdf#page=42"
+    },
+    {
+        "category": "Pescados",
+        "food": "HALIBUT O FLETÁN EN FILETES",
+        "hc_g_100g": 0.0,
+        "source_url": "https://www.fen.org.es/storage/app/media/flipbook/mercado-alimentos-fen/011-Pescados.pdf#page=44"
+    },
+    {
+        "category": "Pescados",
+        "food": "HUEVAS FRESCAS",
+        "hc_g_100g": 0.0,
+        "source_url": "https://www.fen.org.es/storage/app/media/flipbook/mercado-alimentos-fen/011-Pescados.pdf#page=46"
+    },
+    {
+        "category": "Pescados",
+        "food": "JUREL",
+        "hc_g_100g": 0.0,
+        "source_url": "https://www.fen.org.es/storage/app/media/flipbook/mercado-alimentos-fen/011-Pescados.pdf#page=48"
+    },
+    {
+        "category": "Pescados",
+        "food": "LENGUADO",
+        "hc_g_100g": 0.0,
+        "source_url": "https://www.fen.org.es/storage/app/media/flipbook/mercado-alimentos-fen/011-Pescados.pdf#page=50"
+    },
+    {
+        "category": "Pescados",
+        "food": "LUBINA",
+        "hc_g_100g": 0.0,
+        "source_url": "https://www.fen.org.es/storage/app/media/flipbook/mercado-alimentos-fen/011-Pescados.pdf#page=52"
+    },
+    {
+        "category": "Pescados",
+        "food": "MERLUZA",
+        "hc_g_100g": 0.0,
+        "source_url": "https://www.fen.org.es/storage/app/media/flipbook/mercado-alimentos-fen/011-Pescados.pdf#page=54"
+    },
+    {
+        "category": "Pescados",
+        "food": "MERO",
+        "hc_g_100g": 0.0,
+        "source_url": "https://www.fen.org.es/storage/app/media/flipbook/mercado-alimentos-fen/011-Pescados.pdf#page=56"
+    },
+    {
+        "category": "Pescados",
+        "food": "PALITOS DE CANGREJO CONGELADOS",
+        "hc_g_100g": 6.6,
+        "source_url": "https://www.fen.org.es/storage/app/media/flipbook/mercado-alimentos-fen/011-Pescados.pdf#page=58"
+    },
+    {
+        "category": "Pescados",
+        "food": "PALOMETA",
+        "hc_g_100g": 0.0,
+        "source_url": "https://www.fen.org.es/storage/app/media/flipbook/mercado-alimentos-fen/011-Pescados.pdf#page=60"
+    },
+    {
+        "category": "Pescados",
+        "food": "PESCADILLA",
+        "hc_g_100g": 0.0,
+        "source_url": "https://www.fen.org.es/storage/app/media/flipbook/mercado-alimentos-fen/011-Pescados.pdf#page=62"
+    },
+    {
+        "category": "Pescados",
+        "food": "PEZ ESPADA",
+        "hc_g_100g": 0.0,
+        "source_url": "https://www.fen.org.es/storage/app/media/flipbook/mercado-alimentos-fen/011-Pescados.pdf#page=64"
+    },
+    {
+        "category": "Pescados",
+        "food": "FISH, FLATFISH, FLOUNDER AND SOLE SPECIES, RAW",
+        "hc_g_100g": 0.0,
+        "source_url": "https://www.fen.org.es/storage/app/media/flipbook/mercado-alimentos-fen/011-Pescados.pdf#page=66"
+    },
+    {
+        "category": "Pescados",
+        "food": "RAPE",
+        "hc_g_100g": 0.0,
+        "source_url": "https://www.fen.org.es/storage/app/media/flipbook/mercado-alimentos-fen/011-Pescados.pdf#page=68"
+    },
+    {
+        "category": "Pescados",
+        "food": "RAYA",
+        "hc_g_100g": 0.0,
+        "source_url": "https://www.fen.org.es/storage/app/media/flipbook/mercado-alimentos-fen/011-Pescados.pdf#page=70"
+    },
+    {
+        "category": "Pescados",
+        "food": "REO",
+        "hc_g_100g": 0.0,
+        "source_url": "https://www.fen.org.es/storage/app/media/flipbook/mercado-alimentos-fen/011-Pescados.pdf#page=72"
+    },
+    {
+        "category": "Pescados",
+        "food": "RODABALLO",
+        "hc_g_100g": 0.0,
+        "source_url": "https://www.fen.org.es/storage/app/media/flipbook/mercado-alimentos-fen/011-Pescados.pdf#page=74"
+    },
+    {
+        "category": "Pescados",
+        "food": "SALMÓN",
+        "hc_g_100g": 0.0,
+        "source_url": "https://www.fen.org.es/storage/app/media/flipbook/mercado-alimentos-fen/011-Pescados.pdf#page=76"
+    },
+    {
+        "category": "Pescados",
+        "food": "SALMÓN AHUMADO",
+        "hc_g_100g": 0.0,
+        "source_url": "https://www.fen.org.es/storage/app/media/flipbook/mercado-alimentos-fen/011-Pescados.pdf#page=78"
+    },
+    {
+        "category": "Pescados",
+        "food": "SALMONETE",
+        "hc_g_100g": 0.0,
+        "source_url": "https://www.fen.org.es/storage/app/media/flipbook/mercado-alimentos-fen/011-Pescados.pdf#page=80"
+    },
+    {
+        "category": "Pescados",
+        "food": "SARDINAS",
+        "hc_g_100g": 0.0,
+        "source_url": "https://www.fen.org.es/storage/app/media/flipbook/mercado-alimentos-fen/011-Pescados.pdf#page=82"
+    },
+    {
+        "category": "Pescados",
+        "food": "SARDINAS EN ACEITE",
+        "hc_g_100g": 0.0,
+        "source_url": "https://www.fen.org.es/storage/app/media/flipbook/mercado-alimentos-fen/011-Pescados.pdf#page=84"
+    },
+    {
+        "category": "Pescados",
+        "food": "SARGO",
+        "hc_g_100g": 0.0,
+        "source_url": "https://www.fen.org.es/storage/app/media/flipbook/mercado-alimentos-fen/011-Pescados.pdf#page=86"
+    },
+    {
+        "category": "Pescados",
+        "food": "TRUCHA",
+        "hc_g_100g": 0.0,
+        "source_url": "https://www.fen.org.es/storage/app/media/flipbook/mercado-alimentos-fen/011-Pescados.pdf#page=88"
+    },
+    {
+        "category": "Pescados",
+        "food": "BONITO DEL NORTE CRUDO",
+        "hc_g_100g": 0.0,
+        "source_url": "https://www.fen.org.es/storage/app/media/flipbook/mercado-alimentos-fen/011-Pescados.pdf#page=90"
+    },
+    {
+        "category": "Crustáceos y Moluscos",
+        "food": "ALMEJAS",
+        "hc_g_100g": 0.0,
+        "source_url": "https://www.fen.org.es/storage/app/media/flipbook/mercado-alimentos-fen/012-Crustaceos.pdf#page=4"
+    },
+    {
+        "category": "Crustáceos y Moluscos",
+        "food": "BERBERECHO",
+        "hc_g_100g": 0.0,
+        "source_url": "https://www.fen.org.es/storage/app/media/flipbook/mercado-alimentos-fen/012-Crustaceos.pdf#page=6"
+    },
+    {
+        "category": "Crustáceos y Moluscos",
+        "food": "BÍGARO HERVIDO",
+        "hc_g_100g": 375.0,
+        "source_url": "https://www.fen.org.es/storage/app/media/flipbook/mercado-alimentos-fen/012-Crustaceos.pdf#page=8"
+    },
+    {
+        "category": "Crustáceos y Moluscos",
+        "food": "BOGAVANTE",
+        "hc_g_100g": 0.0,
+        "source_url": "https://www.fen.org.es/storage/app/media/flipbook/mercado-alimentos-fen/012-Crustaceos.pdf#page=10"
+    },
+    {
+        "category": "Crustáceos y Moluscos",
+        "food": "BUEY DE MAR",
+        "hc_g_100g": 0.7,
+        "source_url": "https://www.fen.org.es/storage/app/media/flipbook/mercado-alimentos-fen/012-Crustaceos.pdf#page=12"
+    },
+    {
+        "category": "Crustáceos y Moluscos",
+        "food": "CALAMARES Y SIMILARES",
+        "hc_g_100g": 0.0,
+        "source_url": "https://www.fen.org.es/storage/app/media/flipbook/mercado-alimentos-fen/012-Crustaceos.pdf#page=14"
+    },
+    {
+        "category": "Crustáceos y Moluscos",
+        "food": "QUISQUILLA, CAMARÓN",
+        "hc_g_100g": 1.5,
+        "source_url": "https://www.fen.org.es/storage/app/media/flipbook/mercado-alimentos-fen/012-Crustaceos.pdf#page=16"
+    },
+    {
+        "category": "Crustáceos y Moluscos",
+        "food": "CANGREJOS Y SIMILARES",
+        "hc_g_100g": 0.0,
+        "source_url": "https://www.fen.org.es/storage/app/media/flipbook/mercado-alimentos-fen/012-Crustaceos.pdf#page=18"
+    },
+    {
+        "category": "Crustáceos y Moluscos",
+        "food": "CRUSTACEANS, CRAYFISH, MIXED SPICES, WILD, RAW",
+        "hc_g_100g": 0.0,
+        "source_url": "https://www.fen.org.es/storage/app/media/flipbook/mercado-alimentos-fen/012-Crustaceos.pdf#page=20"
+    },
+    {
+        "category": "Crustáceos y Moluscos",
+        "food": "CARABINERO, GAMBÓN",
+        "hc_g_100g": 0.9,
+        "source_url": "https://www.fen.org.es/storage/app/media/flipbook/mercado-alimentos-fen/012-Crustaceos.pdf#page=22"
+    },
+    {
+        "category": "Crustáceos y Moluscos",
+        "food": "CARACOLES",
+        "hc_g_100g": 0.0,
+        "source_url": "https://www.fen.org.es/storage/app/media/flipbook/mercado-alimentos-fen/012-Crustaceos.pdf#page=24"
+    },
+    {
+        "category": "Crustáceos y Moluscos",
+        "food": "CENTOLLO",
+        "hc_g_100g": 0.0,
+        "source_url": "https://www.fen.org.es/storage/app/media/flipbook/mercado-alimentos-fen/012-Crustaceos.pdf#page=26"
+    },
+    {
+        "category": "Crustáceos y Moluscos",
+        "food": "CHIRLAS",
+        "hc_g_100g": 0.0,
+        "source_url": "https://www.fen.org.es/storage/app/media/flipbook/mercado-alimentos-fen/012-Crustaceos.pdf#page=28"
+    },
+    {
+        "category": "Crustáceos y Moluscos",
+        "food": "CIGALAS",
+        "hc_g_100g": 0.0,
+        "source_url": "https://www.fen.org.es/storage/app/media/flipbook/mercado-alimentos-fen/012-Crustaceos.pdf#page=30"
+    },
+    {
+        "category": "Crustáceos y Moluscos",
+        "food": "MOLLISKS, WEDKE SHELL, RAW",
+        "hc_g_100g": 0.0,
+        "source_url": "https://www.fen.org.es/storage/app/media/flipbook/mercado-alimentos-fen/012-Crustaceos.pdf#page=32"
+    },
+    {
+        "category": "Crustáceos y Moluscos",
+        "food": "GAMBAS",
+        "hc_g_100g": 0.0,
+        "source_url": "https://www.fen.org.es/storage/app/media/flipbook/mercado-alimentos-fen/012-Crustaceos.pdf#page=34"
+    },
+    {
+        "category": "Crustáceos y Moluscos",
+        "food": "LANGOSTA",
+        "hc_g_100g": 0.0,
+        "source_url": "https://www.fen.org.es/storage/app/media/flipbook/mercado-alimentos-fen/012-Crustaceos.pdf#page=36"
+    },
+    {
+        "category": "Crustáceos y Moluscos",
+        "food": "LANGOSTINO",
+        "hc_g_100g": 0.0,
+        "source_url": "https://www.fen.org.es/storage/app/media/flipbook/mercado-alimentos-fen/012-Crustaceos.pdf#page=38"
+    },
+    {
+        "category": "Crustáceos y Moluscos",
+        "food": "MEJILLÓN",
+        "hc_g_100g": 0.0,
+        "source_url": "https://www.fen.org.es/storage/app/media/flipbook/mercado-alimentos-fen/012-Crustaceos.pdf#page=40"
+    },
+    {
+        "category": "Crustáceos y Moluscos",
+        "food": "MEJILLÓN EN ESCABECHE",
+        "hc_g_100g": 375.0,
+        "source_url": "https://www.fen.org.es/storage/app/media/flipbook/mercado-alimentos-fen/012-Crustaceos.pdf#page=42"
+    },
+    {
+        "category": "Crustáceos y Moluscos",
+        "food": "MOLLUSKS, CLAM, MIXED SPECIES, RAW",
+        "hc_g_100g": 3.57,
+        "source_url": "https://www.fen.org.es/storage/app/media/flipbook/mercado-alimentos-fen/012-Crustaceos.pdf#page=44"
+    },
+    {
+        "category": "Crustáceos y Moluscos",
+        "food": "NÉCORA Y SIMILARES",
+        "hc_g_100g": 0.0,
+        "source_url": "https://www.fen.org.es/storage/app/media/flipbook/mercado-alimentos-fen/012-Crustaceos.pdf#page=46"
+    },
+    {
+        "category": "Crustáceos y Moluscos",
+        "food": "OSTRA",
+        "hc_g_100g": 0.0,
+        "source_url": "https://www.fen.org.es/storage/app/media/flipbook/mercado-alimentos-fen/012-Crustaceos.pdf#page=48"
+    },
+    {
+        "category": "Crustáceos y Moluscos",
+        "food": "PERCEBES",
+        "hc_g_100g": 0.0,
+        "source_url": "https://www.fen.org.es/storage/app/media/flipbook/mercado-alimentos-fen/012-Crustaceos.pdf#page=50"
+    },
+    {
+        "category": "Crustáceos y Moluscos",
+        "food": "PULPO",
+        "hc_g_100g": 0.0,
+        "source_url": "https://www.fen.org.es/storage/app/media/flipbook/mercado-alimentos-fen/012-Crustaceos.pdf#page=52"
+    },
+    {
+        "category": "Crustáceos y Moluscos",
+        "food": "SEPIA",
+        "hc_g_100g": 0.0,
+        "source_url": "https://www.fen.org.es/storage/app/media/flipbook/mercado-alimentos-fen/012-Crustaceos.pdf#page=54"
+    },
+    {
+        "category": "Crustáceos y Moluscos",
+        "food": "VIEIRA",
+        "hc_g_100g": 0.0,
+        "source_url": "https://www.fen.org.es/storage/app/media/flipbook/mercado-alimentos-fen/012-Crustaceos.pdf#page=56"
+    },
+    {
+        "category": "Condimentos y Aperitivos",
+        "food": "ACEITUNAS CON HUESO",
+        "hc_g_100g": 1.0,
+        "source_url": "https://www.fen.org.es/storage/app/media/flipbook/mercado-alimentos-fen/013-Condimentos.pdf#page=4"
+    },
+    {
+        "category": "Condimentos y Aperitivos",
+        "food": "AZAFRÁN",
+        "hc_g_100g": 61.5,
+        "source_url": "https://www.fen.org.es/storage/app/media/flipbook/mercado-alimentos-fen/013-Condimentos.pdf#page=6"
+    },
+    {
+        "category": "Condimentos y Aperitivos",
+        "food": "CANELA MOLIDA",
+        "hc_g_100g": 375.0,
+        "source_url": "https://www.fen.org.es/storage/app/media/flipbook/mercado-alimentos-fen/013-Condimentos.pdf#page=8"
+    },
+    {
+        "category": "Condimentos y Aperitivos",
+        "food": "KETCHUP",
+        "hc_g_100g": 24.0,
+        "source_url": "https://www.fen.org.es/storage/app/media/flipbook/mercado-alimentos-fen/013-Condimentos.pdf#page=10"
+    },
+    {
+        "category": "Condimentos y Aperitivos",
+        "food": "LAUREL",
+        "hc_g_100g": 48.6,
+        "source_url": "https://www.fen.org.es/storage/app/media/flipbook/mercado-alimentos-fen/013-Condimentos.pdf#page=12"
+    },
+    {
+        "category": "Condimentos y Aperitivos",
+        "food": "MAYONESA COMERCIAL",
+        "hc_g_100g": 0.1,
+        "source_url": "https://www.fen.org.es/storage/app/media/flipbook/mercado-alimentos-fen/013-Condimentos.pdf#page=14"
+    },
+    {
+        "category": "Condimentos y Aperitivos",
+        "food": "MENTA, YERBABUENA, FRESCA",
+        "hc_g_100g": 5.3,
+        "source_url": "https://www.fen.org.es/storage/app/media/flipbook/mercado-alimentos-fen/013-Condimentos.pdf#page=16"
+    },
+    {
+        "category": "Condimentos y Aperitivos",
+        "food": "MOSTAZA",
+        "hc_g_100g": 6.4,
+        "source_url": "https://www.fen.org.es/storage/app/media/flipbook/mercado-alimentos-fen/013-Condimentos.pdf#page=18"
+    },
+    {
+        "category": "Condimentos y Aperitivos",
+        "food": "NUEZ MOSCADA",
+        "hc_g_100g": 375.0,
+        "source_url": "https://www.fen.org.es/storage/app/media/flipbook/mercado-alimentos-fen/013-Condimentos.pdf#page=20"
+    },
+    {
+        "category": "Condimentos y Aperitivos",
+        "food": "ORÉGANO SECO",
+        "hc_g_100g": 49.5,
+        "source_url": "https://www.fen.org.es/storage/app/media/flipbook/mercado-alimentos-fen/013-Condimentos.pdf#page=22"
+    },
+    {
+        "category": "Condimentos y Aperitivos",
+        "food": "PATATAS FRITAS DE BOLSA",
+        "hc_g_100g": 66.8,
+        "source_url": "https://www.fen.org.es/storage/app/media/flipbook/mercado-alimentos-fen/013-Condimentos.pdf#page=24"
+    },
+    {
+        "category": "Condimentos y Aperitivos",
+        "food": "PEPINILLOS EN VINAGRE",
+        "hc_g_100g": 4.5,
+        "source_url": "https://www.fen.org.es/storage/app/media/flipbook/mercado-alimentos-fen/013-Condimentos.pdf#page=26"
+    },
+    {
+        "category": "Condimentos y Aperitivos",
+        "food": "PEREJIL FRESCO",
+        "hc_g_100g": 2.7,
+        "source_url": "https://www.fen.org.es/storage/app/media/flipbook/mercado-alimentos-fen/013-Condimentos.pdf#page=28"
+    },
+    {
+        "category": "Condimentos y Aperitivos",
+        "food": "PIMENTÓN",
+        "hc_g_100g": 34.9,
+        "source_url": "https://www.fen.org.es/storage/app/media/flipbook/mercado-alimentos-fen/013-Condimentos.pdf#page=30"
+    },
+    {
+        "category": "Condimentos y Aperitivos",
+        "food": "PIMIENTA NEGRA",
+        "hc_g_100g": 375.0,
+        "source_url": "https://www.fen.org.es/storage/app/media/flipbook/mercado-alimentos-fen/013-Condimentos.pdf#page=32"
+    },
+    {
+        "category": "Condimentos y Aperitivos",
+        "food": "ROMERO SECO",
+        "hc_g_100g": 46.4,
+        "source_url": "https://www.fen.org.es/storage/app/media/flipbook/mercado-alimentos-fen/013-Condimentos.pdf#page=34"
+    },
+    {
+        "category": "Condimentos y Aperitivos",
+        "food": "SAL FINA DE MESA",
+        "hc_g_100g": 0.0,
+        "source_url": "https://www.fen.org.es/storage/app/media/flipbook/mercado-alimentos-fen/013-Condimentos.pdf#page=36"
+    },
+    {
+        "category": "Condimentos y Aperitivos",
+        "food": "TOMATE FRITO",
+        "hc_g_100g": 3.3,
+        "source_url": "https://www.fen.org.es/storage/app/media/flipbook/mercado-alimentos-fen/013-Condimentos.pdf#page=38"
+    },
+    {
+        "category": "Condimentos y Aperitivos",
+        "food": "TOMILLO SECO",
+        "hc_g_100g": 57.1,
+        "source_url": "https://www.fen.org.es/storage/app/media/flipbook/mercado-alimentos-fen/013-Condimentos.pdf#page=40"
+    },
+    {
+        "category": "Condimentos y Aperitivos",
+        "food": "VINAGRE",
+        "hc_g_100g": 0.6,
+        "source_url": "https://www.fen.org.es/storage/app/media/flipbook/mercado-alimentos-fen/013-Condimentos.pdf#page=42"
+    },
+    {
+        "category": "Bebidas",
+        "food": "AGUA MINERAL DE MESA",
+        "hc_g_100g": 0.0,
+        "source_url": "https://www.fen.org.es/storage/app/media/flipbook/mercado-alimentos-fen/014-Bebidas.pdf#page=4"
+    },
+    {
+        "category": "Bebidas",
+        "food": "WHISKY",
+        "hc_g_100g": 0.4,
+        "source_url": "https://www.fen.org.es/storage/app/media/flipbook/mercado-alimentos-fen/014-Bebidas.pdf#page=6"
+    },
+    {
+        "category": "Bebidas",
+        "food": "CAFÉ, INFUSIÓN",
+        "hc_g_100g": 0.8,
+        "source_url": "https://www.fen.org.es/storage/app/media/flipbook/mercado-alimentos-fen/014-Bebidas.pdf#page=8"
+    },
+    {
+        "category": "Bebidas",
+        "food": "CERVEZA",
+        "hc_g_100g": 12.0,
+        "source_url": "https://www.fen.org.es/storage/app/media/flipbook/mercado-alimentos-fen/014-Bebidas.pdf#page=10"
+    },
+    {
+        "category": "Bebidas",
+        "food": "GASEOSAS",
+        "hc_g_100g": 10.5,
+        "source_url": "https://www.fen.org.es/storage/app/media/flipbook/mercado-alimentos-fen/014-Bebidas.pdf#page=12"
+    },
+    {
+        "category": "Bebidas",
+        "food": "REFRESCOS",
+        "hc_g_100g": 10.5,
+        "source_url": "https://www.fen.org.es/storage/app/media/flipbook/mercado-alimentos-fen/014-Bebidas.pdf#page=14"
+    },
+    {
+        "category": "Bebidas",
+        "food": "SIDRA",
+        "hc_g_100g": 4.0,
+        "source_url": "https://www.fen.org.es/storage/app/media/flipbook/mercado-alimentos-fen/014-Bebidas.pdf#page=16"
+    },
+    {
+        "category": "Bebidas",
+        "food": "TÉ, INFUSIÓN-SIN AZÚCAR",
+        "hc_g_100g": 0.0,
+        "source_url": "https://www.fen.org.es/storage/app/media/flipbook/mercado-alimentos-fen/014-Bebidas.pdf#page=18"
+    },
+    {
+        "category": "Bebidas",
+        "food": "VINO DE MESA-TINTO, BLANCO, ROSADO",
+        "hc_g_100g": 1.1,
+        "source_url": "https://www.fen.org.es/storage/app/media/flipbook/mercado-alimentos-fen/014-Bebidas.pdf#page=20"
+    },
+    {
+        "category": "Bebidas",
+        "food": "ZUMO DE CÍTRICOS",
+        "hc_g_100g": 10.1,
+        "source_url": "https://www.fen.org.es/storage/app/media/flipbook/mercado-alimentos-fen/014-Bebidas.pdf#page=22"
+    }
+]
