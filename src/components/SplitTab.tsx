@@ -20,7 +20,7 @@ export function SplitTab({ state }: SplitTabProps) {
         isErrorDisabledForCurrentSplit, setIsErrorDisabledForCurrentSplit,
         currentRecipeName,
         saveMealToHistory, shareFullMeal, autoUpdateHistory,
-        clearReparto, mealHistory
+        clearReparto, mealHistory, isBatchCooking
     } = state;
 
 
@@ -298,7 +298,31 @@ export function SplitTab({ state }: SplitTabProps) {
                 </div>
             </div>
 
-            {netWeight > 0 && activeFamilyProportionSum > 0 && (
+            {netWeight > 0 && isBatchCooking && adjustedCarbs > 0 && (
+                <motion.div
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    className="bg-purple-50 dark:bg-purple-900/20 p-5 rounded-3xl border border-purple-200 dark:border-purple-800/50 text-center"
+                >
+                    <div className="text-xs text-purple-600 dark:text-purple-400 font-bold uppercase mb-3 tracking-wider">Modo Lote / Postre</div>
+                    <div className="flex flex-col gap-3">
+                        <div className="bg-white dark:bg-gray-800 p-4 rounded-2xl shadow-sm border border-purple-100 dark:border-purple-800/30">
+                            <div className="text-[10px] text-gray-500 dark:text-gray-400 font-bold uppercase mb-1">Concentración de Carbohidratos</div>
+                            <div className="text-2xl font-black text-purple-700 dark:text-purple-400">
+                                {((adjustedCarbs / netWeight) * 100).toFixed(1)} <span className="text-sm font-normal text-gray-500">g HC/100g</span>
+                            </div>
+                        </div>
+                        <div className="bg-purple-500 text-white p-4 rounded-2xl shadow-md border border-purple-400">
+                            <div className="text-[10px] text-purple-200 font-bold uppercase mb-1">Pesa esto para obtener 1 Ración (10g HC)</div>
+                            <div className="text-4xl font-black">
+                                {((netWeight / adjustedCarbs) * 10).toFixed(0)} <span className="text-lg font-normal opacity-80">gramos</span>
+                            </div>
+                        </div>
+                    </div>
+                </motion.div>
+            )}
+
+            {netWeight > 0 && activeFamilyProportionSum > 0 && !isBatchCooking && (
                 <div className="space-y-3">
                     <div className="flex items-center justify-between px-2">
                         <h3 className="text-sm font-bold text-gray-400 uppercase">Raciones Calculadas</h3>

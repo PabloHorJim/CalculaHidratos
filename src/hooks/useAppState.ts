@@ -100,6 +100,7 @@ export function useAppState() {
     const [setAsideValue, setSetAsideValue] = useState<number | ''>('');
     const [portionErrorPercent, setPortionErrorPercent] = useState(0);
     const [isErrorDisabledForCurrentSplit, setIsErrorDisabledForCurrentSplit] = useState(false);
+    const [isBatchCooking, setIsBatchCooking] = useState(false);
 
     // Auto-save state for reparto
     const [pendingAutoSave, setPendingAutoSave] = useState(false);
@@ -1049,6 +1050,7 @@ export function useAppState() {
         setAsideValue, setSetAsideValue,
         portionErrorPercent, setPortionErrorPercent,
         isErrorDisabledForCurrentSplit, setIsErrorDisabledForCurrentSplit,
+        isBatchCooking, setIsBatchCooking,
         pendingAutoSave, autoSaveCountdown,
         cancelAutoSave, clearReparto,
         ingredientWeightHistory,

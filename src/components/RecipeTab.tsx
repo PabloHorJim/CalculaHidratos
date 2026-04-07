@@ -21,6 +21,7 @@ export function RecipeTab({ state }: RecipeTabProps) {
         newIngredientName, setNewIngredientName,
         newIngredientCarbs, setNewIngredientCarbs,
         newIngredientCategory, setNewIngredientCategory,
+        isBatchCooking, setIsBatchCooking,
         totalCarbs,
         editingRecipeId,
         diabeticMembers, activeFamilyProportionSum,
@@ -563,6 +564,24 @@ export function RecipeTab({ state }: RecipeTabProps) {
                             })}
                         </div>
                     )}
+
+                    <div className="mb-4">
+                        <button
+                            onClick={() => setIsBatchCooking(!isBatchCooking)}
+                            className={`w-full flex items-center justify-center gap-2 py-3 rounded-xl font-bold transition-colors text-sm border ${isBatchCooking
+                                    ? 'bg-purple-100 dark:bg-purple-900/30 text-purple-600 dark:text-purple-400 border-purple-200 dark:border-purple-800'
+                                    : 'bg-white dark:bg-gray-800 text-gray-500 border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700'
+                                }`}
+                        >
+                            🍰 Modo Postre/Lote {isBatchCooking ? '(Activado)' : ''}
+                        </button>
+                        {isBatchCooking && (
+                            <div className="text-[10px] text-purple-500/80 text-center mt-1">
+                                No se repartirá a familiares. Se calcularán macros por ración.
+                            </div>
+                        )}
+                    </div>
+
                     <div className="flex flex-col gap-2">
                         <div className="flex gap-2">
                             <button
