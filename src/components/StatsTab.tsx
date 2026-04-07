@@ -60,12 +60,23 @@ export function StatsTab({ state }: StatsTabProps) {
         return mealHistory.filter(entry => {
             const entryDate = new Date(entry.timestamp);
             if (entryDate < periodStart || entryDate > periodEnd) return false;
+            // Never include batch meals in daily individual consumption
+            if (entry.isBatch) return false;
             if (mealFilter !== 'todas' && classifyMeal(entry.timestamp) !== mealFilter) return false;
             return entry.portions.some(p => {
                 return selectedMember && p.memberName === selectedMember.name && p.isDiabetic;
             });
         });
     }, [mealHistory, selectedMemberId, selectedMember, periodStart, periodEnd, mealFilter]);
+
+    // Filter batch entries for the period (independent of member)
+    const batchEntries = useMemo(() => {
+        return mealHistory.filter(entry => {
+            const entryDate = new Date(entry.timestamp);
+            if (entryDate < periodStart || entryDate > periodEnd) return false;
+            return entry.isBatch;
+        });
+    }, [mealHistory, periodStart, periodEnd]);
 
     // Extract carbs for the selected member from filtered entries
     const memberCarbs = useMemo(() => {
@@ -326,6 +337,36 @@ export function StatsTab({ state }: StatsTabProps) {
                         </div>
                     </div>
                 </>
+            )}
+
+            {/* Batch Meals section - always visible if any batches exist in period */}
+            {batchEntries.length > 0 && (
+                <div className="bg-purple-50 dark:bg-purple-900/10 p-4 rounded-2xl shadow-sm border border-purple-100 dark:border-purple-800/30">
+                    <div className="flex justify-between items-center mb-3">
+                        <div className="text-[10px] font-bold text-purple-600 dark:text-purple-400 uppercase">🍰 Elaboraciones en Lote / Postres</div>
+                        <div className="text-xs font-bold text-purple-800 dark:text-purple-300">{batchEntries.length} recetas</div>
+                    </div>
+                    <div className="space-y-2">
+                        {batchEntries.map(entry => {
+                            const date = new Date(entry.timestamp).toLocaleDateString('es-ES', { weekday: 'short', day: 'numeric' });
+                            const concentration = ((entry.totalCarbs / entry.netWeight) * 100).toFixed(1);
+                            const portionWeight = ((entry.netWeight / entry.totalCarbs) * 10).toFixed(0);
+
+                            return (
+                                <div key={entry.id} className="bg-white dark:bg-gray-800 px-3 py-2 rounded-xl flex items-center justify-between border border-purple-50 dark:border-purple-800/20">
+                                    <div className="min-w-0 flex-1">
+                                        <div className="font-bold text-gray-800 dark:text-gray-200 truncate text-sm">{entry.recipeName}</div>
+                                        <div className="text-[10px] text-gray-400 capitalize">{date}</div>
+                                    </div>
+                                    <div className="text-right ml-3 flex flex-col items-end">
+                                        <div className="text-xs font-bold text-purple-600 dark:text-purple-400">{concentration}g HC/100g</div>
+                                        <div className="text-[9px] text-gray-500">1 Ración = {portionWeight}g</div>
+                                    </div>
+                                </div>
+                            );
+                        })}
+                    </div>
+                </div>
             )}
         </div>
     );

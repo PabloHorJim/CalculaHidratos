@@ -850,13 +850,15 @@ export function useAppState() {
                 m => m.recipeName === finalName && (now - new Date(m.timestamp).getTime()) < TWO_HOURS
             );
 
+            const finalPortions = isBatchCooking ? [] : portions;
             const newEntry: MealHistoryEntry = {
                 id: recentDuplicateIndex >= 0 ? prevMeals[recentDuplicateIndex].id : now.toString(),
                 timestamp: new Date().toISOString(),
                 recipeName: finalName,
                 totalCarbs,
                 netWeight,
-                portions
+                isBatch: isBatchCooking || undefined,
+                portions: finalPortions
             };
 
             if (recentDuplicateIndex >= 0) {
@@ -892,13 +894,15 @@ export function useAppState() {
             const existingIdx = prevMeals.findIndex(
                 m => m.recipeName === finalName && (now - new Date(m.timestamp).getTime()) < TWO_HOURS
             );
-            const entry = {
+            const finalPortions = isBatchCooking ? [] : portions;
+            const entry: MealHistoryEntry = {
                 id: existingIdx >= 0 ? prevMeals[existingIdx].id : now.toString(),
                 timestamp: new Date().toISOString(),
                 recipeName: finalName,
                 totalCarbs,
                 netWeight,
-                portions,
+                isBatch: isBatchCooking || undefined,
+                portions: finalPortions,
             };
             if (existingIdx >= 0) {
                 const updated = [...prevMeals];

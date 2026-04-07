@@ -76,9 +76,15 @@ export function HistoryTab({ state }: HistoryTabProps) {
                                                     ) : (
                                                         <div className="flex items-center gap-2">
                                                             <div className="font-bold text-gray-800 dark:text-gray-200 truncate">{entry.recipeName}</div>
-                                                            <div className="text-[10px] text-gray-400 font-medium whitespace-nowrap">
-                                                                {new Date(entry.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                                                            </div>
+                                                            {entry.isBatch ? (
+                                                                <div className="text-[10px] bg-purple-100 dark:bg-purple-900/40 text-purple-600 dark:text-purple-400 font-bold px-1.5 py-0.5 rounded-md whitespace-nowrap border border-purple-200 dark:border-purple-800/50">
+                                                                    🍰 Lote
+                                                                </div>
+                                                            ) : (
+                                                                <div className="text-[10px] text-gray-400 font-medium whitespace-nowrap">
+                                                                    {new Date(entry.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                                                </div>
+                                                            )}
                                                         </div>
                                                     )}
                                                 </div>
@@ -139,41 +145,48 @@ export function HistoryTab({ state }: HistoryTabProps) {
                                                                 </div>
                                                             </div>
 
-                                                            <div className="space-y-2">
-                                                                <div className="text-[10px] font-bold text-gray-400 uppercase px-1">Raciones por Persona</div>
-                                                                {entry.portions.map((p, idx) => (
-                                                                    <div key={idx} className={`bg-white dark:bg-gray-800 p-3 rounded-xl border flex justify-between items-center ${p.isDiabetic ? 'border-blue-100 dark:border-blue-800 bg-blue-50/20 dark:bg-blue-900/20' : 'border-gray-100 dark:border-gray-700'}`}>
-                                                                        <div className="flex-1">
-                                                                            <div className="font-bold text-gray-800 dark:text-gray-200 flex items-center gap-2 text-sm">
-                                                                                {p.memberName}
-                                                                                {p.isDiabetic && <span className="text-[8px] bg-blue-500 text-white px-1.5 py-0.5 rounded-full uppercase">Diabético</span>}
+                                                            {entry.isBatch ? (
+                                                                <div className="bg-purple-50 dark:bg-purple-900/20 p-3 rounded-xl border border-purple-100 dark:border-purple-800 flex justify-between items-center">
+                                                                    <div className="text-[10px] font-bold text-purple-500 uppercase">1 Ración (10g HC) equivale a</div>
+                                                                    <div className="text-lg font-black text-purple-700 dark:text-purple-400">{((entry.netWeight / entry.totalCarbs) * 10).toFixed(0)} <span className="text-xs font-normal">g</span></div>
+                                                                </div>
+                                                            ) : (
+                                                                <div className="space-y-2">
+                                                                    <div className="text-[10px] font-bold text-gray-400 uppercase px-1">Raciones por Persona</div>
+                                                                    {entry.portions.map((p, idx) => (
+                                                                        <div key={idx} className={`bg-white dark:bg-gray-800 p-3 rounded-xl border flex justify-between items-center ${p.isDiabetic ? 'border-blue-100 dark:border-blue-800 bg-blue-50/20 dark:bg-blue-900/20' : 'border-gray-100 dark:border-gray-700'}`}>
+                                                                            <div className="flex-1">
+                                                                                <div className="font-bold text-gray-800 dark:text-gray-200 flex items-center gap-2 text-sm">
+                                                                                    {p.memberName}
+                                                                                    {p.isDiabetic && <span className="text-[8px] bg-blue-500 text-white px-1.5 py-0.5 rounded-full uppercase">Diabético</span>}
+                                                                                </div>
+                                                                            </div>
+                                                                            <div className="flex items-center gap-3">
+                                                                                <div className="text-right">
+                                                                                    <div className="text-lg font-black text-gray-900 dark:text-gray-100 leading-none">{p.weight.toFixed(0)} <span className="text-xs font-normal">g</span></div>
+                                                                                    <div className="text-xs font-bold text-orange-600 dark:text-orange-400 mt-0.5">{p.carbs.toFixed(1)} <span className="text-[10px] font-normal">g HC</span></div>
+                                                                                </div>
+                                                                                <div className="flex gap-1">
+                                                                                    <button
+                                                                                        onClick={() => copyPortionToClipboard(p.memberName, p.weight, p.carbs, p.isDiabetic)}
+                                                                                        className="p-1.5 text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg"
+                                                                                        title="Copiar"
+                                                                                    >
+                                                                                        <Share2 size={14} />
+                                                                                    </button>
+                                                                                    <button
+                                                                                        onClick={() => sharePortion(p.memberName, p.weight, p.carbs, p.isDiabetic)}
+                                                                                        className="p-1.5 text-green-500 hover:bg-green-50 dark:hover:bg-green-900/30 rounded-lg"
+                                                                                        title="WhatsApp"
+                                                                                    >
+                                                                                        <MessageSquare size={14} />
+                                                                                    </button>
+                                                                                </div>
                                                                             </div>
                                                                         </div>
-                                                                        <div className="flex items-center gap-3">
-                                                                            <div className="text-right">
-                                                                                <div className="text-lg font-black text-gray-900 dark:text-gray-100 leading-none">{p.weight.toFixed(0)} <span className="text-xs font-normal">g</span></div>
-                                                                                <div className="text-xs font-bold text-orange-600 dark:text-orange-400 mt-0.5">{p.carbs.toFixed(1)} <span className="text-[10px] font-normal">g HC</span></div>
-                                                                            </div>
-                                                                            <div className="flex gap-1">
-                                                                                <button
-                                                                                    onClick={() => copyPortionToClipboard(p.memberName, p.weight, p.carbs, p.isDiabetic)}
-                                                                                    className="p-1.5 text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg"
-                                                                                    title="Copiar"
-                                                                                >
-                                                                                    <Share2 size={14} />
-                                                                                </button>
-                                                                                <button
-                                                                                    onClick={() => sharePortion(p.memberName, p.weight, p.carbs, p.isDiabetic)}
-                                                                                    className="p-1.5 text-green-500 hover:bg-green-50 dark:hover:bg-green-900/30 rounded-lg"
-                                                                                    title="WhatsApp"
-                                                                                >
-                                                                                    <MessageSquare size={14} />
-                                                                                </button>
-                                                                            </div>
-                                                                        </div>
-                                                                    </div>
-                                                                ))}
-                                                            </div>
+                                                                    ))}
+                                                                </div>
+                                                            )}
 
                                                             <div className="flex gap-2 pt-1">
                                                                 <button

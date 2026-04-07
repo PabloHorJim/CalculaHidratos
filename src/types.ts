@@ -37,6 +37,7 @@ export interface MealHistoryEntry {
   recipeName: string;
   totalCarbs: number;
   netWeight: number;
+  isBatch?: boolean;
   portions: {
     memberName: string;
     weight: number;
