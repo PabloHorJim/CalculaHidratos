@@ -35,10 +35,10 @@ const LaunchRequestHandler = {
     }
 };
 
-const CrearRegistroIntentHandler = {
+const AnadirRegistroIntentHandler = {
     canHandle(handlerInput: Alexa.HandlerInput) {
         return Alexa.getRequestType(handlerInput.requestEnvelope) === 'IntentRequest'
-            && Alexa.getIntentName(handlerInput.requestEnvelope) === 'CrearRegistroIntent';
+            && Alexa.getIntentName(handlerInput.requestEnvelope) === 'AnadirRegistroIntent';
     },
     async handle(handlerInput: Alexa.HandlerInput) {
         const accessToken = handlerInput.requestEnvelope.context.System.user.accessToken;
@@ -225,7 +225,7 @@ const ErrorHandler = {
         console.error(`Error handled: ${error.stack}`);
         console.error(`Request that failed: Type='${type}' Intent='${name}'`);
 
-        const speakOutput = type === 'IntentRequest' && name !== 'CrearRegistroIntent'
+        const speakOutput = type === 'IntentRequest' && name !== 'AnadirRegistroIntent'
             ? 'Ese comando no está registrado. Me pediste algo que mi código no sabe interpretar.'
             : 'Lo siento, hubo un problema técnico en tu Alexa Skill.';
 
@@ -264,7 +264,7 @@ export default async function handler(req: any, res: any) {
         skill = Alexa.SkillBuilders.custom()
             .addRequestHandlers(
                 LaunchRequestHandler,
-                CrearRegistroIntentHandler,
+                AnadirRegistroIntentHandler,
                 HelpIntentHandler,
                 CancelAndStopIntentHandler,
                 FallbackIntentHandler,
