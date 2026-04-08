@@ -2,7 +2,7 @@ import * as Alexa from 'ask-sdk-core';
 import admin from 'firebase-admin';
 import axios from 'axios';
 import stringSimilarity from 'string-similarity';
-import { INITIAL_INGREDIENTS } from '../src/data/ingredients';
+import { INITIAL_INGREDIENTS } from '../src/data/ingredients.ts';
 
 const serviceAccountStr = process.env.FIREBASE_SERVICE_ACCOUNT || process.env.VITE_FIREBASE_SERVICE_ACCOUNT;
 if (!admin.apps.length) {
