@@ -332,6 +332,9 @@ export function useAppState() {
                 if (data.family) setFamily(data.family);
                 if (data.cookware) setCookware(data.cookware);
                 if (data.mealHistory) setMealHistory(data.mealHistory);
+                if (data.currentRecipeName !== undefined) setCurrentRecipeName(data.currentRecipeName);
+                if (data.currentRecipeIngredients !== undefined) setCurrentRecipeIngredients(data.currentRecipeIngredients);
+                if (data.cookingMode !== undefined) setCookingMode(data.cookingMode);
                 setTimeout(() => {
                     setIsSyncing(false);
                     isSyncingFromRemote.current = false;
@@ -361,6 +364,9 @@ export function useAppState() {
                 if (data.family) setFamily(data.family);
                 if (data.cookware) setCookware(data.cookware);
                 if (data.mealHistory) setMealHistory(data.mealHistory);
+                if (data.currentRecipeName !== undefined) setCurrentRecipeName(data.currentRecipeName);
+                if (data.currentRecipeIngredients !== undefined) setCurrentRecipeIngredients(data.currentRecipeIngredients);
+                if (data.cookingMode !== undefined) setCookingMode(data.cookingMode);
                 setTimeout(() => {
                     setIsSyncing(false);
                     isSyncingFromRemote.current = false;
@@ -380,6 +386,7 @@ export function useAppState() {
         setSaveStatus('saving');
         const timer = setTimeout(async () => {
             const state = { customIngredients, recipes, family, cookware, mealHistory, groupId, portionErrorPercent, ingredientWeightHistory };
+            const firebaseState = { ...state, currentRecipeName, currentRecipeIngredients, cookingMode };
 
             localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
 
@@ -388,13 +395,13 @@ export function useAppState() {
                     if (groupId) {
                         const groupDocRef = doc(db, 'groups', groupId);
                         await setDoc(groupDocRef, {
-                            ...state,
+                            ...firebaseState,
                             updatedAt: new Date().toISOString()
                         }, { merge: true });
                     } else {
                         const userDocRef = doc(db, 'users', user.uid);
                         await setDoc(userDocRef, {
-                            ...state,
+                            ...firebaseState,
                             uid: user.uid,
                             email: user.email,
                             displayName: user.displayName,
@@ -411,7 +418,7 @@ export function useAppState() {
         }, 1000);
 
         return () => clearTimeout(timer);
-    }, [customIngredients, recipes, family, cookware, mealHistory, groupId, portionErrorPercent, ingredientWeightHistory, isLoaded, user, isAuthReady, isSyncing, hasConsent]);
+    }, [customIngredients, recipes, family, cookware, mealHistory, groupId, portionErrorPercent, ingredientWeightHistory, currentRecipeName, currentRecipeIngredients, cookingMode, isLoaded, user, isAuthReady, isSyncing, hasConsent]);
 
     useEffect(() => {
         if (toast) {
