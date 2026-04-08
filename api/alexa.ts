@@ -188,16 +188,50 @@ const CancelAndStopIntentHandler = {
     }
 };
 
+const FallbackIntentHandler = {
+    canHandle(handlerInput: Alexa.HandlerInput) {
+        return Alexa.getRequestType(handlerInput.requestEnvelope) === 'IntentRequest'
+            && Alexa.getIntentName(handlerInput.requestEnvelope) === 'AMAZON.FallbackIntent';
+    },
+    handle(handlerInput: Alexa.HandlerInput) {
+        const speakOutput = 'No te entendí muy bien. Recuerda usar comandos como: añade cincuenta gramos de pan al registro.';
+        return handlerInput.responseBuilder
+            .speak(speakOutput)
+            .reprompt(speakOutput)
+            .getResponse();
+    }
+};
+
+const SessionEndedRequestHandler = {
+    canHandle(handlerInput: Alexa.HandlerInput) {
+        return Alexa.getRequestType(handlerInput.requestEnvelope) === 'SessionEndedRequest';
+    },
+    handle(handlerInput: Alexa.HandlerInput) {
+        const request = handlerInput.requestEnvelope.request as any;
+        console.log(`Session ended with reason: ${request.reason} - Error: ${JSON.stringify(request.error || {})}`);
+        return handlerInput.responseBuilder.getResponse(); // El ended request NO debe hablar
+    }
+};
+
 const ErrorHandler = {
     canHandle() {
         return true;
     },
     handle(handlerInput: Alexa.HandlerInput, error: Error) {
+        const request = handlerInput.requestEnvelope.request as any;
+        const type = request.type;
+        const name = type === 'IntentRequest' ? request.intent?.name : 'none';
+
         console.error(`Error handled: ${error.stack}`);
-        const speakOutput = 'Lo siento, hubo un problema al procesar tu petición. Revisa el registro de tu servidor.';
+        console.error(`Request that failed: Type='${type}' Intent='${name}'`);
+
+        const speakOutput = type === 'IntentRequest' && name !== 'CrearRegistroIntent'
+            ? 'Ese comando no está registrado. Me pediste algo que mi código no sabe interpretar.'
+            : 'Lo siento, hubo un problema técnico en tu Alexa Skill.';
+
         return handlerInput.responseBuilder
             .speak(speakOutput)
-            .reprompt(speakOutput)
+            .reprompt('Vuelve a probar, ¿qué quieres añadir?')
             .getResponse();
     }
 };
@@ -215,7 +249,9 @@ export default async function handler(req: any, res: any) {
                 LaunchRequestHandler,
                 CrearRegistroIntentHandler,
                 HelpIntentHandler,
-                CancelAndStopIntentHandler
+                CancelAndStopIntentHandler,
+                FallbackIntentHandler,
+                SessionEndedRequestHandler
             )
             .addErrorHandlers(ErrorHandler)
             .create();
