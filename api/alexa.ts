@@ -236,6 +236,23 @@ const ErrorHandler = {
     }
 };
 
+const CatchAllHandler = {
+    canHandle() {
+        return true;
+    },
+    handle(handlerInput: Alexa.HandlerInput) {
+        const request = handlerInput.requestEnvelope.request as any;
+        const type = request.type;
+        const name = type === 'IntentRequest' ? request.intent?.name : 'ninguno';
+
+        console.log(`[CATCH ALL TRIGGERED] Type='${type}' Intent='${name}'`);
+
+        return handlerInput.responseBuilder
+            .speak(`Aún no me has programado para entender el comando ${name} o la petición ${type}. Por favor revisa que el nombre del intento coincida.`)
+            .getResponse();
+    }
+};
+
 let skill: Alexa.Skill;
 
 export default async function handler(req: any, res: any) {
@@ -251,7 +268,8 @@ export default async function handler(req: any, res: any) {
                 HelpIntentHandler,
                 CancelAndStopIntentHandler,
                 FallbackIntentHandler,
-                SessionEndedRequestHandler
+                SessionEndedRequestHandler,
+                CatchAllHandler
             )
             .addErrorHandlers(ErrorHandler)
             .create();
