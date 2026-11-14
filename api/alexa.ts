@@ -3,6 +3,9 @@ import admin from 'firebase-admin';
 import axios from 'axios';
 import stringSimilarity from 'string-similarity';
 import { INITIAL_INGREDIENTS } from './_lib/ingredients.js';
+import { verifyAlexaRequest } from './_lib/alexaVerify.js';
+import { ApiRequest, readBody, sendJson } from './_lib/http.js';
+import type { ServerResponse } from 'node:http';
 
 const serviceAccountStr = process.env.FIREBASE_SERVICE_ACCOUNT || process.env.VITE_FIREBASE_SERVICE_ACCOUNT;
 if (!admin.apps.length) {
@@ -264,9 +267,29 @@ const CatchAllHandler = {
 
 let skill: Alexa.Skill;
 
-export default async function handler(req: any, res: any) {
-    if (req.method !== 'POST') {
-        return res.status(405).json({ error: 'Method not allowed' });
+/**
+ * ALEXA_SIGNATURE_MODE: "enforce" (default) rejects requests that are not signed by Alexa;
+ * "log" only logs the failure (temporary escape hatch while configuring the deployment).
+ * ALEXA_SKILL_ID (optional): only requests addressed to this skill are accepted.
+ */
+export default async function handler(req: ApiRequest, res: ServerResponse) {
+    if (req.method !== 'POST') return sendJson(res, 405, { error: 'Method not allowed' });
+
+    const { text, exact } = await readBody(req);
+    try {
+        await verifyAlexaRequest({ rawBody: text, headers: req.headers, skillId: process.env.ALEXA_SKILL_ID || undefined });
+    } catch (error) {
+        const reason = error instanceof Error ? error.message : String(error);
+        console.error(`Alexa request verification failed: ${reason}` +
+            (exact ? '' : ' (the body had already been parsed by the platform; set NODEJS_HELPERS=0 so it can be checked byte for byte)'));
+        if (process.env.ALEXA_SIGNATURE_MODE !== 'log') return sendJson(res, 400, { error: 'Invalid Alexa request' });
+    }
+
+    let envelope: any;
+    try {
+        envelope = JSON.parse(text);
+    } catch {
+        return sendJson(res, 400, { error: 'Invalid JSON' });
     }
 
     if (!skill) {
@@ -285,10 +308,9 @@ export default async function handler(req: any, res: any) {
     }
 
     try {
-        const response = await skill.invoke(req.body);
-        res.status(200).json(response);
+        sendJson(res, 200, await skill.invoke(envelope));
     } catch (error) {
         console.error('Error invoking skill:', error);
-        res.status(500).json({ error: 'Internal Server Error' });
+        sendJson(res, 500, { error: 'Internal Server Error' });
     }
 }

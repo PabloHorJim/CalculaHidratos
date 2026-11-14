@@ -35,8 +35,8 @@ export default defineConfig(({ mode }) => {
         },
         workbox: {
           globPatterns: ['**/*.{js,css,html,ico,png,svg}'],
-          // Never answer API calls (Alexa endpoint) with the cached app shell
-          navigateFallbackDenylist: [/^\/api\//],
+          // Never answer API calls or Firebase's sign-in helper pages with the cached app shell
+          navigateFallbackDenylist: [/^\/api\//, /^\/__\//],
           cleanupOutdatedCaches: true,
           runtimeCaching: [
             {
