@@ -86,7 +86,7 @@ const AnadirRegistroIntentHandler = {
                 .getResponse();
         }
 
-        let docRef;
+        let docRef: admin.firestore.DocumentReference;
         if (userDoc.data()?.groupId) {
             docRef = db.collection('groups').doc(userDoc.data()?.groupId);
         } else {
@@ -100,7 +100,7 @@ const AnadirRegistroIntentHandler = {
                 .getResponse();
         }
         const groupData = groupDataDoc.data() || {};
-        const customIngredients = groupData.customIngredients || [];
+        const customIngredients = Array.isArray(groupData.customIngredients) ? groupData.customIngredients : [];
 
         const intentRequest = handlerInput.requestEnvelope.request as any;
         const alimento = intentRequest.intent.slots?.alimento?.value;
@@ -116,7 +116,8 @@ const AnadirRegistroIntentHandler = {
         const cantidad = parseFloat(cantidadStr);
         if (isNaN(cantidad) || cantidad <= 0) {
             return handlerInput.responseBuilder
-                .speak(`La cantidad ${cantidadStr} no es válida.`)
+                .speak(`La cantidad ${cantidadStr} no es válida. Dime el ingrediente y la cantidad en gramos.`)
+                .reprompt('Dime el ingrediente y la cantidad en gramos.')
                 .getResponse();
         }
 
@@ -125,37 +126,45 @@ const AnadirRegistroIntentHandler = {
 
         if (match.bestMatch.rating < 0.3) {
             return handlerInput.responseBuilder
-                .speak(`No encontré algo parecido a ${alimento} en tu lista de ingredientes.`)
+                .speak(`No encontré algo parecido a ${alimento} en tu lista de ingredientes. Prueba con otro nombre.`)
+                .reprompt('Dime el ingrediente y la cantidad en gramos.')
                 .getResponse();
         }
 
         const matchIndex = match.bestMatchIndex;
         const matchedIngredient = options[matchIndex];
 
-        let { currentRecipeIngredients = [], currentRecipeName = '', cookingMode = false } = groupData;
-
-        if (!cookingMode) {
-            cookingMode = true;
-            currentRecipeName = 'Receta de Alexa';
-            currentRecipeIngredients = [];
-        }
-
-        currentRecipeIngredients.push({
-            ingredientId: matchedIngredient.id,
-            weight: cantidad
+        // Each ingredient appears once in a recipe: saying it again adds to its weight.
+        // Done in a transaction so two quick requests (or the app) cannot overwrite each other.
+        const totalWeight = await db.runTransaction(async tx => {
+            const fresh = (await tx.get(docRef)).data() || {};
+            let ingredients: { ingredientId: string; weight: number }[] =
+                Array.isArray(fresh.currentRecipeIngredients) ? [...fresh.currentRecipeIngredients] : [];
+            let name: string = fresh.currentRecipeName || '';
+            if (!fresh.cookingMode) {
+                ingredients = [];
+                name = 'Receta de Alexa';
+            }
+            const index = ingredients.findIndex(ri => ri.ingredientId === matchedIngredient.id);
+            const weight = (index >= 0 ? Number(ingredients[index].weight) || 0 : 0) + cantidad;
+            if (index >= 0) ingredients[index] = { ...ingredients[index], weight };
+            else ingredients.push({ ingredientId: matchedIngredient.id, weight });
+            tx.update(docRef, {
+                cookingMode: true,
+                currentRecipeName: name,
+                currentRecipeIngredients: ingredients,
+                updatedAt: new Date().toISOString()
+            });
+            return weight;
         });
 
-        await docRef.update({
-            cookingMode,
-            currentRecipeName,
-            currentRecipeIngredients,
-            updatedAt: new Date().toISOString()
-        });
-
-        const speakOutput = `He añadido ${cantidad} gramos de ${matchedIngredient.name} a ${currentRecipeName}.`;
+        const speakOutput = totalWeight !== cantidad
+            ? `He añadido ${cantidad} gramos de ${matchedIngredient.name}, en total ${totalWeight} gramos. ¿Deseas añadir algo más?`
+            : `He añadido ${cantidad} gramos de ${matchedIngredient.name}. ¿Deseas añadir algo más?`;
 
         return handlerInput.responseBuilder
             .speak(speakOutput)
+            .reprompt('Dime el siguiente ingrediente o cantidad, o di basta para terminar de editar la receta.')
             .getResponse();
     }
 };

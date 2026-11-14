@@ -16,7 +16,7 @@ export default defineConfig(({ mode }) => {
         devOptions: {
           enabled: true
         },
-        includeAssets: ['favicon.ico', 'apple-touch-icon.png', 'mask-icon.svg'],
+        includeAssets: ['logo.png'],
         manifest: {
           name: 'CarbCalc - Diabetes Family',
           short_name: 'CarbCalc',
@@ -28,20 +28,16 @@ export default defineConfig(({ mode }) => {
           start_url: '/',
           scope: '/',
           icons: [
-            {
-              src: 'logo.png',
-              sizes: '192x192',
-              type: 'image/png'
-            },
-            {
-              src: 'logo.png',
-              sizes: '512x512',
-              type: 'image/png'
-            }
+            // The only icon file is 512x512; declaring it as 192x192 too made browsers warn
+            { src: 'logo.png', sizes: '512x512', type: 'image/png', purpose: 'any' },
+            { src: 'logo.png', sizes: '512x512', type: 'image/png', purpose: 'maskable' }
           ]
         },
         workbox: {
           globPatterns: ['**/*.{js,css,html,ico,png,svg}'],
+          // Never answer API calls (Alexa endpoint) with the cached app shell
+          navigateFallbackDenylist: [/^\/api\//],
+          cleanupOutdatedCaches: true,
           runtimeCaching: [
             {
               urlPattern: /^https:\/\/fonts\.googleapis\.com\/.*/i,
