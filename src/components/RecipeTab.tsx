@@ -4,6 +4,7 @@ import { useVoiceRecognition } from '../hooks/useVoiceRecognition';
 import { motion } from 'motion/react';
 import { AppState } from '../hooks/useAppState';
 import { getCategoryColor } from '../utils/categoryColors';
+import { memberFraction } from '../utils/split';
 
 interface RecipeTabProps {
     state: AppState;
@@ -24,8 +25,8 @@ export function RecipeTab({ state }: RecipeTabProps) {
         isBatchCooking, setIsBatchCooking,
         totalCarbs,
         editingRecipeId,
-        diabeticMembers, activeFamilyProportionSum,
-        setAsideMode, setAsideValue,
+        diabeticMembers,
+        setAsideMode, setAsideValue, split, family,
         ingredients,
         addIngredientToRecipe,
         createAndAddIngredient,
@@ -48,7 +49,8 @@ export function RecipeTab({ state }: RecipeTabProps) {
 
         if (matches.length > 0) {
             // Pick the first match or exact match if possible
-            const exact = matches.find(i => i.name.toLowerCase() === lowerSearched) || matches[0];
+            const exact = matches.find(i => i.name.toLowerCase() === lowerSearched)
+                || [...matches].sort((a, b) => a.name.length - b.name.length)[0];
             const weight = typeof result.amount === 'number' && !isNaN(result.amount) ? result.amount : undefined;
             addIngredientToRecipe(exact, weight);
             setToast(`Añadido por voz: ${exact.name} ${weight ? `(${weight}g)` : ''}`);
@@ -65,13 +67,10 @@ export function RecipeTab({ state }: RecipeTabProps) {
         }
     }, [ingredients, addIngredientToRecipe, setToast, setNewIngredientName, setShowAddIngredient, setSearchTerm]);
 
-    // Calculate effective carbs considering set-aside food
+    // Carbs left after setting food aside. Uses the same maths as the split tab
+    // (grams set aside are compared with the cooked weight once it has been entered).
     const setAsideAmount = typeof setAsideValue === 'number' && setAsideValue > 0 ? setAsideValue : 0;
-    const effectiveCarbsForDiabetics = setAsideMode === 'percentage'
-        ? totalCarbs * (1 - setAsideAmount / 100)
-        : setAsideMode === 'absolute' && totalCarbs > 0
-            ? totalCarbs * (1 - setAsideAmount / (currentRecipeIngredients.reduce((sum, ri) => sum + ri.weight, 0) || 1))
-            : totalCarbs;
+    const effectiveCarbsForDiabetics = totalCarbs * split.servedFraction;
 
     const suggestedIngredients = React.useMemo(() => {
         if (searchTerm) return [];
@@ -157,8 +156,8 @@ export function RecipeTab({ state }: RecipeTabProps) {
         const recipeCounts: Record<string, number> = {};
 
         mealHistory.forEach(meal => {
-            if (meal.timestamp > oneYearAgo && meal.recipeName) {
-                const mealDate = new Date(meal.timestamp);
+            const mealDate = new Date(meal.timestamp);
+            if (mealDate.getTime() > oneYearAgo && meal.recipeName && !meal.isBatch) {
                 const mHour = mealDate.getHours();
 
                 let match = false;
@@ -447,6 +446,9 @@ export function RecipeTab({ state }: RecipeTabProps) {
                         <div className="flex gap-2">
                             <input
                                 type="number"
+                                inputMode="decimal"
+                                min="0"
+                                max="100"
                                 placeholder="HC/100g"
                                 className="flex-1 px-3 py-2 bg-white dark:bg-gray-800 rounded-lg text-sm outline-none dark:text-gray-100"
                                 value={newIngredientCarbs}
@@ -512,8 +514,11 @@ export function RecipeTab({ state }: RecipeTabProps) {
                                 )}
                                 <input
                                     type="number"
+                                    inputMode="decimal"
+                                    min="0"
                                     value={ri.weight}
-                                    onChange={(e) => updateIngredientWeight(ri.ingredientId, Number(e.target.value))}
+                                    onFocus={(e) => e.target.select()}
+                                    onChange={(e) => updateIngredientWeight(ri.ingredientId, Math.max(0, Number(e.target.value) || 0))}
                                     className="w-20 px-3 py-1.5 bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-lg text-right text-base outline-none focus:ring-2 focus:ring-orange-200 dark:focus:ring-orange-800 dark:text-gray-100"
                                 />
                                 <span className="text-sm text-gray-500 dark:text-gray-400">g</span>
@@ -543,9 +548,7 @@ export function RecipeTab({ state }: RecipeTabProps) {
                     {diabeticMembers.length > 0 && (
                         <div className="flex flex-wrap gap-3 mb-3">
                             {diabeticMembers.map(dm => {
-                                const dmCarbs = activeFamilyProportionSum > 0
-                                    ? (dm.proportion / activeFamilyProportionSum) * effectiveCarbsForDiabetics
-                                    : 0;
+                                const dmCarbs = memberFraction(dm, family) * effectiveCarbsForDiabetics;
                                 return (
                                     <div key={dm.id} className="flex items-center gap-2 bg-blue-50 dark:bg-blue-900/30 px-3 py-2 rounded-xl border border-blue-100 dark:border-blue-800">
                                         <div>

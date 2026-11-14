@@ -20,7 +20,7 @@ export function HistoryTab({ state }: HistoryTabProps) {
 
     const groupedHistory = mealHistory.reduce((groups: { [key: string]: MealHistoryEntry[] }, entry) => {
         const date = new Date(entry.timestamp);
-        const dateKey = date.toLocaleDateString('es-ES', { weekday: 'long', day: 'numeric', month: 'long' });
+        const dateKey = date.toLocaleDateString('es-ES', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
         const capitalizedKey = dateKey.charAt(0).toUpperCase() + dateKey.slice(1);
         if (!groups[capitalizedKey]) groups[capitalizedKey] = [];
         groups[capitalizedKey].push(entry);
@@ -137,7 +137,7 @@ export function HistoryTab({ state }: HistoryTabProps) {
                                                             <div className="grid grid-cols-2 gap-2">
                                                                 <div className="bg-white dark:bg-gray-800 p-3 rounded-xl border border-gray-100 dark:border-gray-700">
                                                                     <div className="text-[10px] text-gray-400 font-bold uppercase mb-1">Peso Neto</div>
-                                                                    <div className="text-lg font-black text-gray-800 dark:text-gray-200">{entry.netWeight} <span className="text-xs font-normal">g</span></div>
+                                                                    <div className="text-lg font-black text-gray-800 dark:text-gray-200">{entry.netWeight.toFixed(0)} <span className="text-xs font-normal">g</span></div>
                                                                 </div>
                                                                 <div className="bg-white dark:bg-gray-800 p-3 rounded-xl border border-gray-100 dark:border-gray-700">
                                                                     <div className="text-[10px] text-gray-400 font-bold uppercase mb-1">Carbohidratos</div>
@@ -148,7 +148,7 @@ export function HistoryTab({ state }: HistoryTabProps) {
                                                             {entry.isBatch ? (
                                                                 <div className="bg-purple-50 dark:bg-purple-900/20 p-3 rounded-xl border border-purple-100 dark:border-purple-800 flex justify-between items-center">
                                                                     <div className="text-[10px] font-bold text-purple-500 uppercase">1 Ración (10g HC) equivale a</div>
-                                                                    <div className="text-lg font-black text-purple-700 dark:text-purple-400">{((entry.netWeight / entry.totalCarbs) * 10).toFixed(0)} <span className="text-xs font-normal">g</span></div>
+                                                                    <div className="text-lg font-black text-purple-700 dark:text-purple-400">{entry.totalCarbs > 0 ? ((entry.netWeight / entry.totalCarbs) * 10).toFixed(0) : '–'} <span className="text-xs font-normal">g</span></div>
                                                                 </div>
                                                             ) : (
                                                                 <div className="space-y-2">

@@ -3,6 +3,8 @@ import { Scale, Save, Share2, MessageSquare, Trash2, AlertTriangle } from 'lucid
 import { motion } from 'motion/react';
 import { AppState } from '../hooks/useAppState';
 import { getMealSlot } from '../utils/dateUtils';
+import { memberFraction } from '../utils/split';
+import { UPSERT_WINDOW_MS } from '../utils/history';
 
 interface SplitTabProps {
     state: AppState;
@@ -13,68 +15,53 @@ export function SplitTab({ state }: SplitTabProps) {
         family, cookware, activeFamilyProportionSum,
         selectedCookwareId, setSelectedCookwareId,
         totalWeightWithCookware, setTotalWeightWithCookware,
-        totalCarbs, cachedTotalCarbs, cachedRecipeName,
+        cachedRecipeName,
         setAsideMode, setSetAsideMode,
         setAsideValue, setSetAsideValue,
         portionErrorPercent,
         isErrorDisabledForCurrentSplit, setIsErrorDisabledForCurrentSplit,
         currentRecipeName,
         saveMealToHistory, shareFullMeal, autoUpdateHistory,
-        clearReparto, mealHistory, isBatchCooking
+        clearReparto, mealHistory, isBatchCooking,
+        split, effectiveCarbs,
     } = state;
 
-
-    const selectedItem = cookware.find(c => c.id === selectedCookwareId);
-    const cookwareMass = selectedCookwareId === 'none' ? 0 : (selectedItem?.mass ?? 0);
-    const hasCookwareSelection = selectedCookwareId === 'none' || !!selectedItem;
-    const netWeightRaw = (typeof totalWeightWithCookware === 'number' && hasCookwareSelection)
-        ? Math.max(0, totalWeightWithCookware - cookwareMass)
-        : 0;
-
-    const setAsideAmount = typeof setAsideValue === 'number' && setAsideValue > 0 ? setAsideValue : 0;
-    const setAsideWeight = setAsideMode === 'percentage'
-        ? netWeightRaw * (setAsideAmount / 100)
-        : setAsideMode === 'absolute'
-            ? Math.min(setAsideAmount, netWeightRaw)
-            : 0;
-    const netWeight = Math.max(0, netWeightRaw - setAsideWeight);
-
-    const effectiveCarbs = totalCarbs > 0 ? totalCarbs : cachedTotalCarbs;
-    const adjustedCarbs = netWeightRaw > 0 ? effectiveCarbs * (netWeight / netWeightRaw) : effectiveCarbs;
+    // All the weight/carbs maths lives in utils/split.ts (shared with the recipe tab)
+    const { netWeightRaw, setAsideWeight, netWeight, adjustedCarbs } = split;
 
     const calculatedPortions = family
         .filter(m => m.isActive)
         .map(member => {
-            const memberPortion = activeFamilyProportionSum > 0
-                ? (member.proportion / activeFamilyProportionSum) * netWeight
-                : 0;
-            const memberCarbs = activeFamilyProportionSum > 0
-                ? (member.proportion / activeFamilyProportionSum) * adjustedCarbs
-                : 0;
-
+            const fraction = memberFraction(member, family);
+            const memberPortion = fraction * netWeight;
             return {
                 member,
                 portion: isErrorDisabledForCurrentSplit ? memberPortion : memberPortion * (1 - portionErrorPercent / 100),
-                portionCarbs: memberCarbs
+                portionCarbs: fraction * adjustedCarbs
             };
         });
 
+    const displayRecipeName = currentRecipeName || cachedRecipeName || 'Comida sin nombre';
+
     const historicalWarnings = React.useMemo(() => {
         const warnings: string[] = [];
+        const now = Date.now();
         const currentSlot = getMealSlot(new Date().getHours());
 
-        // Filter history by the current meal slot (breakfast, lunch, dinner, night)
-        const sameSlotHistory = mealHistory.filter(m =>
-            getMealSlot(new Date(m.timestamp).getHours()) === currentSlot
-        );
+        // Earlier meals in the same slot (breakfast, lunch, dinner, night), newest first.
+        // The entry being edited right now (same recipe, last two hours) is not "history".
+        const sameSlotHistory = mealHistory.filter(m => {
+            const t = new Date(m.timestamp).getTime();
+            if (m.recipeName === displayRecipeName && now - t < UPSERT_WINDOW_MS) return false;
+            return getMealSlot(new Date(m.timestamp).getHours()) === currentSlot;
+        });
 
-        // 1. Check historical HC/100g for this recipe (within same slot)
-        if (cachedRecipeName && netWeight > 0) {
-            const lastSimilarMeal = [...sameSlotHistory]
-                .reverse()
-                .find(m => m.recipeName === cachedRecipeName && m.totalCarbs && m.netWeight);
+        // 1. Compare HC/100g with the last time this recipe was cooked
+        if (cachedRecipeName && netWeight > 0 && adjustedCarbs > 0) {
+            const lastSimilarMeal = sameSlotHistory
+                .find(m => m.recipeName === cachedRecipeName && m.totalCarbs > 0 && m.netWeight > 0);
 
-            if (lastSimilarMeal && lastSimilarMeal.netWeight > 0) {
+            if (lastSimilarMeal) {
                 const lastHc100g = (lastSimilarMeal.totalCarbs / lastSimilarMeal.netWeight) * 100;
                 const currentHc100g = (adjustedCarbs / netWeight) * 100;
 
@@ -84,20 +71,15 @@ export function SplitTab({ state }: SplitTabProps) {
             }
         }
 
-        // 2. Check for abnormally large portions (within same slot)
-        let portionWarning = false;
-        calculatedPortions.forEach(cp => {
+        // 2. Check for abnormally large portions compared with the last 15 meals of this slot
+        const portionWarning = calculatedPortions.some(cp => {
             const memberRecentMeals = sameSlotHistory
-                .slice(-15) // Look at slightly fewer recent meals since they are slot-specific
-                .map(m => m.portions?.find(p => p.memberName === cp.member.name))
+                .slice(0, 15)
+                .map(m => m.portions?.find(p => p.memberId ? p.memberId === cp.member.id : p.memberName === cp.member.name))
                 .filter((p): p is NonNullable<typeof p> => !!p && p.weight > 0);
-
-            if (memberRecentMeals.length >= 3) {
-                const avgWeight = memberRecentMeals.reduce((sum, p) => sum + p.weight, 0) / memberRecentMeals.length;
-                if (cp.portion > 300 && cp.portion > avgWeight * 1.5) {
-                    portionWarning = true;
-                }
-            }
+            if (memberRecentMeals.length < 3) return false;
+            const avgWeight = memberRecentMeals.reduce((sum, p) => sum + p.weight, 0) / memberRecentMeals.length;
+            return cp.portion > 300 && cp.portion > avgWeight * 1.5;
         });
 
         if (portionWarning) {
@@ -105,37 +87,38 @@ export function SplitTab({ state }: SplitTabProps) {
         }
 
         return warnings;
-    }, [cachedRecipeName, netWeight, adjustedCarbs, mealHistory, calculatedPortions]);
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [cachedRecipeName, displayRecipeName, netWeight, adjustedCarbs, mealHistory, calculatedPortions.map(p => p.portion).join(',')]);
 
     const portionsForSharing = calculatedPortions.map(p => ({
+        memberId: p.member.id,
         memberName: p.member.name,
         weight: p.portion,
         carbs: p.portionCarbs,
         isDiabetic: p.member.isDiabetic
     }));
 
-    const displayRecipeName = currentRecipeName || cachedRecipeName || 'Comida sin nombre';
-
     // ---- auto-update history on split changes (debounced 800ms) ----
-    const autoUpdateRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+    // Only reacts to changes made while this tab is open: just opening the tab with
+    // yesterday's weights still on screen must not log a new meal.
+    const lastSavedSignature = useRef<string | null>(null);
+    const signature = [
+        displayRecipeName, isBatchCooking, netWeight.toFixed(1), adjustedCarbs.toFixed(2),
+        ...portionsForSharing.map(p => `${p.memberId}:${p.weight.toFixed(1)}:${p.carbs.toFixed(2)}`)
+    ].join('|');
     useEffect(() => {
-        if (autoUpdateRef.current) clearTimeout(autoUpdateRef.current);
-        autoUpdateRef.current = setTimeout(() => {
-            if (netWeight > 0) {
-                autoUpdateHistory(
-                    displayRecipeName,
-                    effectiveCarbs,
-                    netWeight,
-                    portionsForSharing
-                );
-            }
+        if (lastSavedSignature.current === null) {
+            lastSavedSignature.current = signature;
+            return;
+        }
+        if (lastSavedSignature.current === signature || netWeight <= 0) return;
+        const timer = setTimeout(() => {
+            lastSavedSignature.current = signature;
+            autoUpdateHistory(displayRecipeName, adjustedCarbs, netWeight, portionsForSharing);
         }, 800);
-        return () => { if (autoUpdateRef.current) clearTimeout(autoUpdateRef.current); };
+        return () => clearTimeout(timer);
         // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [netWeight, adjustedCarbs, portionsForSharing.map(p => p.weight + p.carbs).join(',')]);
-
-    // Auto-save is disabled per user request, using explicit save only
-    // Meals with identical names saved within 2 hours will be silently upserted by useAppState.
+    }, [signature]);
 
     return (
         <div className="space-y-6">
@@ -203,6 +186,8 @@ export function SplitTab({ state }: SplitTabProps) {
                         <div className="flex items-center gap-3">
                             <input
                                 type="number"
+                                inputMode="decimal"
+                                min="0"
                                 placeholder="0"
                                 value={totalWeightWithCookware}
                                 onChange={(e) => setTotalWeightWithCookware(e.target.value === '' ? '' : Number(e.target.value))}
@@ -212,11 +197,19 @@ export function SplitTab({ state }: SplitTabProps) {
                         </div>
                     </div>
 
+                    {typeof totalWeightWithCookware === 'number' && totalWeightWithCookware > 0 && netWeightRaw <= 0 && (
+                        <div className="text-xs font-medium text-amber-600 dark:text-amber-400 px-1">
+                            {selectedCookwareId === ''
+                                ? 'Selecciona un utensilio (o "Sin utensilio") para calcular el reparto.'
+                                : 'El peso introducido es menor o igual que el del utensilio. Revisa el peso o el utensilio elegido.'}
+                        </div>
+                    )}
+
                     {netWeightRaw > 0 && (
                         <>
                             <div className="bg-green-50 dark:bg-green-900/20 p-4 rounded-2xl border border-green-100 dark:border-green-800">
                                 <div className="text-xs text-green-600 dark:text-green-400 font-bold uppercase mb-1">Peso Neto de la Comida</div>
-                                <div className="text-2xl font-black text-green-700 dark:text-green-400">{netWeightRaw} g</div>
+                                <div className="text-2xl font-black text-green-700 dark:text-green-400">{netWeightRaw.toFixed(0)} g</div>
                             </div>
 
                             <div className="bg-gray-50 dark:bg-gray-700 p-3 rounded-2xl border border-gray-100 dark:border-gray-600">

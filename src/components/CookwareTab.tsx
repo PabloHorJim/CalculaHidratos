@@ -37,8 +37,10 @@ export function CookwareTab({ state }: CookwareTabProps) {
                         <div className="flex items-center gap-2">
                             <input
                                 type="number"
+                                min="0"
+                                inputMode="decimal"
                                 value={c.mass}
-                                onChange={(e) => updateCookware(c.id, { mass: Number(e.target.value) })}
+                                onChange={(e) => updateCookware(c.id, { mass: Math.max(0, Number(e.target.value) || 0) })}
                                 className="w-20 px-2 py-1 bg-gray-50 dark:bg-gray-700 rounded text-sm text-right outline-none focus:ring-2 focus:ring-purple-200 dark:focus:ring-purple-800 dark:text-gray-100"
                             />
                             <span className="text-xs text-gray-400">g</span>

@@ -1,4 +1,4 @@
-import React, { useCallback, useMemo } from 'react';
+import React, { useCallback } from 'react';
 import {
   ChefHat,
   Scale,
@@ -26,7 +26,7 @@ import { CookieConsent } from './components/CookieConsent';
 
 export default function App() {
   const state = useAppState();
-  const { activeTab, setActiveTab, isSidebarOpen, setIsSidebarOpen, user, saveStatus, toast, showTutorial, dismissTutorial, hasConsent } = state;
+  const { activeTab, setActiveTab, isSidebarOpen, setIsSidebarOpen, user, syncStatus, toast, showTutorial, dismissTutorial, needsConsentPrompt } = state;
 
   const currentTabIndex = MAIN_TABS.indexOf(activeTab);
 
@@ -47,11 +47,6 @@ export default function App() {
     onSwipeRight: goToPrevTab,
   });
 
-  // Track swipe direction for animation
-  const swipeDirection = useMemo(() => {
-    return currentTabIndex;
-  }, [currentTabIndex]);
-
   return (
     <div
       className="min-h-screen bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-gray-100 font-sans pb-24 transition-colors duration-300"
@@ -59,7 +54,7 @@ export default function App() {
       onTouchEnd={onTouchEnd}
     >
       {/* Cookie Consent */}
-      {!hasConsent && <CookieConsent state={state} />}
+      {needsConsentPrompt && <CookieConsent state={state} />}
 
       {/* Tutorial Overlay */}
       {showTutorial && <OnboardingTutorial onDismiss={dismissTutorial} />}
@@ -84,13 +79,16 @@ export default function App() {
               <div>
                 <h1 className="text-base font-black tracking-tight leading-none">CarbCalc</h1>
                 <div className="flex items-center gap-1.5">
-                  {saveStatus !== 'idle' && (
-                    <span className={`text-[8px] font-bold uppercase px-1 rounded ${saveStatus === 'saving' ? 'text-blue-400' : 'text-green-400'}`}>
-                      {saveStatus === 'saving' ? '...' : 'OK'}
-                    </span>
-                  )}
-                  {user ? (
-                    <span className="text-[8px] font-bold uppercase text-blue-400">Nube</span>
+                  {!user ? (
+                    <span className="text-[8px] font-bold uppercase text-gray-400">Local</span>
+                  ) : syncStatus === 'offline' ? (
+                    <span className="text-[8px] font-bold uppercase text-amber-500" title="Los cambios se guardan en este dispositivo y se enviarán al recuperar la conexión">Sin conexión</span>
+                  ) : syncStatus === 'error' ? (
+                    <span className="text-[8px] font-bold uppercase text-red-500" title="No se pudo sincronizar con la nube">Error de nube</span>
+                  ) : syncStatus === 'saving' || syncStatus === 'connecting' ? (
+                    <span className="text-[8px] font-bold uppercase text-blue-400">Nube ...</span>
+                  ) : syncStatus === 'synced' ? (
+                    <span className="text-[8px] font-bold uppercase text-green-500">Nube OK</span>
                   ) : (
                     <span className="text-[8px] font-bold uppercase text-gray-400">Local</span>
                   )}
@@ -113,11 +111,7 @@ export default function App() {
       </header>
 
       {/* Main Content — Swipe-enabled */}
-      <main
-        className="max-w-md mx-auto p-6"
-        onTouchStart={onTouchStart}
-        onTouchEnd={onTouchEnd}
-      >
+      <main className="max-w-md mx-auto p-6">
         <AnimatePresence mode="wait">
           <motion.div
             key={activeTab}

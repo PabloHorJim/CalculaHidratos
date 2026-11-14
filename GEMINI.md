@@ -72,7 +72,7 @@ useAppState (hook)
 - `users/{uid}` — User profile + personal data (when not in a group)
 - `groups/{groupId}` — Shared group data (ingredients, recipes, family, cookware, history)
 - Auth: Google Sign-In only
-- Offline persistence enabled via `enableIndexedDbPersistence`
+- Offline cache via `persistentLocalCache` (multi-tab)
 
 ## Common Tasks
 
@@ -95,10 +95,27 @@ useAppState (hook)
 2. Update `INITIAL_INGREDIENTS` in `data/ingredients.ts`
 3. Update the recipe tab UI to display/edit the new field
 
+## Cloud sync (read before touching persistence)
+
+- `src/sync/merge.ts` — pure three-way merge (`base` / `local` / `remote`), record by record for arrays keyed by `id`.
+- `src/sync/engine.ts` — framework-free `SyncEngine`. It never writes before the server copy has been received,
+  pushes only the fields that changed inside a Firestore transaction, and while offline keeps changes local
+  (together with the last known server copy in `localStorage['carb_calc_sync_base']`) until the connection returns.
+- `src/hooks/useCloudSync.ts` — React/Firestore wrapper. The synced fields are listed in `SYNC_FIELDS` in `useAppState.ts`.
+- To sync a new piece of state: add it to `SyncedState`, `SYNC_FIELDS`, `syncedState` and `applyRemoteChanges`.
+- Never call `setDoc` on a data document with the whole state: that is the bug this design replaced.
+- Never let `undefined` reach Firestore (use `toPlain` or omit the key).
+
+## Tests
+
+`npm test` runs the unit tests (Node test runner through `tsx`): merge rules, a simulated multi-device
+sync (`src/sync/engine.test.ts`, includes offline/restart and a fuzz test), split maths, history and voice parsing.
+
 ## Important Notes
 
-- The split calculation in `SplitTab.tsx` handles complex interplay between cookware mass, set-aside food, and error margins
+- All weight/carb maths of the split lives in `src/utils/split.ts` (`computeSplit`, `memberFraction`) and is shared by `RecipeTab` and `SplitTab` — do not duplicate it in components
+- Meal history is always kept sorted newest-first and capped (`src/utils/history.ts`); use `upsertHistory` to add entries
 - `cachedTotalCarbs` ensures the split tab shows carbs even after the recipe form is cleared
 - The stats panel classifies meals by timestamp hour (6-11=breakfast, 11-16=lunch, 16-23=dinner)
 - The legal notice follows RGPD/LOPDGDD two-layer information system
-- Pre-existing lint errors in `firebase.ts` are due to `import.meta.env` typing (resolved at runtime by Vite)
+- `@types/react` is not installed, so `tsc` treats most React values as `any`; do not rely on it to catch component errors

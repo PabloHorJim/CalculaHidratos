@@ -21,8 +21,6 @@ export function Sidebar({ state }: SidebarProps) {
         exportMealData,
     } = state;
 
-    if (!isSidebarOpen) return null;
-
     return (
         <AnimatePresence>
             {isSidebarOpen && (

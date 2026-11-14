@@ -8,7 +8,7 @@ interface CookieConsentProps {
 }
 
 export function CookieConsent({ state }: CookieConsentProps) {
-    const { acceptConsent } = state;
+    const { acceptConsent, declineCloudConsent } = state;
 
     return (
         <motion.div
@@ -56,7 +56,7 @@ export function CookieConsent({ state }: CookieConsentProps) {
                         Aceptar y continuar
                     </button>
                     <button
-                        onClick={acceptConsent}
+                        onClick={declineCloudConsent}
                         className="w-full py-2 text-gray-400 dark:text-gray-500 text-xs font-medium hover:text-gray-600 dark:hover:text-gray-300 transition-colors"
                     >
                         Solo funcionalidad básica (sin nube)

@@ -58,8 +58,10 @@ export function FamilyTab({ state }: FamilyTabProps) {
                                     <input
                                         type="number"
                                         step="0.001"
+                                        min="0"
+                                        inputMode="decimal"
                                         value={member.proportion}
-                                        onChange={(e) => updateFamilyMember(member.id, { proportion: Number(e.target.value) })}
+                                        onChange={(e) => updateFamilyMember(member.id, { proportion: Math.max(0, Number(e.target.value) || 0) })}
                                         className="w-full px-2 py-1 bg-gray-50 dark:bg-gray-700 rounded text-sm outline-none focus:ring-2 focus:ring-blue-200 dark:focus:ring-blue-800 dark:text-gray-100"
                                     />
                                 </div>

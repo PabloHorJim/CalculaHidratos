@@ -1,7 +1,11 @@
-import { useState, useEffect, useMemo, useRef, useCallback } from 'react';
+import { useState, useEffect, useMemo, useCallback } from 'react';
 import { Ingredient, Recipe, RecipeIngredient, FamilyMember, Cookware, MealHistoryEntry, FamilyGroup } from '../types';
 import { INITIAL_INGREDIENTS } from '../data/ingredients';
 import { getMealSlot } from '../utils/dateUtils';
+import { sortHistory, upsertHistory } from '../utils/history';
+import { computeSplit, memberFraction } from '../utils/split';
+import { toPlain } from '../sync/merge';
+import { useCloudSync, clearSyncBase, SyncField } from './useCloudSync';
 import {
     auth,
     db,
@@ -17,22 +21,51 @@ import {
     OperationType,
     handleFirestoreError,
     User,
-    updateDoc,
     query,
-    where,
-    getDocs
+    where
 } from '../firebase';
 
 const STORAGE_KEY = 'carb_calc_state';
 const COOKING_STATE_KEY = 'carb_calc_cooking';
 const TUTORIAL_KEY = 'carbcalc_tutorial_done';
-const DARK_MODE_KEY = 'carbcalc_dark_mode';
 const CONSENT_KEY = 'carbcalc_consent';
 
 export type TabType = 'recipe' | 'split' | 'family' | 'cookware' | 'history' | 'group' | 'stats' | 'legal';
 
 // Ordered tabs for swipe navigation (main nav bar tabs only)
 export const MAIN_TABS: TabType[] = ['recipe', 'split', 'family'];
+
+/** 'cloud' = accepted Firebase sync, 'local' = device-only storage, null = not answered yet. */
+type Consent = 'cloud' | 'local' | null;
+
+type Portion = MealHistoryEntry['portions'][number];
+
+/** Everything that is shared with the family through Firestore. */
+interface SyncedState extends Record<string, unknown> {
+    customIngredients: Ingredient[];
+    recipes: Recipe[];
+    family: FamilyMember[];
+    cookware: Cookware[];
+    mealHistory: MealHistoryEntry[];
+    ingredientWeightHistory: Record<string, number[]>;
+    currentRecipeName: string;
+    currentRecipeIngredients: RecipeIngredient[];
+    cookingMode: boolean;
+}
+
+const asArray = (v: unknown) => (Array.isArray(v) ? v : []);
+
+const SYNC_FIELDS: { [K in keyof SyncedState]: SyncField } = {
+    customIngredients: { key: 'id', normalize: asArray },
+    recipes: { key: 'id', normalize: asArray },
+    family: { key: 'id', normalize: asArray },
+    cookware: { key: 'id', normalize: asArray },
+    mealHistory: { key: 'id', normalize: v => sortHistory(asArray(v)) },
+    ingredientWeightHistory: { normalize: v => (v && typeof v === 'object' && !Array.isArray(v) ? v : {}) },
+    currentRecipeName: { normalize: v => (typeof v === 'string' ? v : '') },
+    currentRecipeIngredients: { key: 'ingredientId', normalize: asArray },
+    cookingMode: { normalize: v => !!v }
+};
 
 export function useAppState() {
     // --- State ---
@@ -57,22 +90,25 @@ export function useAppState() {
     const [familyGroup, setFamilyGroup] = useState<FamilyGroup | null>(null);
     const [groupMembers, setGroupMembers] = useState<any[]>([]);
     const [isLoaded, setIsLoaded] = useState(false);
-    const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'saved'>('idle');
     const [toast, setToast] = useState<string | null>(null);
     const [user, setUser] = useState<User | null>(null);
     const [isAuthReady, setIsAuthReady] = useState(false);
-    const [isSyncing, setIsSyncing] = useState(false);
+    // True once the user's profile document (which says which group they belong to) is known
+    const [isProfileReady, setIsProfileReady] = useState(false);
     const [isSidebarOpen, setIsSidebarOpen] = useState(false);
     const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
     const [isInstallable, setIsInstallable] = useState(false);
     const [showTutorial, setShowTutorial] = useState(false);
 
-    // Dark mode — system preference only
-
-    // Cookie consent
-    const [hasConsent, setHasConsent] = useState(() => {
-        return localStorage.getItem(CONSENT_KEY) === 'true';
+    // Privacy consent ('true' is the value stored by older versions)
+    const [consent, setConsent] = useState<Consent>(() => {
+        const stored = localStorage.getItem(CONSENT_KEY);
+        if (stored === 'true' || stored === 'cloud') return 'cloud';
+        if (stored === 'local') return 'local';
+        return null;
     });
+    const hasConsent = consent === 'cloud';
+    const needsConsentPrompt = consent === null;
 
     // Recipe Builder State
     const [cookingMode, setCookingMode] = useState(false);
@@ -102,15 +138,6 @@ export function useAppState() {
     const [isErrorDisabledForCurrentSplit, setIsErrorDisabledForCurrentSplit] = useState(false);
     const [isBatchCooking, setIsBatchCooking] = useState(false);
 
-    // Auto-save state for reparto
-    const [pendingAutoSave, setPendingAutoSave] = useState(false);
-    const [autoSaveCountdown, setAutoSaveCountdown] = useState(0);
-    const autoSaveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-    const countdownRef = useRef<ReturnType<typeof setInterval> | null>(null);
-
-    // Ref to guard save effect against writing back data that just arrived from Firestore
-    const isSyncingFromRemote = useRef(false);
-
     // Adaptive ingredient weights
     const [ingredientWeightHistory, setIngredientWeightHistory] = useState<Record<string, number[]>>({});
 
@@ -128,8 +155,14 @@ export function useAppState() {
     }, []);
 
     const acceptConsent = useCallback(() => {
-        setHasConsent(true);
-        localStorage.setItem(CONSENT_KEY, 'true');
+        setConsent('cloud');
+        localStorage.setItem(CONSENT_KEY, 'cloud');
+    }, []);
+
+    /** Keep using the app with device-only storage: nothing is sent to Firebase. */
+    const declineCloudConsent = useCallback(() => {
+        setConsent('local');
+        localStorage.setItem(CONSENT_KEY, 'local');
     }, []);
 
     // --- Auth & Sync ---
@@ -153,18 +186,6 @@ export function useAppState() {
         localStorage.setItem(TUTORIAL_KEY, 'true');
     };
 
-    // Helper to extract custom ingredients from legacy or new saved arrays
-    const extractCustomIngredients = useCallback((savedIngredients: Ingredient[], savedCustomIngredients?: Ingredient[]) => {
-        if (savedCustomIngredients) {
-            return savedCustomIngredients;
-        }
-        // Legacy migration: filter out old standard ingredients but KEEP custom ones if we wanted to
-        // HOWEVER, user requested a FULL wipe of custom ingredients.
-        // Therefore, we just return empty array for everyone right now, ignoring the old ingredients completely.
-        return [];
-    }, []);
-
-
     // Load initial data from localStorage
     useEffect(() => {
         const saved = localStorage.getItem(STORAGE_KEY);
@@ -172,14 +193,13 @@ export function useAppState() {
         if (saved) {
             try {
                 const parsed = JSON.parse(saved);
-                if (parsed.customIngredients) setCustomIngredients(parsed.customIngredients);
-                else setCustomIngredients([]); // Force reset of legacy ingredients
-                if (parsed.recipes) setRecipes(parsed.recipes);
-                if (parsed.family) setFamily(parsed.family);
-                if (parsed.cookware) setCookware(parsed.cookware);
-                if (parsed.mealHistory) {
-                    setMealHistory(parsed.mealHistory);
-                    loadedMealHistory = parsed.mealHistory;
+                if (Array.isArray(parsed.customIngredients)) setCustomIngredients(parsed.customIngredients);
+                if (Array.isArray(parsed.recipes)) setRecipes(parsed.recipes);
+                if (Array.isArray(parsed.family)) setFamily(parsed.family);
+                if (Array.isArray(parsed.cookware)) setCookware(parsed.cookware);
+                if (Array.isArray(parsed.mealHistory)) {
+                    loadedMealHistory = sortHistory(parsed.mealHistory);
+                    setMealHistory(loadedMealHistory);
                 }
                 if (parsed.groupId) setGroupId(parsed.groupId);
                 if (typeof parsed.portionErrorPercent === 'number') setPortionErrorPercent(parsed.portionErrorPercent);
@@ -200,13 +220,12 @@ export function useAppState() {
                 const shouldAutoClear = (() => {
                     if (!cachedName) return false;
                     const currentSlot = getMealSlot(new Date().getHours());
-                    // Find the most recent history entry for this recipe name
-                    const lastEntry = [...loadedMealHistory]
-                        .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime())
-                        .find(m => m.recipeName === cachedName);
+                    // History is sorted newest first: this is the most recent entry for the recipe
+                    const lastEntry = loadedMealHistory.find(m => m.recipeName === cachedName);
                     if (!lastEntry) return false;
-                    const entrySlot = getMealSlot(new Date(lastEntry.timestamp).getHours());
-                    return entrySlot !== currentSlot;
+                    const entryDate = new Date(lastEntry.timestamp);
+                    const isOtherDay = entryDate.toDateString() !== new Date().toDateString();
+                    return isOtherDay || getMealSlot(entryDate.getHours()) !== currentSlot;
                 })();
 
                 if (shouldAutoClear) {
@@ -223,6 +242,7 @@ export function useAppState() {
                     if (parsed.cachedRecipeName) setCachedRecipeName(parsed.cachedRecipeName);
                     if (parsed.setAsideMode) setSetAsideMode(parsed.setAsideMode);
                     if (typeof parsed.setAsideValue === 'number') setSetAsideValue(parsed.setAsideValue);
+                    if (parsed.isBatchCooking) setIsBatchCooking(true);
                 }
             } catch (e) {
                 console.error('Failed to load cooking state', e);
@@ -246,49 +266,61 @@ export function useAppState() {
             cachedRecipeName,
             setAsideMode,
             setAsideValue,
+            isBatchCooking,
         };
         localStorage.setItem(COOKING_STATE_KEY, JSON.stringify(cookingState));
     }, [currentRecipeName, currentRecipeIngredients, editingRecipeId, cookingMode,
         selectedCookwareId, totalWeightWithCookware, cachedTotalCarbs, cachedRecipeName,
-        setAsideMode, setAsideValue, isLoaded]);
+        setAsideMode, setAsideValue, isBatchCooking, isLoaded]);
 
-    // Sync with Firestore if logged in
+    // Save shared data to localStorage immediately (the cloud copy is handled by useCloudSync)
     useEffect(() => {
-        if (!isAuthReady || !user || !hasConsent) return;
+        if (!isLoaded) return;
+        const state = { customIngredients, recipes, family, cookware, mealHistory, groupId, portionErrorPercent, ingredientWeightHistory };
+        try {
+            localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+        } catch (e) {
+            console.error('Failed to save state locally', e);
+        }
+    }, [customIngredients, recipes, family, cookware, mealHistory, groupId, portionErrorPercent, ingredientWeightHistory, isLoaded]);
+
+    // User profile: make sure it exists and follow which group the user belongs to
+    const cloudEnabled = isLoaded && isAuthReady && !!user && hasConsent;
+    useEffect(() => {
+        setIsProfileReady(false);
+        if (!cloudEnabled || !user) return;
 
         const userDocRef = doc(db, 'users', user.uid);
-
         const unsubscribeUser = onSnapshot(userDocRef, (snapshot) => {
-            if (snapshot.exists()) {
-                const data = snapshot.data();
-                if (data.groupId !== groupId) {
-                    setGroupId(data.groupId || null);
-                }
-            } else {
-                const localData = localStorage.getItem(STORAGE_KEY);
-                if (localData) {
-                    try {
-                        const parsed = JSON.parse(localData);
-                        setDoc(userDocRef, {
-                            uid: user.uid,
-                            email: user.email,
-                            displayName: user.displayName,
-                            groupId: parsed.groupId || null,
-                            updatedAt: new Date().toISOString()
-                        }).catch(err => handleFirestoreError(err, OperationType.WRITE, `users/${user.uid}`));
-                    } catch (e) {
-                        console.error('Failed to sync local data to Firestore', e);
-                    }
-                }
+            const data = snapshot.exists() ? snapshot.data() : null;
+            // A cached "does not exist" only means this device has never seen the profile
+            if (!data && snapshot.metadata.fromCache) return;
+
+            setGroupId(data?.groupId || null);
+            setIsProfileReady(true);
+
+            const profile = {
+                uid: user.uid,
+                email: user.email,
+                displayName: user.displayName,
+                photoURL: user.photoURL
+            };
+            const isOutdated = !data || (Object.keys(profile) as (keyof typeof profile)[])
+                .some(k => (data[k] ?? null) !== (profile[k] ?? null));
+            if (isOutdated) {
+                setDoc(userDocRef, profile, { merge: true })
+                    .catch(err => handleFirestoreError(err, OperationType.WRITE, `users/${user.uid}`));
             }
+        }, (err) => {
+            handleFirestoreError(err, OperationType.GET, `users/${user.uid}`);
         });
 
         return () => unsubscribeUser();
-    }, [user, isAuthReady, groupId, hasConsent]);
+    }, [user, cloudEnabled]);
 
     // Sync with Group members
     useEffect(() => {
-        if (!isAuthReady || !user || !groupId || !hasConsent) {
+        if (!cloudEnabled || !isProfileReady || !groupId) {
             setGroupMembers([]);
             return;
         }
@@ -307,118 +339,56 @@ export function useAppState() {
         });
 
         return () => unsubscribe();
-    }, [groupId, isAuthReady, user, hasConsent]);
+    }, [groupId, cloudEnabled, isProfileReady]);
 
-    // Sync with Group data if groupId is present
+    // Shared data lives in the group document, or in the user's own document when not in a group
+    const syncDocPath = !cloudEnabled || !isProfileReady || !user
+        ? null
+        : groupId ? `groups/${groupId}` : `users/${user.uid}`;
+
+    const syncedState = useMemo<SyncedState>(() => ({
+        customIngredients, recipes, family, cookware, mealHistory, ingredientWeightHistory,
+        currentRecipeName, currentRecipeIngredients, cookingMode
+    }), [customIngredients, recipes, family, cookware, mealHistory, ingredientWeightHistory,
+        currentRecipeName, currentRecipeIngredients, cookingMode]);
+
+    const applyRemoteChanges = useCallback((patch: Partial<SyncedState>) => {
+        if (patch.customIngredients !== undefined) setCustomIngredients(patch.customIngredients);
+        if (patch.recipes !== undefined) setRecipes(patch.recipes);
+        if (patch.family !== undefined) setFamily(patch.family);
+        if (patch.cookware !== undefined) setCookware(patch.cookware);
+        if (patch.mealHistory !== undefined) setMealHistory(patch.mealHistory);
+        if (patch.ingredientWeightHistory !== undefined) setIngredientWeightHistory(patch.ingredientWeightHistory);
+        if (patch.currentRecipeName !== undefined) setCurrentRecipeName(patch.currentRecipeName);
+        if (patch.currentRecipeIngredients !== undefined) setCurrentRecipeIngredients(patch.currentRecipeIngredients);
+        if (patch.cookingMode !== undefined) setCookingMode(patch.cookingMode);
+    }, []);
+
+    const handleRemoteDocument = useCallback((path: string, data: Record<string, unknown> | null) => {
+        if (!path.startsWith('groups/')) return;
+        setFamilyGroup(data ? {
+            id: String(data.id ?? path.slice('groups/'.length)),
+            name: String(data.name ?? ''),
+            adminUid: String(data.adminUid ?? ''),
+            inviteCode: String(data.inviteCode ?? path.slice('groups/'.length))
+        } : null);
+    }, []);
+
+    const syncExtra = useMemo(() => (groupId || !user ? undefined : { uid: user.uid }), [groupId, user]);
+
+    const { status: syncStatus } = useCloudSync<SyncedState>({
+        docPath: syncDocPath,
+        local: syncedState,
+        fields: SYNC_FIELDS,
+        apply: applyRemoteChanges,
+        onRemoteDocument: handleRemoteDocument,
+        extraOnWrite: syncExtra,
+        createIfMissing: !groupId
+    });
+
     useEffect(() => {
-        if (!isAuthReady || !user || !groupId || !hasConsent) return;
-
-        const groupDocRef = doc(db, 'groups', groupId);
-
-        const unsubscribeGroup = onSnapshot(groupDocRef, (snapshot) => {
-            if (!snapshot.metadata.hasPendingWrites && snapshot.exists()) {
-                const data = snapshot.data();
-                isSyncingFromRemote.current = true;
-                setIsSyncing(true);
-                setFamilyGroup({
-                    id: data.id,
-                    name: data.name,
-                    adminUid: data.adminUid,
-                    inviteCode: data.inviteCode
-                });
-                if (data.customIngredients) setCustomIngredients(data.customIngredients);
-                else setCustomIngredients([]);
-                if (data.recipes) setRecipes(data.recipes);
-                if (data.family) setFamily(data.family);
-                if (data.cookware) setCookware(data.cookware);
-                if (data.mealHistory) setMealHistory(data.mealHistory);
-                if (data.currentRecipeName !== undefined) setCurrentRecipeName(data.currentRecipeName);
-                if (data.currentRecipeIngredients !== undefined) setCurrentRecipeIngredients(data.currentRecipeIngredients);
-                if (data.cookingMode !== undefined) setCookingMode(data.cookingMode);
-                setTimeout(() => {
-                    setIsSyncing(false);
-                    isSyncingFromRemote.current = false;
-                }, 1500);
-            }
-        }, (err) => {
-            handleFirestoreError(err, OperationType.GET, `groups/${groupId}`);
-        });
-
-        return () => unsubscribeGroup();
-    }, [user, isAuthReady, groupId, hasConsent]);
-
-    // Sync with User data if NO groupId is present
-    useEffect(() => {
-        if (!isAuthReady || !user || groupId || !hasConsent) return;
-
-        const userDocRef = doc(db, 'users', user.uid);
-
-        const unsubscribeUser = onSnapshot(userDocRef, (snapshot) => {
-            if (!snapshot.metadata.hasPendingWrites && snapshot.exists()) {
-                const data = snapshot.data();
-                isSyncingFromRemote.current = true;
-                setIsSyncing(true);
-                if (data.customIngredients) setCustomIngredients(data.customIngredients);
-                else setCustomIngredients([]);
-                if (data.recipes) setRecipes(data.recipes);
-                if (data.family) setFamily(data.family);
-                if (data.cookware) setCookware(data.cookware);
-                if (data.mealHistory) setMealHistory(data.mealHistory);
-                if (data.currentRecipeName !== undefined) setCurrentRecipeName(data.currentRecipeName);
-                if (data.currentRecipeIngredients !== undefined) setCurrentRecipeIngredients(data.currentRecipeIngredients);
-                if (data.cookingMode !== undefined) setCookingMode(data.cookingMode);
-                setTimeout(() => {
-                    setIsSyncing(false);
-                    isSyncingFromRemote.current = false;
-                }, 1500);
-            }
-        }, (err) => {
-            handleFirestoreError(err, OperationType.GET, `users/${user.uid}`);
-        });
-
-        return () => unsubscribeUser();
-    }, [user, isAuthReady, groupId, hasConsent]);
-
-    // Save changes (Local + Cloud)
-    useEffect(() => {
-        if (!isLoaded || !isAuthReady || isSyncing || isSyncingFromRemote.current) return;
-
-        setSaveStatus('saving');
-        const timer = setTimeout(async () => {
-            const state = { customIngredients, recipes, family, cookware, mealHistory, groupId, portionErrorPercent, ingredientWeightHistory };
-            const firebaseState = { ...state, currentRecipeName, currentRecipeIngredients, cookingMode };
-
-            localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
-
-            if (user && hasConsent) {
-                try {
-                    if (groupId) {
-                        const groupDocRef = doc(db, 'groups', groupId);
-                        await setDoc(groupDocRef, {
-                            ...firebaseState,
-                            updatedAt: new Date().toISOString()
-                        }, { merge: true });
-                    } else {
-                        const userDocRef = doc(db, 'users', user.uid);
-                        await setDoc(userDocRef, {
-                            ...firebaseState,
-                            uid: user.uid,
-                            email: user.email,
-                            displayName: user.displayName,
-                            updatedAt: new Date().toISOString()
-                        }, { merge: true });
-                    }
-                } catch (err) {
-                    console.error('Firestore save failed', err);
-                }
-            }
-
-            setSaveStatus('saved');
-            setTimeout(() => setSaveStatus('idle'), 2000);
-        }, 1000);
-
-        return () => clearTimeout(timer);
-    }, [customIngredients, recipes, family, cookware, mealHistory, groupId, portionErrorPercent, ingredientWeightHistory, currentRecipeName, currentRecipeIngredients, cookingMode, isLoaded, user, isAuthReady, isSyncing, hasConsent]);
+        if (!groupId) setFamilyGroup(null);
+    }, [groupId]);
 
     useEffect(() => {
         if (toast) {
@@ -483,14 +453,23 @@ export function useAppState() {
         return family.filter(m => m.isDiabetic && m.isActive);
     }, [family]);
 
-    const diabeticCarbsMap = useMemo(() => {
-        const map = new Map<string, number>();
-        if (activeFamilyProportionSum === 0) return map;
-        diabeticMembers.forEach(m => {
-            map.set(m.id, (m.proportion / activeFamilyProportionSum) * totalCarbs);
-        });
-        return map;
-    }, [diabeticMembers, activeFamilyProportionSum, totalCarbs]);
+    // Shared "reparto" maths (cooked weight, food set aside, carbs actually served)
+    const selectedCookware = cookware.find(c => c.id === selectedCookwareId);
+    const cookwareMass = selectedCookwareId === 'none' ? 0 : (selectedCookware ? selectedCookware.mass : null);
+    const effectiveCarbs = totalCarbs > 0 ? totalCarbs : cachedTotalCarbs;
+    const split = useMemo(() => computeSplit({
+        totalWeight: totalWeightWithCookware,
+        cookwareMass,
+        setAsideMode,
+        setAsideValue,
+        totalCarbs: effectiveCarbs,
+        rawIngredientWeight: currentRecipeIngredients.reduce((sum, ri) => sum + (Number(ri.weight) || 0), 0)
+    }), [totalWeightWithCookware, cookwareMass, setAsideMode, setAsideValue, effectiveCarbs, currentRecipeIngredients]);
+
+    /** Carbohydrates a member gets from the food being shared out. */
+    const getMemberCarbs = useCallback((member: FamilyMember) => {
+        return memberFraction(member, family) * split.adjustedCarbs;
+    }, [family, split.adjustedCarbs]);
 
     const filteredRecipes = useMemo(() => {
         return recipes.filter(r =>
@@ -520,20 +499,41 @@ export function useAppState() {
 
     // --- Handlers ---
     const addIngredientToRecipe = (ingredient: Ingredient, initialWeight?: number) => {
-        const existing = currentRecipeIngredients.find(ri => ri.ingredientId === ingredient.id);
-        if (existing) return;
         const defaultWeight = initialWeight !== undefined ? initialWeight : getAdaptiveWeight(ingredient.id);
-        setCurrentRecipeIngredients([...currentRecipeIngredients, { ingredientId: ingredient.id, weight: defaultWeight }]);
+        setCurrentRecipeIngredients(prev => {
+            const existing = prev.find(ri => ri.ingredientId === ingredient.id);
+            if (!existing) return [...prev, { ingredientId: ingredient.id, weight: defaultWeight }];
+            // Already in the recipe: an explicit amount (voice) replaces the weight
+            if (initialWeight === undefined) return prev;
+            return prev.map(ri => ri.ingredientId === ingredient.id ? { ...ri, weight: initialWeight } : ri);
+        });
         setSearchTerm('');
     };
 
     const createAndAddIngredient = () => {
-        if (!newIngredientName || newIngredientCarbs === '') return;
+        const name = newIngredientName.trim();
+        const carbs = Number(newIngredientCarbs);
+        if (!name || newIngredientCarbs === '') return;
+        if (!Number.isFinite(carbs) || carbs < 0 || carbs > 100) {
+            setToast('Los HC por 100g deben estar entre 0 y 100');
+            return;
+        }
+        const duplicate = ingredients.find(i => i.name.toLowerCase() === name.toLowerCase());
+        if (duplicate) {
+            addIngredientToRecipe(duplicate);
+            setNewIngredientName('');
+            setNewIngredientCarbs('');
+            setNewIngredientCategory('');
+            setShowAddIngredient(false);
+            setToast(`"${duplicate.name}" ya existía: añadido a la receta`);
+            return;
+        }
+        const category = newIngredientCategory.trim();
         const newIngredient: Ingredient = {
             id: Date.now().toString(),
-            name: newIngredientName,
-            carbsPer100g: Number(newIngredientCarbs),
-            category: newIngredientCategory || undefined
+            name,
+            carbsPer100g: carbs,
+            ...(category ? { category } : {})
         };
         setCustomIngredients(prev => [...prev, newIngredient]);
         addIngredientToRecipe(newIngredient);
@@ -587,29 +587,9 @@ export function useAppState() {
             setToast('Receta guardada');
         }
 
-        // Create/update a preliminary history entry (no split data yet)
+        // Create/update a preliminary history entry (keeps the split of a recent entry, if any)
         if (computedCarbs > 0) {
-            setMealHistory(prevMeals => {
-                const now = Date.now();
-                const TWO_HOURS = 2 * 60 * 60 * 1000;
-                const existingIdx = prevMeals.findIndex(
-                    m => m.recipeName === currentRecipeName && (now - new Date(m.timestamp).getTime()) < TWO_HOURS
-                );
-                const entry = {
-                    id: existingIdx >= 0 ? prevMeals[existingIdx].id : now.toString(),
-                    timestamp: new Date().toISOString(),
-                    recipeName: currentRecipeName,
-                    totalCarbs: computedCarbs,
-                    netWeight: existingIdx >= 0 ? prevMeals[existingIdx].netWeight : 0,
-                    portions: existingIdx >= 0 ? prevMeals[existingIdx].portions : [],
-                };
-                if (existingIdx >= 0) {
-                    const updated = [...prevMeals];
-                    updated[existingIdx] = entry;
-                    return updated;
-                }
-                return [entry, ...prevMeals].slice(0, 50);
-            });
+            setMealHistory(prev => upsertHistory(prev, { recipeName: currentRecipeName, totalCarbs: computedCarbs }));
         }
 
         // Do NOT clear recipe data — user explicitly requested this
@@ -640,27 +620,7 @@ export function useAppState() {
 
         // Preliminary history entry
         if (computedCarbs > 0) {
-            setMealHistory(prevMeals => {
-                const now = Date.now();
-                const TWO_HOURS = 2 * 60 * 60 * 1000;
-                const existingIdx = prevMeals.findIndex(
-                    m => m.recipeName === currentRecipeName && (now - new Date(m.timestamp).getTime()) < TWO_HOURS
-                );
-                const entry = {
-                    id: existingIdx >= 0 ? prevMeals[existingIdx].id : now.toString(),
-                    timestamp: new Date().toISOString(),
-                    recipeName: currentRecipeName,
-                    totalCarbs: computedCarbs,
-                    netWeight: existingIdx >= 0 ? prevMeals[existingIdx].netWeight : 0,
-                    portions: existingIdx >= 0 ? prevMeals[existingIdx].portions : [],
-                };
-                if (existingIdx >= 0) {
-                    const updated = [...prevMeals];
-                    updated[existingIdx] = entry;
-                    return updated;
-                }
-                return [entry, ...prevMeals].slice(0, 50);
-            });
+            setMealHistory(prev => upsertHistory(prev, { recipeName: currentRecipeName, totalCarbs: computedCarbs }));
         }
 
         // Do NOT clear or switch tabs
@@ -689,7 +649,12 @@ export function useAppState() {
     };
 
     const deleteRecipe = (id: string) => {
+        const recipe = recipes.find(r => r.id === id);
+        if (!recipe) return;
+        if (!window.confirm(`¿Eliminar la receta "${recipe.name}"? Se borrará para toda la familia.`)) return;
         setRecipes(prev => prev.filter(r => r.id !== id));
+        if (editingRecipeId === id) setEditingRecipeId(null);
+        setToast('Receta eliminada');
     };
 
     const toggleFamilyMember = (id: string) => {
@@ -708,10 +673,12 @@ export function useAppState() {
             isDiabetic: false,
             isActive: true
         };
-        setFamily([...family, newMember]);
+        setFamily(prev => [...prev, newMember]);
     };
 
     const removeFamilyMember = (id: string) => {
+        const member = family.find(m => m.id === id);
+        if (!member || !window.confirm(`¿Eliminar a ${member.name || 'este miembro'} de la familia?`)) return;
         setFamily(prev => prev.filter(m => m.id !== id));
     };
 
@@ -721,7 +688,7 @@ export function useAppState() {
             name: 'Nuevo Utensilio',
             mass: 500
         };
-        setCookware([...cookware, newCookware]);
+        setCookware(prev => [...prev, newCookware]);
     };
 
     const updateCookware = (id: string, updates: Partial<Cookware>) => {
@@ -729,10 +696,18 @@ export function useAppState() {
     };
 
     const removeCookware = (id: string) => {
+        const item = cookware.find(c => c.id === id);
+        if (!item || !window.confirm(`¿Eliminar el utensilio "${item.name}"?`)) return;
         setCookware(prev => prev.filter(c => c.id !== id));
+        if (selectedCookwareId === id) setSelectedCookwareId('');
     };
 
     const handleLogin = async () => {
+        if (!hasConsent) {
+            const ok = window.confirm('Para iniciar sesión y sincronizar con tu familia, tus datos se guardarán en Firebase (Google Cloud). ¿Aceptas?');
+            if (!ok) return;
+            acceptConsent();
+        }
         try {
             await signInWithPopup(auth, googleProvider);
             setToast('Sesión iniciada');
@@ -753,6 +728,7 @@ export function useAppState() {
     const handleLogout = async () => {
         try {
             await signOut(auth);
+            clearSyncBase();
             setToast('Sesión cerrada');
             setFamilyGroup(null);
             setGroupId(null);
@@ -762,37 +738,41 @@ export function useAppState() {
     };
 
     const createGroup = async (name: string) => {
-        if (!user) return;
-        const inviteCode = Math.random().toString(36).substring(2, 8).toUpperCase();
+        const groupName = name.trim();
+        if (!user || !groupName) return;
+        const alphabet = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'; // no 0/O/1/I: easier to dictate
+        const random = crypto.getRandomValues(new Uint8Array(6));
+        const inviteCode = Array.from(random, n => alphabet[n % alphabet.length]).join('');
         const newGroupId = inviteCode;
 
         const newGroup: FamilyGroup = {
             id: newGroupId,
-            name,
+            name: groupName,
             adminUid: user.uid,
             inviteCode
         };
 
         try {
-            await setDoc(doc(db, 'groups', newGroupId), {
+            await setDoc(doc(db, 'groups', newGroupId), toPlain({
                 ...newGroup,
                 customIngredients,
                 recipes,
                 family,
                 cookware,
                 mealHistory,
+                ingredientWeightHistory,
                 updatedAt: new Date().toISOString()
-            });
+            }));
 
-            await updateDoc(doc(db, 'users', user.uid), {
-                groupId: newGroupId
-            });
+            await setDoc(doc(db, 'users', user.uid), { uid: user.uid, groupId: newGroupId }, { merge: true });
 
             setGroupId(newGroupId);
             setFamilyGroup(newGroup);
+            setGroupNameInput('');
             setToast('Grupo creado');
         } catch (err) {
             handleFirestoreError(err, OperationType.WRITE, `groups/${newGroupId}`);
+            setToast('No se pudo crear el grupo. Comprueba tu conexión.');
         }
     };
 
@@ -805,30 +785,30 @@ export function useAppState() {
             const groupDoc = await getDoc(doc(db, 'groups', inviteCode));
 
             if (groupDoc.exists()) {
-                await updateDoc(doc(db, 'users', user.uid), {
-                    groupId: inviteCode
-                });
+                await setDoc(doc(db, 'users', user.uid), { uid: user.uid, groupId: inviteCode }, { merge: true });
                 setGroupId(inviteCode);
+                setInviteInput('');
                 setToast('Te has unido al grupo');
             } else {
                 setToast('Código de invitación inválido');
             }
         } catch (err) {
             handleFirestoreError(err, OperationType.WRITE, `users/${user.uid}`);
+            setToast('No se pudo unir al grupo. Comprueba tu conexión.');
         }
     };
 
     const leaveGroup = async () => {
         if (!user) return;
+        if (!window.confirm('¿Salir del grupo? Dejarás de ver los datos compartidos de la familia.')) return;
         try {
-            await updateDoc(doc(db, 'users', user.uid), {
-                groupId: null
-            });
+            await setDoc(doc(db, 'users', user.uid), { uid: user.uid, groupId: null }, { merge: true });
             setGroupId(null);
             setFamilyGroup(null);
             setToast('Has salido del grupo');
         } catch (err) {
             handleFirestoreError(err, OperationType.WRITE, `users/${user.uid}`);
+            setToast('No se pudo salir del grupo. Comprueba tu conexión.');
         }
     };
 
@@ -840,45 +820,18 @@ export function useAppState() {
     };
 
     const updateMealHistoryEntry = (id: string, newName: string) => {
-        setMealHistory(prev => prev.map(e => e.id === id ? { ...e, recipeName: newName } : e));
+        const name = newName.trim();
+        if (name) setMealHistory(prev => prev.map(e => e.id === id ? { ...e, recipeName: name } : e));
         setEditingHistoryId(null);
+        if (!name) return;
         setToast('Nombre actualizado');
     };
 
-    const saveMealToHistory = (recipeName: string, totalCarbs: number, netWeight: number, portions: any[]) => {
+    const saveMealToHistory = (recipeName: string, totalCarbs: number, netWeight: number, portions: Portion[]) => {
         const finalName = recipeName || cachedRecipeName || 'Comida sin nombre';
-
-        setMealHistory(prevMeals => {
-            const now = Date.now();
-            const TWO_HOURS = 2 * 60 * 60 * 1000; // 2 hours window for overwrite
-
-            // Look for a recent entry with the same recipe name
-            const recentDuplicateIndex = prevMeals.findIndex(
-                m => m.recipeName === finalName && (now - new Date(m.timestamp).getTime()) < TWO_HOURS
-            );
-
-            const finalPortions = isBatchCooking ? [] : portions;
-            const newEntry: MealHistoryEntry = {
-                id: recentDuplicateIndex >= 0 ? prevMeals[recentDuplicateIndex].id : now.toString(),
-                timestamp: new Date().toISOString(),
-                recipeName: finalName,
-                totalCarbs,
-                netWeight,
-                isBatch: isBatchCooking || undefined,
-                portions: finalPortions
-            };
-
-            if (recentDuplicateIndex >= 0) {
-                // Overwrite the existing entry
-                const updated = [...prevMeals];
-                updated[recentDuplicateIndex] = newEntry;
-                return updated;
-            } else {
-                // Add new entry
-                return [newEntry, ...prevMeals].slice(0, 50);
-            }
-        });
-
+        setMealHistory(prev => upsertHistory(prev, {
+            recipeName: finalName, totalCarbs, netWeight, portions, isBatch: isBatchCooking
+        }));
         setToast('Guardado en el historial');
     };
 
@@ -891,42 +844,15 @@ export function useAppState() {
         recipeName: string,
         totalCarbs: number,
         netWeight: number,
-        portions: { memberName: string; weight: number; carbs: number; isDiabetic: boolean }[]
+        portions: Portion[]
     ) => {
         if (!recipeName || netWeight <= 0) return;
-        const finalName = recipeName;
-        setMealHistory(prevMeals => {
-            const now = Date.now();
-            const TWO_HOURS = 2 * 60 * 60 * 1000;
-            const existingIdx = prevMeals.findIndex(
-                m => m.recipeName === finalName && (now - new Date(m.timestamp).getTime()) < TWO_HOURS
-            );
-            const finalPortions = isBatchCooking ? [] : portions;
-            const entry: MealHistoryEntry = {
-                id: existingIdx >= 0 ? prevMeals[existingIdx].id : now.toString(),
-                timestamp: new Date().toISOString(),
-                recipeName: finalName,
-                totalCarbs,
-                netWeight,
-                isBatch: isBatchCooking || undefined,
-                portions: finalPortions,
-            };
-            if (existingIdx >= 0) {
-                const updated = [...prevMeals];
-                updated[existingIdx] = entry;
-                return updated;
-            }
-            return [entry, ...prevMeals].slice(0, 50);
-        });
-    }, []);
-
-    const cancelAutoSave = useCallback(() => {
-        // Kept for signature compatibility if still called elsewhere, though no longer needed
-        setPendingAutoSave(false);
-    }, []);
+        setMealHistory(prev => upsertHistory(prev, {
+            recipeName, totalCarbs, netWeight, portions, isBatch: isBatchCooking
+        }));
+    }, [isBatchCooking]);
 
     const clearReparto = useCallback(() => {
-        cancelAutoSave();
         setSelectedCookwareId('');
         setTotalWeightWithCookware('');
         setSetAsideMode('none');
@@ -934,7 +860,7 @@ export function useAppState() {
         setCachedTotalCarbs(0);
         setCachedRecipeName('');
         setIsErrorDisabledForCurrentSplit(false);
-    }, [cancelAutoSave]);
+    }, []);
 
     const sharePortion = (name: string, weight: number, carbs: number, isDiabetic: boolean) => {
         const message = `🍽️ *Reparto de Comida*\n\nPara *${name}*:\n- Ración: *${weight.toFixed(0)}g*\n- Carbohidratos: *${carbs.toFixed(1)}g HC*${isDiabetic ? ' (¡Diabético! ⚠️)' : ''}\n\nCalculado con CarbCalc`;
@@ -957,14 +883,15 @@ export function useAppState() {
     const shareDiabeticCarbs = (member: FamilyMember, carbs: number) => {
         const message = `🩺 *HC para ${member.name}*: *${carbs.toFixed(1)}g HC*\n\nCalculado con CarbCalc 💙`;
         const encoded = encodeURIComponent(message);
-        const phone = member.phone ? member.phone.replace(/[^0-9+]/g, '') : '';
+        // wa.me expects the international number with digits only (no "+", spaces or leading 00)
+        const phone = member.phone ? member.phone.replace(/\D/g, '').replace(/^00/, '') : '';
         const url = phone
             ? `https://wa.me/${phone}?text=${encoded}`
             : `https://wa.me/?text=${encoded}`;
         window.open(url, '_blank');
     };
 
-    const shareFullMeal = (recipeName: string, totalMealCarbs: number, netW: number, portions: { memberName: string; weight: number; carbs: number; isDiabetic: boolean }[], via: 'whatsapp' | 'clipboard') => {
+    const shareFullMeal = (recipeName: string, totalMealCarbs: number, netW: number, portions: Portion[], via: 'whatsapp' | 'clipboard') => {
         const portionLines = portions.map(p =>
             `- ${p.memberName}: ${p.weight.toFixed(0)}g (${p.carbs.toFixed(1)}g HC)${p.isDiabetic ? ' ⚠️' : ''}`
         ).join('\n');
@@ -995,19 +922,20 @@ export function useAppState() {
             filename = `carbcalc_export_${new Date().toISOString().split('T')[0]}.json`;
         } else {
             const headers = ['Fecha', 'Receta', 'HC Totales', 'Peso Neto', 'Persona', 'Peso Ración', 'HC Ración', 'Diabético'];
-            const rows = data.flatMap(entry =>
-                entry.portions.map(p => [
-                    entry.timestamp,
-                    entry.recipeName,
-                    entry.totalCarbs.toFixed(1),
-                    entry.netWeight.toFixed(0),
-                    p.memberName,
-                    p.weight.toFixed(0),
-                    p.carbs.toFixed(1),
-                    p.isDiabetic ? 'Sí' : 'No'
-                ].join(','))
-            );
-            blob = new Blob([headers.join(',') + '\n' + rows.join('\n')], { type: 'text/csv' });
+            const cell = (value: string) => /[",\n]/.test(value) ? `"${value.replace(/"/g, '""')}"` : value;
+            const rows = data.flatMap(entry => {
+                const common = [entry.timestamp, entry.recipeName, entry.totalCarbs.toFixed(1), entry.netWeight.toFixed(0)];
+                // Batch / not-yet-split meals have no portions but must still be exported
+                const portions = entry.portions.length > 0 ? entry.portions : [null];
+                return portions.map(p => [
+                    ...common,
+                    p ? p.memberName : '',
+                    p ? p.weight.toFixed(0) : '',
+                    p ? p.carbs.toFixed(1) : '',
+                    p ? (p.isDiabetic ? 'Sí' : 'No') : ''
+                ].map(cell).join(','));
+            });
+            blob = new Blob(['\uFEFF' + headers.join(',') + '\n' + rows.join('\n')], { type: 'text/csv;charset=utf-8' });
             filename = `carbcalc_export_${new Date().toISOString().split('T')[0]}.csv`;
         }
 
@@ -1029,12 +957,12 @@ export function useAppState() {
         groupId, familyGroup, groupMembers,
 
         // UI state
-        isLoaded, saveStatus, toast, setToast,
-        user, isAuthReady, isSyncing,
+        isLoaded, syncStatus, toast, setToast,
+        user, isAuthReady,
         isSidebarOpen, setIsSidebarOpen,
         isInstallable, handleInstallClick,
         showTutorial, dismissTutorial,
-        hasConsent, acceptConsent,
+        hasConsent, needsConsentPrompt, acceptConsent, declineCloudConsent,
 
         // Recipe builder
         cookingMode, setCookingMode,
@@ -1062,13 +990,13 @@ export function useAppState() {
         portionErrorPercent, setPortionErrorPercent,
         isErrorDisabledForCurrentSplit, setIsErrorDisabledForCurrentSplit,
         isBatchCooking, setIsBatchCooking,
-        pendingAutoSave, autoSaveCountdown,
-        cancelAutoSave, clearReparto,
+        clearReparto,
         ingredientWeightHistory,
 
         // Computed
         filteredIngredients, totalCarbs, activeFamilyProportionSum,
-        diabeticMembers, diabeticCarbsMap, filteredRecipes,
+        diabeticMembers, filteredRecipes,
+        split, effectiveCarbs, getMemberCarbs,
 
         // Handlers
         addIngredientToRecipe, createAndAddIngredient,

@@ -2,6 +2,7 @@ import React, { useState, useMemo } from 'react';
 import { BarChart3, TrendingUp, TrendingDown, Calendar, Activity } from 'lucide-react';
 import { MealHistoryEntry } from '../types';
 import { AppState } from '../hooks/useAppState';
+import { localDateKey } from '../utils/history';
 
 interface StatsTabProps {
     state: AppState;
@@ -14,6 +15,11 @@ function classifyMeal(timestamp: string): 'desayuno' | 'comida' | 'cena' {
     if (hour >= 6 && hour < 11) return 'desayuno';
     if (hour >= 11 && hour < 16) return 'comida';
     return 'cena';
+}
+
+/** Portions saved by recent versions carry the member id, so renaming a member keeps their stats. */
+function isMemberPortion(p: MealHistoryEntry['portions'][number], member: { id: string; name: string }): boolean {
+    return p.memberId ? p.memberId === member.id : p.memberName === member.name;
 }
 
 function getMealLabel(type: MealType): string {
@@ -31,7 +37,9 @@ export function StatsTab({ state }: StatsTabProps) {
     const [isCustomPeriod, setIsCustomPeriod] = useState(false);
     const [customStartDate, setCustomStartDate] = useState('');
     const [customEndDate, setCustomEndDate] = useState('');
-    const [selectedMemberId, setSelectedMemberId] = useState<string>(diabeticMembers[0]?.id || '');
+    const [chosenMemberId, setSelectedMemberId] = useState<string>('');
+    // Fall back to the first diabetic member when nothing (valid) has been chosen yet
+    const selectedMemberId = diabeticMembers.some(m => m.id === chosenMemberId) ? chosenMemberId : (diabeticMembers[0]?.id || '');
     const [mealFilter, setMealFilter] = useState<MealType>('todas');
 
     const selectedMember = family.find(m => m.id === selectedMemberId);
@@ -39,17 +47,17 @@ export function StatsTab({ state }: StatsTabProps) {
 
     const { periodStart, periodEnd, actualDays } = useMemo(() => {
         if (isCustomPeriod && customStartDate && customEndDate) {
-            const start = new Date(customStartDate);
-            start.setHours(0, 0, 0, 0);
-            const end = new Date(customEndDate);
-            end.setHours(23, 59, 59, 999);
-            const days = Math.max(1, Math.ceil((end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24)));
+            // "YYYY-MM-DDT00:00" is parsed as local time ("YYYY-MM-DD" alone would be UTC)
+            let start = new Date(`${customStartDate}T00:00:00`);
+            let end = new Date(`${customEndDate}T23:59:59.999`);
+            if (start > end) [start, end] = [new Date(`${customEndDate}T00:00:00`), new Date(`${customStartDate}T23:59:59.999`)];
+            const days = Math.min(366, Math.max(1, Math.round((end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24))));
             return { periodStart: start, periodEnd: end, actualDays: days };
         }
         const end = new Date();
         end.setHours(23, 59, 59, 999);
         const start = new Date();
-        start.setDate(start.getDate() - periodDays);
+        start.setDate(start.getDate() - (periodDays - 1)); // today counts as one of the days
         start.setHours(0, 0, 0, 0);
         return { periodStart: start, periodEnd: end, actualDays: periodDays };
     }, [periodDays, isCustomPeriod, customStartDate, customEndDate]);
@@ -63,9 +71,7 @@ export function StatsTab({ state }: StatsTabProps) {
             // Never include batch meals in daily individual consumption
             if (entry.isBatch) return false;
             if (mealFilter !== 'todas' && classifyMeal(entry.timestamp) !== mealFilter) return false;
-            return entry.portions.some(p => {
-                return selectedMember && p.memberName === selectedMember.name && p.isDiabetic;
-            });
+            return !!selectedMember && entry.portions.some(p => isMemberPortion(p, selectedMember));
         });
     }, [mealHistory, selectedMemberId, selectedMember, periodStart, periodEnd, mealFilter]);
 
@@ -82,7 +88,7 @@ export function StatsTab({ state }: StatsTabProps) {
     const memberCarbs = useMemo(() => {
         if (!selectedMember) return [];
         return filteredEntries.map(entry => {
-            const portion = entry.portions.find(p => p.memberName === selectedMember.name);
+            const portion = entry.portions.find(p => isMemberPortion(p, selectedMember));
             return {
                 date: entry.timestamp,
                 carbs: portion?.carbs || 0,
@@ -105,10 +111,10 @@ export function StatsTab({ state }: StatsTabProps) {
         for (let i = actualDays - 1; i >= 0; i--) {
             const d = new Date(periodEnd);
             d.setDate(d.getDate() - i);
-            const dateStr = d.toISOString().split('T')[0];
+            const dateStr = localDateKey(d);
             const dayLabel = d.toLocaleDateString('es-ES', { weekday: 'short', day: 'numeric' });
             const dayCarbs = memberCarbs
-                .filter(e => new Date(e.date).toISOString().split('T')[0] === dateStr)
+                .filter(e => localDateKey(new Date(e.date)) === dateStr)
                 .reduce((sum, e) => sum + e.carbs, 0);
             days.push({ date: dateStr, carbs: dayCarbs, label: dayLabel });
         }
@@ -130,10 +136,11 @@ export function StatsTab({ state }: StatsTabProps) {
                 const entryDate = new Date(entry.timestamp);
                 if (entryDate < periodStart || entryDate > periodEnd) return false;
                 if (classifyMeal(entry.timestamp) !== type) return false;
-                return entry.portions.some(p => p.memberName === selectedMember.name && p.isDiabetic);
+                if (entry.isBatch) return false;
+                return entry.portions.some(p => isMemberPortion(p, selectedMember));
             });
             const carbsOfType = mealsOfType.map(entry => {
-                const portion = entry.portions.find(p => p.memberName === selectedMember.name);
+                const portion = entry.portions.find(p => isMemberPortion(p, selectedMember));
                 return portion?.carbs || 0;
             });
             const mean = carbsOfType.length > 0 ? carbsOfType.reduce((a, b) => a + b, 0) / carbsOfType.length : 0;
@@ -349,8 +356,8 @@ export function StatsTab({ state }: StatsTabProps) {
                     <div className="space-y-2">
                         {batchEntries.map(entry => {
                             const date = new Date(entry.timestamp).toLocaleDateString('es-ES', { weekday: 'short', day: 'numeric' });
-                            const concentration = ((entry.totalCarbs / entry.netWeight) * 100).toFixed(1);
-                            const portionWeight = ((entry.netWeight / entry.totalCarbs) * 10).toFixed(0);
+                            const concentration = entry.netWeight > 0 ? ((entry.totalCarbs / entry.netWeight) * 100).toFixed(1) : '–';
+                            const portionWeight = entry.totalCarbs > 0 ? ((entry.netWeight / entry.totalCarbs) * 10).toFixed(0) : '–';
 
                             return (
                                 <div key={entry.id} className="bg-white dark:bg-gray-800 px-3 py-2 rounded-xl flex items-center justify-between border border-purple-50 dark:border-purple-800/20">

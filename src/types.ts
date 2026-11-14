@@ -39,6 +39,7 @@ export interface MealHistoryEntry {
   netWeight: number;
   isBatch?: boolean;
   portions: {
+    memberId?: string; // absent in entries saved by older versions
     memberName: string;
     weight: number;
     carbs: number;
