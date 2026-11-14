@@ -97,7 +97,42 @@ src/
     └── ingredients.ts          # Base de datos de ingredientes
 ```
 
+## ✅ Tests
+
+```bash
+npm run lint        # TypeScript estricto
+npm test            # unitarios: sincronización simulada entre dispositivos, reparto, dosis, Alexa, proxy de login
+npm run test:rules  # reglas de seguridad contra el emulador de Firestore (necesita Java)
+npm run test:e2e    # tres navegadores contra los emuladores: grupos, sincronización, sin conexión, modo paciente
+```
+
 ## 🚀 Despliegue
+
+### Orden para desplegar esta versión (importante)
+
+1. **Publica primero las reglas** de `firestore.rules` (son compatibles con la versión anterior de la app):
+   `npx firebase-tools deploy --only firestore:rules --project <tu-proyecto>`, o pégalas en la consola de Firebase.
+   Si usas una base de datos con nombre (`VITE_FIREBASE_FIRESTORE_DATABASE_ID`), publícalas en esa base de datos.
+   Sin las reglas nuevas, el historial de comidas y el modo paciente no se sincronizan (la app muestra "Error de nube").
+2. **Despliega la app.** La primera vez que cada persona la abra se apuntará sola en la lista de miembros de su grupo y
+   el historial se moverá a la colección `meals`. Quien siga con la versión antigua dejará de ver el grupo hasta que su
+   app se actualice (basta con abrirla de nuevo).
+3. **Alexa:** añade en Vercel `NODEJS_HELPERS=0` (y, si quieres, `ALEXA_SKILL_ID`). El endpoint ahora rechaza peticiones
+   que no vengan firmadas por Amazon; si la skill dejase de responder, mira los logs de la función y pon
+   temporalmente `ALEXA_SIGNATURE_MODE=log`.
+
+### Inicio de sesión dentro de la app instalada (opcional)
+
+Las ventanas emergentes de Google fallan a menudo en una PWA instalada. Para usar el inicio de sesión por redirección:
+
+1. En Vercel, define `FIREBASE_PROJECT_ID` (o deja `VITE_FIREBASE_PROJECT_ID`) y cambia
+   `VITE_FIREBASE_AUTH_DOMAIN` al dominio de la app (p. ej. `mi-app.vercel.app`). `vercel.json` ya sirve
+   `/__/auth/*` desde ese dominio a través de `api/auth-proxy.ts`.
+2. En Google Cloud → Credenciales → cliente OAuth web, añade `https://<dominio-de-la-app>/__/auth/handler`
+   a los URI de redirección autorizados.
+3. En Firebase Authentication → Dominios autorizados, comprueba que está el dominio de la app.
+
+Mientras `VITE_FIREBASE_AUTH_DOMAIN` no coincida con el dominio de la app, se sigue usando la ventana emergente.
 
 ### Vercel (recomendado)
 

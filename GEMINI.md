@@ -14,7 +14,7 @@ CarbCalc is a **carbohydrate calculator PWA** for families with diabetic members
 
 All application state lives in a single custom hook: `src/hooks/useAppState.ts`. This hook:
 - Manages ~30 pieces of state (ingredients, recipes, family, cookware, history, auth, UI)
-- Handles all CRUD operations via handler functions
+- Handles all CRUD operations via handler functions (auth/group logic lives in `useSession`)
 - Computes derived values (`totalCarbs`, `diabeticMembers`, `filteredIngredients`, etc.)
 - Manages localStorage persistence and Firestore sync
 - Returns everything as a flat object (`AppState`)
@@ -106,10 +106,27 @@ useAppState (hook)
 - Never call `setDoc` on a data document with the whole state: that is the bug this design replaced.
 - Never let `undefined` reach Firestore (use `toPlain` or omit the key).
 
+## Data model (Firestore)
+
+- `users/{uid}` — profile (`groupId`…) plus the user's own shared data when not in a group. Owner only.
+- `users/{uid}/meals/{id}` — meal history without a group. `users/{uid}/private/patient` — patient mode (owner only, never shared).
+- `groups/{code}` — family data + `memberUids`, `members`, `blockedUids`, `adminUid`. Only listed members can read it.
+- `groups/{code}/meals/{id}` — family meal history, one document per meal (`CollectionSyncEngine`, newest 300 on device).
+- `firestore.rules` is tested by `tests/rules.test.ts`; change both together.
+
+## Hooks
+
+- `useAppState` — recipe/split/family data and handlers (orchestrator).
+- `useSession` — auth, profile, group membership and group operations.
+- `useCloudSync` / `useCollectionSync` — React wrappers of the two sync engines in `src/sync/`.
+- `usePatientState` — patient mode (private). Dose maths in `src/utils/bolus.ts` (pure, tested): never put dosing logic in components.
+- `useConsent`, `useInstallPrompt` — small single-purpose hooks.
+
 ## Tests
 
 `npm test` runs the unit tests (Node test runner through `tsx`): merge rules, a simulated multi-device
-sync (`src/sync/engine.test.ts`, includes offline/restart and a fuzz test), split maths, history and voice parsing.
+sync (`src/sync/*.test.ts`, includes offline/restart and fuzz tests), split maths, dose maths, history, voice parsing,
+Alexa signature verification and the sign-in proxy. `npm run test:rules` and `npm run test:e2e` use the Firebase emulators.
 
 ## Important Notes
 
@@ -118,4 +135,4 @@ sync (`src/sync/engine.test.ts`, includes offline/restart and a fuzz test), spli
 - `cachedTotalCarbs` ensures the split tab shows carbs even after the recipe form is cleared
 - The stats panel classifies meals by timestamp hour (6-11=breakfast, 11-16=lunch, 16-23=dinner)
 - The legal notice follows RGPD/LOPDGDD two-layer information system
-- `@types/react` is not installed, so `tsc` treats most React values as `any`; do not rely on it to catch component errors
+- TypeScript runs in strict mode (`npm run lint`); numeric fields use `components/NumberInput`

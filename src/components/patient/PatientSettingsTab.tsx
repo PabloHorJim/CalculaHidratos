@@ -74,7 +74,12 @@ export function PatientSettingsTab({ state, patient }: PatientSettingsTabProps) 
                         <div className="text-sm font-bold text-gray-800 dark:text-gray-100">Modo paciente</div>
                         <div className="text-[10px] text-gray-400">Añade la pestaña "Dosis" con la calculadora de insulina</div>
                     </div>
-                    <input type="checkbox" className="w-5 h-5 accent-cyan-500" checked={settings.enabled} onChange={(e) => updateSettings({ enabled: e.target.checked })} />
+                    <input type="checkbox" className="w-5 h-5 accent-cyan-500" checked={settings.enabled} onChange={(e) => {
+                        const enable = e.target.checked;
+                        // Health data needs explicit consent (RGPD art. 9)
+                        if (enable && !window.confirm('El modo paciente guarda datos de salud (parámetros de insulina, glucemias y dosis) en este dispositivo' + (user ? ' y en un documento privado de tu cuenta' : '') + '. No se comparten con tu grupo familiar.\n\n¿Quieres activarlo?')) return;
+                        updateSettings({ enabled: enable });
+                    }} />
                 </label>
             </section>
 

@@ -10,6 +10,8 @@
     "clean": "rm -rf dist",
     "lint": "tsc --noEmit",
     "test": "tsx --test src/utils/*.test.ts src/sync/*.test.ts tests/api.test.ts",
+    "emulators": "npx -y firebase-tools@13 emulators:start --only firestore,auth --project demo-carbcalc",
+    "test:e2e": "bash tests/e2e.sh",
     "test:rules": "npx -y firebase-tools@13 emulators:exec --only firestore --project demo-carbcalc \"tsx --test tests/rules.test.ts\""
   },
   "dependencies": {

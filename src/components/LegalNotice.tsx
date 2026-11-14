@@ -40,7 +40,11 @@ export function LegalNotice() {
                         <li>Recetas, ingredientes, cantidades</li>
                         <li>Miembros de la familia y proporciones</li>
                         <li>Historial de comidas</li>
-                        <li>No se recopilan datos de salud protegidos</li>
+                        <li>
+                            Solo si activas el <strong>modo paciente</strong>: datos de salud (parámetros de insulina, glucemias y
+                            dosis que registres). Se guardan en tu dispositivo y, si has iniciado sesión, en un documento privado
+                            de tu cuenta al que no accede tu grupo familiar. Puedes desactivarlo y borrar los registros cuando quieras.
+                        </li>
                     </ul>
                 </div>
 

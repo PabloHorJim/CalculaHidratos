@@ -1,8 +1,9 @@
 import { initializeApp } from 'firebase/app';
-import { getAuth, GoogleAuthProvider, signInWithPopup, signInWithRedirect, getRedirectResult, signOut, onAuthStateChanged } from 'firebase/auth';
+import { getAuth, GoogleAuthProvider, signInWithPopup, signInWithRedirect, getRedirectResult, signOut, onAuthStateChanged, connectAuthEmulator, signInWithCredential } from 'firebase/auth';
 import type { User } from 'firebase/auth';
 import {
   initializeFirestore,
+  connectFirestoreEmulator,
   persistentLocalCache,
   persistentMultipleTabManager,
   collection,
@@ -50,6 +51,17 @@ export const db = initializeFirestore(app, {
 }, firestoreDatabaseId);
 
 export const googleProvider = new GoogleAuthProvider();
+
+// Local end-to-end testing against the Firebase emulators (npm run emulators).
+// Never enabled in a normal build: the flag is replaced by `false` and this block is removed.
+if (import.meta.env.VITE_USE_EMULATORS === 'true') {
+  connectAuthEmulator(auth, 'http://127.0.0.1:9099', { disableWarnings: true });
+  connectFirestoreEmulator(db, '127.0.0.1', 8085);
+  (window as unknown as { __emulatorSignIn: (email: string, name: string) => Promise<unknown> }).__emulatorSignIn =
+    (email, name) => signInWithCredential(auth, GoogleAuthProvider.credential(
+      JSON.stringify({ sub: email, email, email_verified: true, name })
+    ));
+}
 
 // Error Handling Spec for Firestore Operations
 export enum OperationType {
