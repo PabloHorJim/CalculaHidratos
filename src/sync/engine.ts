@@ -185,7 +185,7 @@ export class SyncEngine<T extends Record<string, unknown>> {
                 f,
                 base[f] === undefined
                     ? r // first sync of this field on this device: the cloud wins
-                    : merge3(base[f], l, r, this.options.fields[f].key)
+                    : merge3<unknown>(base[f], l, r, this.options.fields[f].key)
             );
             nextBase[f] = toPlain(r);
             if (canon(merged) !== canon(l)) (patch as any)[f] = merged;
@@ -234,7 +234,7 @@ export class SyncEngine<T extends Record<string, unknown>> {
                     let m: unknown;
                     if (s === undefined) m = l;               // server has nothing yet
                     else if (base[f] === undefined) m = s;    // never synced: server wins
-                    else m = merge3(base[f], l, s, this.options.fields[f].key);
+                    else m = merge3<unknown>(base[f], l, s, this.options.fields[f].key);
                     m = this.normalize(f, m);
                     result[f] = m;
                     if (canon(m) !== canon(s)) toWrite[f] = toPlain(m);

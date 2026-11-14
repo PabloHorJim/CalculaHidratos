@@ -5,6 +5,8 @@ import { motion } from 'motion/react';
 import { AppState } from '../hooks/useAppState';
 import { getCategoryColor } from '../utils/categoryColors';
 import { memberFraction } from '../utils/split';
+import { NumberInput } from './NumberInput';
+
 
 interface RecipeTabProps {
     state: AppState;
@@ -444,15 +446,13 @@ export function RecipeTab({ state }: RecipeTabProps) {
                             onChange={(e) => setNewIngredientName(e.target.value)}
                         />
                         <div className="flex gap-2">
-                            <input
-                                type="number"
-                                inputMode="decimal"
-                                min="0"
-                                max="100"
+                            <NumberInput
+                                allowEmpty
+                                max={100}
                                 placeholder="HC/100g"
-                                className="flex-1 px-3 py-2 bg-white dark:bg-gray-800 rounded-lg text-sm outline-none dark:text-gray-100"
+                                className="flex-1 min-w-0 px-3 py-2 bg-white dark:bg-gray-800 rounded-lg text-sm outline-none dark:text-gray-100"
                                 value={newIngredientCarbs}
-                                onChange={(e) => setNewIngredientCarbs(e.target.value === '' ? '' : Number(e.target.value))}
+                                onChange={setNewIngredientCarbs}
                             />
                             <input
                                 type="text"
@@ -481,7 +481,19 @@ export function RecipeTab({ state }: RecipeTabProps) {
             <div className="space-y-3">
                 {currentRecipeIngredients.map(ri => {
                     const ingredient = ingredients.find(i => i.id === ri.ingredientId);
-                    if (!ingredient) return null;
+                    if (!ingredient) {
+                        return (
+                            <div key={ri.ingredientId} className="flex items-center gap-3 bg-red-50 dark:bg-red-900/20 p-3 rounded-xl border border-red-200 dark:border-red-800">
+                                <AlertTriangle size={18} className="text-red-500 shrink-0" />
+                                <div className="flex-1 text-xs font-medium text-red-700 dark:text-red-300">
+                                    Ingrediente eliminado ({ri.weight} g). Sus carbohidratos <strong>no se están contando</strong>: vuelve a añadirlo o quítalo.
+                                </div>
+                                <button onClick={() => removeIngredientFromRecipe(ri.ingredientId)} className="p-1.5 text-red-400 hover:text-red-600" title="Quitar de la receta">
+                                    <Trash2 size={16} />
+                                </button>
+                            </div>
+                        );
+                    }
 
                     const history = ingredientWeightHistory[ri.ingredientId] || [];
                     let isHighAmount = false;
@@ -512,13 +524,10 @@ export function RecipeTab({ state }: RecipeTabProps) {
                                         <AlertTriangle size={18} />
                                     </div>
                                 )}
-                                <input
-                                    type="number"
-                                    inputMode="decimal"
-                                    min="0"
+                                <NumberInput
+                                    aria-label={`Gramos de ${ingredient.name}`}
                                     value={ri.weight}
-                                    onFocus={(e) => e.target.select()}
-                                    onChange={(e) => updateIngredientWeight(ri.ingredientId, Math.max(0, Number(e.target.value) || 0))}
+                                    onChange={(v) => updateIngredientWeight(ri.ingredientId, v === '' ? 0 : v)}
                                     className="w-20 px-3 py-1.5 bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-lg text-right text-base outline-none focus:ring-2 focus:ring-orange-200 dark:focus:ring-orange-800 dark:text-gray-100"
                                 />
                                 <span className="text-sm text-gray-500 dark:text-gray-400">g</span>

@@ -1,6 +1,8 @@
 import React from 'react';
 import { Plus, Trash2, Utensils } from 'lucide-react';
 import { AppState } from '../hooks/useAppState';
+import { NumberInput } from './NumberInput';
+
 
 interface CookwareTabProps {
     state: AppState;
@@ -35,12 +37,10 @@ export function CookwareTab({ state }: CookwareTabProps) {
                             />
                         </div>
                         <div className="flex items-center gap-2">
-                            <input
-                                type="number"
-                                min="0"
-                                inputMode="decimal"
+                            <NumberInput
+                                aria-label={`Peso de ${c.name} en gramos`}
                                 value={c.mass}
-                                onChange={(e) => updateCookware(c.id, { mass: Math.max(0, Number(e.target.value) || 0) })}
+                                onChange={(v) => updateCookware(c.id, { mass: v === '' ? 0 : v })}
                                 className="w-20 px-2 py-1 bg-gray-50 dark:bg-gray-700 rounded text-sm text-right outline-none focus:ring-2 focus:ring-purple-200 dark:focus:ring-purple-800 dark:text-gray-100"
                             />
                             <span className="text-xs text-gray-400">g</span>

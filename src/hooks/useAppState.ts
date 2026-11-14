@@ -30,7 +30,7 @@ const COOKING_STATE_KEY = 'carb_calc_cooking';
 const TUTORIAL_KEY = 'carbcalc_tutorial_done';
 const CONSENT_KEY = 'carbcalc_consent';
 
-export type TabType = 'recipe' | 'split' | 'family' | 'cookware' | 'history' | 'group' | 'stats' | 'legal';
+export type TabType = 'recipe' | 'split' | 'family' | 'cookware' | 'ingredients' | 'history' | 'stats' | 'legal' | 'dose' | 'patient';
 
 // Ordered tabs for swipe navigation (main nav bar tabs only)
 export const MAIN_TABS: TabType[] = ['recipe', 'split', 'family'];
@@ -77,9 +77,8 @@ export function useAppState() {
     }, [customIngredients]);
     const [recipes, setRecipes] = useState<Recipe[]>([]);
     const [family, setFamily] = useState<FamilyMember[]>([
-        { id: '1', name: 'Pablo', proportion: 0.25, isDiabetic: true, isActive: true },
-        { id: '2', name: 'Juanjo', proportion: 0.241, isDiabetic: false, isActive: true },
-        { id: '3', name: 'Eva', proportion: 0.143, isDiabetic: false, isActive: true }
+        { id: '1', name: 'Persona 1', proportion: 1, isDiabetic: true, isActive: true },
+        { id: '2', name: 'Persona 2', proportion: 1, isDiabetic: false, isActive: true }
     ]);
     const [cookware, setCookware] = useState<Cookware[]>([
         { id: '1', name: 'Olla Grande', mass: 1200 },
@@ -510,38 +509,59 @@ export function useAppState() {
         setSearchTerm('');
     };
 
-    const createAndAddIngredient = () => {
-        const name = newIngredientName.trim();
-        const carbs = Number(newIngredientCarbs);
-        if (!name || newIngredientCarbs === '') return;
+    /** Creates a custom ingredient; returns the existing one when the name is already taken. */
+    const createCustomIngredient = (rawName: string, rawCarbs: number | '', rawCategory = ''): { ingredient: Ingredient; created: boolean } | null => {
+        const name = rawName.trim();
+        const carbs = Number(rawCarbs);
+        if (!name || rawCarbs === '') return null;
         if (!Number.isFinite(carbs) || carbs < 0 || carbs > 100) {
             setToast('Los HC por 100g deben estar entre 0 y 100');
-            return;
+            return null;
         }
         const duplicate = ingredients.find(i => i.name.toLowerCase() === name.toLowerCase());
-        if (duplicate) {
-            addIngredientToRecipe(duplicate);
-            setNewIngredientName('');
-            setNewIngredientCarbs('');
-            setNewIngredientCategory('');
-            setShowAddIngredient(false);
-            setToast(`"${duplicate.name}" ya existía: añadido a la receta`);
-            return;
-        }
-        const category = newIngredientCategory.trim();
+        if (duplicate) return { ingredient: duplicate, created: false };
+        const category = rawCategory.trim();
         const newIngredient: Ingredient = {
-            id: Date.now().toString(),
+            // "c" prefix: never clashes with the numeric ids of the built-in list
+            id: `c${Date.now()}`,
             name,
             carbsPer100g: carbs,
             ...(category ? { category } : {})
         };
         setCustomIngredients(prev => [...prev, newIngredient]);
-        addIngredientToRecipe(newIngredient);
+        return { ingredient: newIngredient, created: true };
+    };
+
+    const createAndAddIngredient = () => {
+        const result = createCustomIngredient(newIngredientName, newIngredientCarbs, newIngredientCategory);
+        if (!result) return;
+        addIngredientToRecipe(result.ingredient);
         setNewIngredientName('');
         setNewIngredientCarbs('');
         setNewIngredientCategory('');
         setShowAddIngredient(false);
-        setToast('Ingrediente creado y añadido');
+        setToast(result.created ? 'Ingrediente creado y añadido' : `"${result.ingredient.name}" ya existía: añadido a la receta`);
+    };
+
+    const updateCustomIngredient = (id: string, updates: Partial<Omit<Ingredient, 'id'>>) => {
+        setCustomIngredients(prev => prev.map(i => {
+            if (i.id !== id) return i;
+            const next = { ...i, ...updates };
+            if (!next.category) delete next.category;
+            return next;
+        }));
+    };
+
+    const removeCustomIngredient = (id: string) => {
+        const ingredient = customIngredients.find(i => i.id === id);
+        if (!ingredient) return;
+        const usedIn = recipes.filter(r => r.ingredients.some(ri => ri.ingredientId === id)).length;
+        const warning = usedIn > 0
+            ? `\n\nSe usa en ${usedIn} receta${usedIn === 1 ? '' : 's'}: dejará de contar carbohidratos en ellas hasta que lo sustituyas.`
+            : '';
+        if (!window.confirm(`¿Eliminar el ingrediente "${ingredient.name}"?${warning}`)) return;
+        setCustomIngredients(prev => prev.filter(i => i.id !== id));
+        setToast('Ingrediente eliminado');
     };
 
     const updateIngredientWeight = (id: string, weight: number) => {
@@ -1000,6 +1020,7 @@ export function useAppState() {
 
         // Handlers
         addIngredientToRecipe, createAndAddIngredient,
+        customIngredients, createCustomIngredient, updateCustomIngredient, removeCustomIngredient,
         updateIngredientWeight, removeIngredientFromRecipe,
         saveRecipe, saveAsNewRecipe, loadRecipe, startNewRecipe, clearCookingState, deleteRecipe,
         toggleFamilyMember, updateFamilyMember, addFamilyMember, removeFamilyMember,

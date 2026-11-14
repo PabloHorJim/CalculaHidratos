@@ -4,6 +4,8 @@ import { motion } from 'motion/react';
 import { AppState } from '../hooks/useAppState';
 import { getMealSlot } from '../utils/dateUtils';
 import { memberFraction } from '../utils/split';
+import { NumberInput } from './NumberInput';
+
 import { UPSERT_WINDOW_MS } from '../utils/history';
 
 interface SplitTabProps {
@@ -184,13 +186,12 @@ export function SplitTab({ state }: SplitTabProps) {
                             {selectedCookwareId === 'none' ? 'Peso Total' : 'Peso Total (con utensilio)'}
                         </label>
                         <div className="flex items-center gap-3">
-                            <input
-                                type="number"
-                                inputMode="decimal"
-                                min="0"
+                            <NumberInput
+                                allowEmpty
+                                aria-label="Peso total en gramos"
                                 placeholder="0"
                                 value={totalWeightWithCookware}
-                                onChange={(e) => setTotalWeightWithCookware(e.target.value === '' ? '' : Number(e.target.value))}
+                                onChange={setTotalWeightWithCookware}
                                 className="flex-1 px-4 py-3 bg-gray-50 dark:bg-gray-700 rounded-2xl text-xl font-bold outline-none focus:ring-2 focus:ring-green-200 dark:focus:ring-green-800 dark:text-gray-100 transition-colors"
                             />
                             <span className="text-lg font-bold text-gray-400">g</span>
@@ -241,11 +242,13 @@ export function SplitTab({ state }: SplitTabProps) {
                                             </button>
                                         </div>
                                         <div className="flex items-center gap-2">
-                                            <input
-                                                type="number"
+                                            <NumberInput
+                                                allowEmpty
+                                                aria-label="Cantidad a apartar"
+                                                max={setAsideMode === 'percentage' ? 100 : undefined}
                                                 placeholder={setAsideMode === 'percentage' ? '25' : '500'}
                                                 value={setAsideValue}
-                                                onChange={(e) => setSetAsideValue(e.target.value === '' ? '' : Number(e.target.value))}
+                                                onChange={setSetAsideValue}
                                                 className="flex-1 px-3 py-2 bg-white dark:bg-gray-800 rounded-lg text-sm outline-none focus:ring-2 focus:ring-orange-200 dark:focus:ring-orange-800 border border-gray-200 dark:border-gray-600 dark:text-gray-100"
                                             />
                                             <span className="text-sm font-bold text-gray-400">{setAsideMode === 'percentage' ? '%' : 'g'}</span>

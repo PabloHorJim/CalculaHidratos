@@ -1,6 +1,6 @@
 import React from 'react';
 import {
-    Calculator, History, Utensils, Percent, Download,
+    Calculator, History, Utensils, Percent, Download, Apple,
     LogIn, LogOut, BarChart3, Shield, Mail, FileDown
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
@@ -75,6 +75,14 @@ export function Sidebar({ state }: SidebarProps) {
                                 icon={<Utensils size={20} />}
                                 label="Mis Utensilios"
                                 description="Ollas, sartenes y pesos"
+                            />
+
+                            <SidebarButton
+                                active={activeTab === 'ingredients'}
+                                onClick={() => { setActiveTab('ingredients'); setIsSidebarOpen(false); }}
+                                icon={<Apple size={20} />}
+                                label="Ingredientes"
+                                description="Crear, editar y consultar HC"
                             />
 
                             {/* Portion Error Config */}

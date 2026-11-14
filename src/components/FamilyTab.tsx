@@ -1,6 +1,8 @@
 import React from 'react';
 import { Plus, Trash2, CheckCircle2, Circle, Users, CloudOff, UserPlus, LogOut, User as UserIcon } from 'lucide-react';
 import { AppState } from '../hooks/useAppState';
+import { NumberInput } from './NumberInput';
+
 
 interface FamilyTabProps {
     state: AppState;
@@ -55,13 +57,10 @@ export function FamilyTab({ state }: FamilyTabProps) {
                             <div className="grid grid-cols-2 gap-3">
                                 <div>
                                     <label className="text-[9px] uppercase font-bold text-gray-400 block mb-0.5">Proporción</label>
-                                    <input
-                                        type="number"
-                                        step="0.001"
-                                        min="0"
-                                        inputMode="decimal"
+                                    <NumberInput
+                                        aria-label={`Proporción de ${member.name}`}
                                         value={member.proportion}
-                                        onChange={(e) => updateFamilyMember(member.id, { proportion: Math.max(0, Number(e.target.value) || 0) })}
+                                        onChange={(v) => updateFamilyMember(member.id, { proportion: v === '' ? 0 : v })}
                                         className="w-full px-2 py-1 bg-gray-50 dark:bg-gray-700 rounded text-sm outline-none focus:ring-2 focus:ring-blue-200 dark:focus:ring-blue-800 dark:text-gray-100"
                                     />
                                 </div>
