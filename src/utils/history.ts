@@ -1,7 +1,9 @@
 import { MealHistoryEntry } from '../types';
 
-/** Maximum number of meals kept (≈ 2 months at 3 meals/day). */
-export const HISTORY_LIMIT = 200;
+/** Newest meals kept in sync on each device (≈ 3 months at 3 meals/day). Older ones stay in the cloud. */
+export const HISTORY_WINDOW = 300;
+/** Safety cap for device-only use, so local storage cannot grow without bound. */
+export const HISTORY_LIMIT = 1000;
 /** Saving the same recipe again within this window updates the entry instead of adding one. */
 export const UPSERT_WINDOW_MS = 2 * 60 * 60 * 1000;
 

@@ -11,34 +11,42 @@ interface Options<T extends Record<string, unknown>> {
     local: T;
     fields: { [K in keyof T]: SyncField };
     apply: (patch: Partial<T>) => void;
-    onRemoteDocument?: (path: string, data: Record<string, unknown> | null) => void;
+    onRemoteDocument?: (path: string, data: Record<string, unknown> | null, fromCache: boolean) => void;
     extraOnWrite?: Record<string, unknown>;
     createIfMissing: boolean;
+    /** localStorage key for the last known server copy (one per synced document kind). */
+    storageKey?: string;
+    /** Called when the listener is rejected (e.g. "permission-denied" after leaving a group). */
+    onError?: (code: string, path: string) => void;
 }
 
-const BASE_STORAGE_KEY = 'carb_calc_sync_base';
+export const SHARED_BASE_KEY = 'carb_calc_sync_base';
 
 /** Last known server copy, kept in localStorage so offline edits survive an app restart. */
-const localStorageBaseStore: BaseStore = {
-    load(path) {
-        try {
-            const parsed = JSON.parse(localStorage.getItem(BASE_STORAGE_KEY) || 'null');
-            return parsed && parsed.path === path && parsed.data ? parsed.data : null;
-        } catch {
-            return null;
+function localStorageBaseStore(storageKey: string): BaseStore {
+    return {
+        load(path) {
+            try {
+                const parsed = JSON.parse(localStorage.getItem(storageKey) || 'null');
+                return parsed && parsed.path === path && parsed.data ? parsed.data : null;
+            } catch {
+                return null;
+            }
+        },
+        save(path, data) {
+            try {
+                localStorage.setItem(storageKey, JSON.stringify({ path, data }));
+            } catch (e) {
+                console.error('Could not persist sync base', e);
+            }
         }
-    },
-    save(path, data) {
-        try {
-            localStorage.setItem(BASE_STORAGE_KEY, JSON.stringify({ path, data }));
-        } catch (e) {
-            console.error('Could not persist sync base', e);
-        }
-    }
-};
+    };
+}
 
-export function clearSyncBase() {
-    try { localStorage.removeItem(BASE_STORAGE_KEY); } catch { /* ignore */ }
+export function clearSyncBase(...storageKeys: string[]) {
+    for (const key of storageKeys) {
+        try { localStorage.removeItem(key); } catch { /* ignore */ }
+    }
 }
 
 const firestoreTransport: SyncTransport = {
@@ -86,11 +94,12 @@ export function useCloudSync<T extends Record<string, unknown>>(options: Options
             path: docPath,
             fields: optionsRef.current.fields,
             transport: firestoreTransport,
-            baseStore: localStorageBaseStore,
+            baseStore: localStorageBaseStore(optionsRef.current.storageKey ?? SHARED_BASE_KEY),
             initialLocal: optionsRef.current.local,
             apply: patch => optionsRef.current.apply(patch),
             onStatus: setStatus,
-            onRemoteDocument: (path, data) => optionsRef.current.onRemoteDocument?.(path, data),
+            onError: error => optionsRef.current.onError?.(String((error as any)?.code ?? 'unknown'), docPath),
+            onRemoteDocument: (path, data, fromCache) => optionsRef.current.onRemoteDocument?.(path, data, fromCache),
             extraOnWrite: () => optionsRef.current.extraOnWrite,
             createIfMissing: optionsRef.current.createIfMissing
         });

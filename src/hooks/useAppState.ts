@@ -1,52 +1,36 @@
-import { useState, useEffect, useMemo, useCallback } from 'react';
+import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { Ingredient, Recipe, RecipeIngredient, FamilyMember, Cookware, MealHistoryEntry, FamilyGroup } from '../types';
 import { INITIAL_INGREDIENTS } from '../data/ingredients';
 import { getMealSlot } from '../utils/dateUtils';
-import { sortHistory, upsertHistory } from '../utils/history';
+import { sortHistory, upsertHistory, HISTORY_WINDOW } from '../utils/history';
 import { computeSplit, memberFraction } from '../utils/split';
-import { toPlain } from '../sync/merge';
-import { useCloudSync, clearSyncBase, SyncField } from './useCloudSync';
-import {
-    auth,
-    db,
-    googleProvider,
-    signInWithPopup,
-    signOut,
-    onAuthStateChanged,
-    collection,
-    doc,
-    setDoc,
-    getDoc,
-    onSnapshot,
-    OperationType,
-    handleFirestoreError,
-    User,
-    query,
-    where
-} from '../firebase';
+import { useCloudSync, clearSyncBase, SHARED_BASE_KEY, SyncField, SyncStatus } from './useCloudSync';
+import { useCollectionSync } from './useCollectionSync';
+import { useConsent } from './useConsent';
+import { useInstallPrompt } from './useInstallPrompt';
+import { useSession, LOCAL_STATE_KEY } from './useSession';
+import { copyText, portionMessage, fullMealMessage, sharePortionOnWhatsApp, shareFullMealOnWhatsApp, shareDiabeticCarbsOnWhatsApp } from '../utils/share';
+import { mealsToCsv, downloadFile } from '../utils/exportData';
+import { db, doc, setDoc, collection, getDocs, query, orderBy } from '../firebase';
 
-const STORAGE_KEY = 'carb_calc_state';
+const STORAGE_KEY = LOCAL_STATE_KEY;
+const HISTORY_BASE_KEY = 'carb_calc_sync_base_meals';
 const COOKING_STATE_KEY = 'carb_calc_cooking';
 const TUTORIAL_KEY = 'carbcalc_tutorial_done';
-const CONSENT_KEY = 'carbcalc_consent';
 
 export type TabType = 'recipe' | 'split' | 'family' | 'cookware' | 'ingredients' | 'history' | 'stats' | 'legal' | 'dose' | 'patient';
 
 // Ordered tabs for swipe navigation (main nav bar tabs only)
 export const MAIN_TABS: TabType[] = ['recipe', 'split', 'family'];
 
-/** 'cloud' = accepted Firebase sync, 'local' = device-only storage, null = not answered yet. */
-type Consent = 'cloud' | 'local' | null;
-
 type Portion = MealHistoryEntry['portions'][number];
 
-/** Everything that is shared with the family through Firestore. */
+/** Shared data kept as fields of one Firestore document (the meal history has its own collection). */
 interface SyncedState extends Record<string, unknown> {
     customIngredients: Ingredient[];
     recipes: Recipe[];
     family: FamilyMember[];
     cookware: Cookware[];
-    mealHistory: MealHistoryEntry[];
     ingredientWeightHistory: Record<string, number[]>;
     currentRecipeName: string;
     currentRecipeIngredients: RecipeIngredient[];
@@ -60,7 +44,6 @@ const SYNC_FIELDS: { [K in keyof SyncedState]: SyncField } = {
     recipes: { key: 'id', normalize: asArray },
     family: { key: 'id', normalize: asArray },
     cookware: { key: 'id', normalize: asArray },
-    mealHistory: { key: 'id', normalize: v => sortHistory(asArray(v)) },
     ingredientWeightHistory: { normalize: v => (v && typeof v === 'object' && !Array.isArray(v) ? v : {}) },
     currentRecipeName: { normalize: v => (typeof v === 'string' ? v : '') },
     currentRecipeIngredients: { key: 'ingredientId', normalize: asArray },
@@ -85,29 +68,13 @@ export function useAppState() {
         { id: '2', name: 'Sartén Mediana', mass: 800 }
     ]);
     const [mealHistory, setMealHistory] = useState<MealHistoryEntry[]>([]);
-    const [groupId, setGroupId] = useState<string | null>(null);
-    const [familyGroup, setFamilyGroup] = useState<FamilyGroup | null>(null);
-    const [groupMembers, setGroupMembers] = useState<any[]>([]);
     const [isLoaded, setIsLoaded] = useState(false);
     const [toast, setToast] = useState<string | null>(null);
-    const [user, setUser] = useState<User | null>(null);
-    const [isAuthReady, setIsAuthReady] = useState(false);
-    // True once the user's profile document (which says which group they belong to) is known
-    const [isProfileReady, setIsProfileReady] = useState(false);
     const [isSidebarOpen, setIsSidebarOpen] = useState(false);
-    const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
-    const [isInstallable, setIsInstallable] = useState(false);
     const [showTutorial, setShowTutorial] = useState(false);
 
-    // Privacy consent ('true' is the value stored by older versions)
-    const [consent, setConsent] = useState<Consent>(() => {
-        const stored = localStorage.getItem(CONSENT_KEY);
-        if (stored === 'true' || stored === 'cloud') return 'cloud';
-        if (stored === 'local') return 'local';
-        return null;
-    });
-    const hasConsent = consent === 'cloud';
-    const needsConsentPrompt = consent === null;
+    const { hasConsent, needsConsentPrompt, acceptConsent, declineCloudConsent } = useConsent();
+    const { isInstallable, handleInstallClick } = useInstallPrompt();
 
     // Recipe Builder State
     const [cookingMode, setCookingMode] = useState(false);
@@ -153,26 +120,6 @@ export function useAppState() {
         return () => mq.removeEventListener('change', handler);
     }, []);
 
-    const acceptConsent = useCallback(() => {
-        setConsent('cloud');
-        localStorage.setItem(CONSENT_KEY, 'cloud');
-    }, []);
-
-    /** Keep using the app with device-only storage: nothing is sent to Firebase. */
-    const declineCloudConsent = useCallback(() => {
-        setConsent('local');
-        localStorage.setItem(CONSENT_KEY, 'local');
-    }, []);
-
-    // --- Auth & Sync ---
-    useEffect(() => {
-        const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
-            setUser(currentUser);
-            setIsAuthReady(true);
-        });
-        return () => unsubscribe();
-    }, []);
-
     // Check if tutorial should be shown
     useEffect(() => {
         if (isLoaded && !localStorage.getItem(TUTORIAL_KEY)) {
@@ -200,7 +147,6 @@ export function useAppState() {
                     loadedMealHistory = sortHistory(parsed.mealHistory);
                     setMealHistory(loadedMealHistory);
                 }
-                if (parsed.groupId) setGroupId(parsed.groupId);
                 if (typeof parsed.portionErrorPercent === 'number') setPortionErrorPercent(parsed.portionErrorPercent);
                 if (parsed.ingredientWeightHistory) setIngredientWeightHistory(parsed.ingredientWeightHistory);
             } catch (e) {
@@ -272,6 +218,96 @@ export function useAppState() {
         selectedCookwareId, totalWeightWithCookware, cachedTotalCarbs, cachedRecipeName,
         setAsideMode, setAsideValue, isBatchCooking, isLoaded]);
 
+    // ---- Session, group and cloud sync ----
+    // Latest shared data, for handlers that must not be re-created on every change
+    const seedRef = useRef<() => Record<string, unknown>>(() => ({}));
+    const session = useSession({
+        isLoaded,
+        hasConsent,
+        acceptConsent,
+        setToast,
+        getGroupSeed: () => seedRef.current(),
+        onSignedOut: () => clearSyncBase(SHARED_BASE_KEY, HISTORY_BASE_KEY)
+    });
+    const { user, isAuthReady, groupId, familyGroup, groupMembers, syncDocPath } = session;
+
+    const syncedState = useMemo<SyncedState>(() => ({
+        customIngredients, recipes, family, cookware, ingredientWeightHistory,
+        currentRecipeName, currentRecipeIngredients, cookingMode
+    }), [customIngredients, recipes, family, cookware, ingredientWeightHistory,
+        currentRecipeName, currentRecipeIngredients, cookingMode]);
+    seedRef.current = () => ({ customIngredients, recipes, family, cookware, ingredientWeightHistory });
+
+    const applyRemoteChanges = useCallback((patch: Partial<SyncedState>) => {
+        if (patch.customIngredients !== undefined) setCustomIngredients(patch.customIngredients);
+        if (patch.recipes !== undefined) setRecipes(patch.recipes);
+        if (patch.family !== undefined) setFamily(patch.family);
+        if (patch.cookware !== undefined) setCookware(patch.cookware);
+        if (patch.ingredientWeightHistory !== undefined) setIngredientWeightHistory(patch.ingredientWeightHistory);
+        if (patch.currentRecipeName !== undefined) setCurrentRecipeName(patch.currentRecipeName);
+        if (patch.currentRecipeIngredients !== undefined) setCurrentRecipeIngredients(patch.currentRecipeIngredients);
+        if (patch.cookingMode !== undefined) setCookingMode(patch.cookingMode);
+    }, []);
+
+    // Meal history used to be a field of the shared document. `historyParent` records, for
+    // the document currently synced, whether its meals have already been moved to the
+    // "meals" collection and, if not, the old list that still has to be moved.
+    const [historyParent, setHistoryParent] = useState<{ path: string; migrated: boolean; legacy: MealHistoryEntry[] } | null>(null);
+    const { handleRemoteDocument: handleGroupDocument, handleSyncError } = session;
+    const handleRemoteDocument = useCallback((path: string, data: Record<string, unknown> | null, fromCache: boolean) => {
+        handleGroupDocument(path, data);
+        const migrated = data?.historyMigrated === true;
+        // "Not migrated yet" is only believed when the server says so: an old cached copy
+        // would make this device upload meals that were deleted after the migration.
+        if (fromCache && !migrated) return;
+        setHistoryParent(prev => {
+            if (prev && prev.path === path && prev.migrated === migrated) return prev;
+            const legacy = !migrated && Array.isArray(data?.mealHistory) ? (data.mealHistory as MealHistoryEntry[]) : [];
+            return { path, migrated, legacy };
+        });
+    }, [handleGroupDocument]);
+
+    const syncExtra = useMemo(() => (groupId || !user ? undefined : { uid: user.uid }), [groupId, user]);
+
+    const { status: documentStatus } = useCloudSync<SyncedState>({
+        docPath: syncDocPath,
+        local: syncedState,
+        fields: SYNC_FIELDS,
+        apply: applyRemoteChanges,
+        onRemoteDocument: handleRemoteDocument,
+        onError: handleSyncError,
+        extraOnWrite: syncExtra,
+        createIfMissing: !groupId
+    });
+
+    const historyReady = !!syncDocPath && historyParent?.path === syncDocPath;
+    const markHistoryMigrated = useCallback(() => {
+        if (!syncDocPath) return;
+        setDoc(doc(db, syncDocPath), { historyMigrated: true, ...(syncExtra ?? {}) }, { merge: true })
+            .catch(err => console.error('Could not record the history migration', err?.code || err));
+    }, [syncDocPath, syncExtra]);
+
+    const { status: historyStatus } = useCollectionSync<MealHistoryEntry>({
+        collectionPath: historyReady ? `${syncDocPath}/meals` : null,
+        local: mealHistory,
+        apply: setMealHistory,
+        normalize: sortHistory,
+        orderField: 'timestamp',
+        windowSize: HISTORY_WINDOW,
+        storageKey: HISTORY_BASE_KEY,
+        seed: historyReady && historyParent && !historyParent.migrated ? historyParent.legacy : null,
+        onSeeded: markHistoryMigrated,
+        onError: handleSyncError
+    });
+
+    // One status for the header: the worse of the two
+    const syncStatus: SyncStatus = (() => {
+        if (documentStatus === 'off') return user && hasConsent ? 'connecting' : 'off';
+        const order: SyncStatus[] = ['error', 'offline', 'connecting', 'saving', 'synced'];
+        const history = historyStatus === 'off' ? 'connecting' : historyStatus;
+        return order.find(s => s === documentStatus || s === history) ?? documentStatus;
+    })();
+
     // Save shared data to localStorage immediately (the cloud copy is handled by useCloudSync)
     useEffect(() => {
         if (!isLoaded) return;
@@ -283,142 +319,12 @@ export function useAppState() {
         }
     }, [customIngredients, recipes, family, cookware, mealHistory, groupId, portionErrorPercent, ingredientWeightHistory, isLoaded]);
 
-    // User profile: make sure it exists and follow which group the user belongs to
-    const cloudEnabled = isLoaded && isAuthReady && !!user && hasConsent;
-    useEffect(() => {
-        setIsProfileReady(false);
-        if (!cloudEnabled || !user) return;
-
-        const userDocRef = doc(db, 'users', user.uid);
-        const unsubscribeUser = onSnapshot(userDocRef, (snapshot) => {
-            const data = snapshot.exists() ? snapshot.data() : null;
-            // A cached "does not exist" only means this device has never seen the profile
-            if (!data && snapshot.metadata.fromCache) return;
-
-            setGroupId(data?.groupId || null);
-            setIsProfileReady(true);
-
-            const profile = {
-                uid: user.uid,
-                email: user.email,
-                displayName: user.displayName,
-                photoURL: user.photoURL
-            };
-            const isOutdated = !data || (Object.keys(profile) as (keyof typeof profile)[])
-                .some(k => (data[k] ?? null) !== (profile[k] ?? null));
-            if (isOutdated) {
-                setDoc(userDocRef, profile, { merge: true })
-                    .catch(err => handleFirestoreError(err, OperationType.WRITE, `users/${user.uid}`));
-            }
-        }, (err) => {
-            handleFirestoreError(err, OperationType.GET, `users/${user.uid}`);
-        });
-
-        return () => unsubscribeUser();
-    }, [user, cloudEnabled]);
-
-    // Sync with Group members
-    useEffect(() => {
-        if (!cloudEnabled || !isProfileReady || !groupId) {
-            setGroupMembers([]);
-            return;
-        }
-
-        const q = query(collection(db, 'users'), where('groupId', '==', groupId));
-        const unsubscribe = onSnapshot(q, (snapshot) => {
-            const members = snapshot.docs.map(doc => ({
-                uid: doc.id,
-                displayName: doc.data().displayName,
-                photoURL: doc.data().photoURL,
-                email: doc.data().email
-            }));
-            setGroupMembers(members);
-        }, (err) => {
-            console.error('Failed to fetch group members', err);
-        });
-
-        return () => unsubscribe();
-    }, [groupId, cloudEnabled, isProfileReady]);
-
-    // Shared data lives in the group document, or in the user's own document when not in a group
-    const syncDocPath = !cloudEnabled || !isProfileReady || !user
-        ? null
-        : groupId ? `groups/${groupId}` : `users/${user.uid}`;
-
-    const syncedState = useMemo<SyncedState>(() => ({
-        customIngredients, recipes, family, cookware, mealHistory, ingredientWeightHistory,
-        currentRecipeName, currentRecipeIngredients, cookingMode
-    }), [customIngredients, recipes, family, cookware, mealHistory, ingredientWeightHistory,
-        currentRecipeName, currentRecipeIngredients, cookingMode]);
-
-    const applyRemoteChanges = useCallback((patch: Partial<SyncedState>) => {
-        if (patch.customIngredients !== undefined) setCustomIngredients(patch.customIngredients);
-        if (patch.recipes !== undefined) setRecipes(patch.recipes);
-        if (patch.family !== undefined) setFamily(patch.family);
-        if (patch.cookware !== undefined) setCookware(patch.cookware);
-        if (patch.mealHistory !== undefined) setMealHistory(patch.mealHistory);
-        if (patch.ingredientWeightHistory !== undefined) setIngredientWeightHistory(patch.ingredientWeightHistory);
-        if (patch.currentRecipeName !== undefined) setCurrentRecipeName(patch.currentRecipeName);
-        if (patch.currentRecipeIngredients !== undefined) setCurrentRecipeIngredients(patch.currentRecipeIngredients);
-        if (patch.cookingMode !== undefined) setCookingMode(patch.cookingMode);
-    }, []);
-
-    const handleRemoteDocument = useCallback((path: string, data: Record<string, unknown> | null) => {
-        if (!path.startsWith('groups/')) return;
-        setFamilyGroup(data ? {
-            id: String(data.id ?? path.slice('groups/'.length)),
-            name: String(data.name ?? ''),
-            adminUid: String(data.adminUid ?? ''),
-            inviteCode: String(data.inviteCode ?? path.slice('groups/'.length))
-        } : null);
-    }, []);
-
-    const syncExtra = useMemo(() => (groupId || !user ? undefined : { uid: user.uid }), [groupId, user]);
-
-    const { status: syncStatus } = useCloudSync<SyncedState>({
-        docPath: syncDocPath,
-        local: syncedState,
-        fields: SYNC_FIELDS,
-        apply: applyRemoteChanges,
-        onRemoteDocument: handleRemoteDocument,
-        extraOnWrite: syncExtra,
-        createIfMissing: !groupId
-    });
-
-    useEffect(() => {
-        if (!groupId) setFamilyGroup(null);
-    }, [groupId]);
-
     useEffect(() => {
         if (toast) {
             const timer = setTimeout(() => setToast(null), 3000);
             return () => clearTimeout(timer);
         }
     }, [toast]);
-
-    useEffect(() => {
-        const handleBeforeInstallPrompt = (e: any) => {
-            e.preventDefault();
-            setDeferredPrompt(e);
-            setIsInstallable(true);
-        };
-
-        window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
-
-        return () => {
-            window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
-        };
-    }, []);
-
-    const handleInstallClick = async () => {
-        if (!deferredPrompt) return;
-        deferredPrompt.prompt();
-        const result = await deferredPrompt.userChoice;
-        if (result.outcome === 'accepted') {
-            setIsInstallable(false);
-        }
-        setDeferredPrompt(null);
-    };
 
     // --- Computed Values ---
     const filteredIngredients = useMemo(() => {
@@ -722,114 +628,14 @@ export function useAppState() {
         if (selectedCookwareId === id) setSelectedCookwareId('');
     };
 
-    const handleLogin = async () => {
-        if (!hasConsent) {
-            const ok = window.confirm('Para iniciar sesión y sincronizar con tu familia, tus datos se guardarán en Firebase (Google Cloud). ¿Aceptas?');
-            if (!ok) return;
-            acceptConsent();
-        }
-        try {
-            await signInWithPopup(auth, googleProvider);
-            setToast('Sesión iniciada');
-        } catch (error: any) {
-            if (error.code === 'auth/popup-closed-by-user') {
-                setToast('Inicio de sesión cancelado. Intenta abrir la app en una pestaña nueva.');
-            } else if (error.code === 'auth/cancelled-popup-request') {
-                console.warn('Login request cancelled (multiple clicks)');
-            } else if (error.code === 'auth/popup-blocked') {
-                setToast('Ventana emergente bloqueada. Habilita las ventanas emergentes o abre en pestaña nueva.');
-            } else {
-                console.error('Login failed', error);
-                setToast('Error al iniciar sesión');
-            }
-        }
-    };
-
-    const handleLogout = async () => {
-        try {
-            await signOut(auth);
-            clearSyncBase();
-            setToast('Sesión cerrada');
-            setFamilyGroup(null);
-            setGroupId(null);
-        } catch (error) {
-            console.error('Logout failed', error);
-        }
-    };
+    const { handleLogin, handleLogout, leaveGroup, removeGroupMember } = session;
 
     const createGroup = async (name: string) => {
-        const groupName = name.trim();
-        if (!user || !groupName) return;
-        const alphabet = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'; // no 0/O/1/I: easier to dictate
-        const random = crypto.getRandomValues(new Uint8Array(6));
-        const inviteCode = Array.from(random, n => alphabet[n % alphabet.length]).join('');
-        const newGroupId = inviteCode;
-
-        const newGroup: FamilyGroup = {
-            id: newGroupId,
-            name: groupName,
-            adminUid: user.uid,
-            inviteCode
-        };
-
-        try {
-            await setDoc(doc(db, 'groups', newGroupId), toPlain({
-                ...newGroup,
-                customIngredients,
-                recipes,
-                family,
-                cookware,
-                mealHistory,
-                ingredientWeightHistory,
-                updatedAt: new Date().toISOString()
-            }));
-
-            await setDoc(doc(db, 'users', user.uid), { uid: user.uid, groupId: newGroupId }, { merge: true });
-
-            setGroupId(newGroupId);
-            setFamilyGroup(newGroup);
-            setGroupNameInput('');
-            setToast('Grupo creado');
-        } catch (err) {
-            handleFirestoreError(err, OperationType.WRITE, `groups/${newGroupId}`);
-            setToast('No se pudo crear el grupo. Comprueba tu conexión.');
-        }
+        if (await session.createGroup(name)) setGroupNameInput('');
     };
 
-    const joinGroup = async (inviteCodeInput: string) => {
-        if (!user) return;
-        const inviteCode = inviteCodeInput.trim().toUpperCase();
-        if (!inviteCode) return;
-
-        try {
-            const groupDoc = await getDoc(doc(db, 'groups', inviteCode));
-
-            if (groupDoc.exists()) {
-                await setDoc(doc(db, 'users', user.uid), { uid: user.uid, groupId: inviteCode }, { merge: true });
-                setGroupId(inviteCode);
-                setInviteInput('');
-                setToast('Te has unido al grupo');
-            } else {
-                setToast('Código de invitación inválido');
-            }
-        } catch (err) {
-            handleFirestoreError(err, OperationType.WRITE, `users/${user.uid}`);
-            setToast('No se pudo unir al grupo. Comprueba tu conexión.');
-        }
-    };
-
-    const leaveGroup = async () => {
-        if (!user) return;
-        if (!window.confirm('¿Salir del grupo? Dejarás de ver los datos compartidos de la familia.')) return;
-        try {
-            await setDoc(doc(db, 'users', user.uid), { uid: user.uid, groupId: null }, { merge: true });
-            setGroupId(null);
-            setFamilyGroup(null);
-            setToast('Has salido del grupo');
-        } catch (err) {
-            handleFirestoreError(err, OperationType.WRITE, `users/${user.uid}`);
-            setToast('No se pudo salir del grupo. Comprueba tu conexión.');
-        }
+    const joinGroup = async (inviteCode: string) => {
+        if (await session.joinGroup(inviteCode)) setInviteInput('');
     };
 
     const deleteMealHistoryEntry = (id: string) => {
@@ -882,91 +688,43 @@ export function useAppState() {
         setIsErrorDisabledForCurrentSplit(false);
     }, []);
 
-    const sharePortion = (name: string, weight: number, carbs: number, isDiabetic: boolean) => {
-        const message = `🍽️ *Reparto de Comida*\n\nPara *${name}*:\n- Ración: *${weight.toFixed(0)}g*\n- Carbohidratos: *${carbs.toFixed(1)}g HC*${isDiabetic ? ' (¡Diabético! ⚠️)' : ''}\n\nCalculado con CarbCalc`;
-        const encoded = encodeURIComponent(message);
-        window.open(`https://wa.me/?text=${encoded}`, '_blank');
+    const sharePortion = sharePortionOnWhatsApp;
+    const shareDiabeticCarbs = shareDiabeticCarbsOnWhatsApp;
+
+    const copyPortionToClipboard = async (name: string, weight: number, carbs: number, isDiabetic: boolean) => {
+        const ok = await copyText(portionMessage(name, weight, carbs, isDiabetic, false));
+        setToast(ok ? 'Copiado al portapapeles' : 'No se pudo copiar');
     };
 
-    const copyPortionToClipboard = (name: string, weight: number, carbs: number, isDiabetic: boolean) => {
-        const message = `🍽️ Reparto de Comida\n\nPara ${name}:\n- Ración: ${weight.toFixed(0)}g\n- Carbohidratos: ${carbs.toFixed(1)}g HC${isDiabetic ? ' (¡Diabético! ⚠️)' : ''}\n\nCalculado con CarbCalc`;
-        navigator.clipboard.writeText(message).then(() => {
-            setToast('Copiado al portapapeles');
-        });
-    };
-
-    /**
-     * Share definitive HC count for a diabetic member via WhatsApp.
-     * Uses direct phone URL if member.phone is set, otherwise generic wa.me.
-     * The HC count is proportion-based and independent of serving weight.
-     */
-    const shareDiabeticCarbs = (member: FamilyMember, carbs: number) => {
-        const message = `🩺 *HC para ${member.name}*: *${carbs.toFixed(1)}g HC*\n\nCalculado con CarbCalc 💙`;
-        const encoded = encodeURIComponent(message);
-        // wa.me expects the international number with digits only (no "+", spaces or leading 00)
-        const phone = member.phone ? member.phone.replace(/\D/g, '').replace(/^00/, '') : '';
-        const url = phone
-            ? `https://wa.me/${phone}?text=${encoded}`
-            : `https://wa.me/?text=${encoded}`;
-        window.open(url, '_blank');
-    };
-
-    const shareFullMeal = (recipeName: string, totalMealCarbs: number, netW: number, portions: Portion[], via: 'whatsapp' | 'clipboard') => {
-        const portionLines = portions.map(p =>
-            `- ${p.memberName}: ${p.weight.toFixed(0)}g (${p.carbs.toFixed(1)}g HC)${p.isDiabetic ? ' ⚠️' : ''}`
-        ).join('\n');
-        const message = `🍽️ ${via === 'whatsapp' ? '*' : ''}Reparto: ${recipeName}${via === 'whatsapp' ? '*' : ''}\n\nPeso neto: ${netW.toFixed(0)}g\nHC totales: ${totalMealCarbs.toFixed(1)}g\n\n${portionLines}\n\nCalculado con CarbCalc`;
+    const shareFullMeal = async (recipeName: string, totalMealCarbs: number, netW: number, portions: Portion[], via: 'whatsapp' | 'clipboard') => {
         if (via === 'whatsapp') {
-            const encoded = encodeURIComponent(message);
-            window.open(`https://wa.me/?text=${encoded}`, '_blank');
-        } else {
-            navigator.clipboard.writeText(message).then(() => setToast('Reparto copiado al portapapeles'));
+            shareFullMealOnWhatsApp(recipeName, totalMealCarbs, netW, portions);
+            return;
         }
+        const ok = await copyText(fullMealMessage(recipeName, totalMealCarbs, netW, portions, false));
+        setToast(ok ? 'Reparto copiado al portapapeles' : 'No se pudo copiar');
     };
 
-    // Export meal data for integration readiness
-    const exportMealData = useCallback((format: 'json' | 'csv') => {
-        const data = mealHistory.map(entry => ({
-            timestamp: entry.timestamp,
-            recipeName: entry.recipeName,
-            totalCarbs: entry.totalCarbs,
-            netWeight: entry.netWeight,
-            portions: entry.portions
-        }));
-
-        let blob: Blob;
-        let filename: string;
-
-        if (format === 'json') {
-            blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
-            filename = `carbcalc_export_${new Date().toISOString().split('T')[0]}.json`;
-        } else {
-            const headers = ['Fecha', 'Receta', 'HC Totales', 'Peso Neto', 'Persona', 'Peso Ración', 'HC Ración', 'Diabético'];
-            const cell = (value: string) => /[",\n]/.test(value) ? `"${value.replace(/"/g, '""')}"` : value;
-            const rows = data.flatMap(entry => {
-                const common = [entry.timestamp, entry.recipeName, entry.totalCarbs.toFixed(1), entry.netWeight.toFixed(0)];
-                // Batch / not-yet-split meals have no portions but must still be exported
-                const portions = entry.portions.length > 0 ? entry.portions : [null];
-                return portions.map(p => [
-                    ...common,
-                    p ? p.memberName : '',
-                    p ? p.weight.toFixed(0) : '',
-                    p ? p.carbs.toFixed(1) : '',
-                    p ? (p.isDiabetic ? 'Sí' : 'No') : ''
-                ].map(cell).join(','));
-            });
-            blob = new Blob(['\uFEFF' + headers.join(',') + '\n' + rows.join('\n')], { type: 'text/csv;charset=utf-8' });
-            filename = `carbcalc_export_${new Date().toISOString().split('T')[0]}.csv`;
+    /** Exports the whole history: every meal stored in the cloud, not only the ones on this device. */
+    const exportMealData = useCallback(async (format: 'json' | 'csv') => {
+        let meals = mealHistory;
+        if (historyReady && navigator.onLine) {
+            try {
+                const snapshot = await getDocs(query(collection(db, `${syncDocPath}/meals`), orderBy('timestamp', 'desc')));
+                const all = snapshot.docs.map(d => ({ ...(d.data() as MealHistoryEntry), id: d.id }));
+                if (all.length >= mealHistory.length) meals = all;
+            } catch (err) {
+                console.error('Could not download the full history; exporting the local copy', err);
+            }
         }
-
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = filename;
-        a.click();
-        URL.revokeObjectURL(url);
-        setToast(`Datos exportados como ${format.toUpperCase()}`);
-    }, [mealHistory]);
+        const date = new Date().toISOString().split('T')[0];
+        if (format === 'json') {
+            downloadFile(`carbcalc_export_${date}.json`, JSON.stringify(meals, null, 2), 'application/json');
+        } else {
+            downloadFile(`carbcalc_export_${date}.csv`, mealsToCsv(meals), 'text/csv;charset=utf-8');
+        }
+        setToast(`${meals.length} comidas exportadas como ${format.toUpperCase()}`);
+    }, [mealHistory, historyReady, syncDocPath]);
 
     return {
         // Tab navigation
@@ -1026,7 +784,7 @@ export function useAppState() {
         toggleFamilyMember, updateFamilyMember, addFamilyMember, removeFamilyMember,
         addCookware, updateCookware, removeCookware,
         handleLogin, handleLogout,
-        createGroup, joinGroup, leaveGroup,
+        createGroup, joinGroup, leaveGroup, removeGroupMember,
         deleteMealHistoryEntry, updateMealHistoryEntry, saveMealToHistory, autoUpdateHistory,
         sharePortion, copyPortionToClipboard, shareFullMeal, shareDiabeticCarbs,
         exportMealData,

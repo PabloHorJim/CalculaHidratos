@@ -1,67 +1,37 @@
 // ===============================================================
-// Assumed Data Model
+// CarbCalc security rules
 // ===============================================================
 //
-// Collection: /users/{userId}
-// Fields:
-//   - uid: string (required)
-//   - email: string (optional)
-//   - displayName: string (optional)
-//   - groupId: string (optional)
+// /users/{uid}                 profile (uid, email, displayName, photoURL, groupId) and, when
+//                              the user is not in a group, their own shared data. Owner only.
+// /users/{uid}/meals/{id}      meal history of a user without a group. Owner only.
+// /users/{uid}/private/{id}    private data (patient mode: insulin settings, doses). Owner only.
 //
-// Collection: /groups/{groupId}
-// Fields:
-//   - id: string (required)
-//   - name: string (required)
-//   - adminUid: string (required)
-//   - inviteCode: string (required)
-//   - ingredients: list (optional)
-//   - recipes: list (optional)
-//   - family: list (optional)
-//   - cookware: list (optional)
-//   - mealHistory: list (optional)
+// /groups/{groupId}            family data. `memberUids` lists who may read and write it.
+//                              The document id is the invite code: whoever knows it can add
+//                              THEMSELF to the list (and nothing else). The admin can remove
+//                              members; removed members go to `blockedUids` and cannot rejoin.
+// /groups/{groupId}/meals/{id} meal history of the family. Members only.
 //
+// Deploy with:  npx firebase-tools deploy --only firestore:rules
+// Test with:    npm run test:rules
 // ===============================================================
 
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    // ===============================================================
-    // Helper Functions
-    // ===============================================================
-    
-    function isAuthenticated() {
+    function signedIn() {
       return request.auth != null;
     }
 
     function isOwner(userId) {
-      return isAuthenticated() && request.auth.uid == userId;
-    }
-
-    function isGroupMember(groupId) {
-      let userPath = /databases/$(database)/documents/users/$(request.auth.uid);
-      return isAuthenticated() && 
-             exists(userPath) && 
-             get(userPath).data.groupId == groupId;
-    }
-
-    function isGroupAdmin() {
-      return isAuthenticated() && 
-             resource.data.adminUid == request.auth.uid;
+      return signedIn() && request.auth.uid == userId;
     }
 
     function isValidEmail(email) {
       return email is string && email.matches("^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}$");
     }
-
-    function isValidString(val, maxLen) {
-      return val is string && val.size() > 0 && val.size() <= maxLen;
-    }
-
-    // ===============================================================
-    // Domain Validators
-    // ===============================================================
 
     function isValidUser(data) {
       return data.keys().hasAll(['uid']) &&
@@ -73,42 +43,120 @@ service cloud.firestore {
 
     function isValidGroup(data) {
       return data.keys().hasAll(['id', 'name', 'adminUid', 'inviteCode']) &&
-             isValidString(data.name, 100) &&
+             data.name is string && data.name.size() > 0 && data.name.size() <= 100 &&
              data.adminUid is string &&
              data.inviteCode is string &&
-             (!('ingredients' in data) || data.ingredients is list) &&
+             (!('memberUids' in data) || (data.memberUids is list && data.memberUids.size() <= 50)) &&
+             (!('blockedUids' in data) || (data.blockedUids is list && data.blockedUids.size() <= 200)) &&
+             (!('members' in data) || data.members is map) &&
+             (!('customIngredients' in data) || data.customIngredients is list) &&
              (!('recipes' in data) || data.recipes is list) &&
              (!('family' in data) || data.family is list) &&
              (!('cookware' in data) || data.cookware is list) &&
              (!('mealHistory' in data) || data.mealHistory is list);
     }
 
-    // ===============================================================
-    // Match Rules
-    // ===============================================================
+    function isValidMeal(data, mealId) {
+      return data.id == mealId &&
+             data.timestamp is string &&
+             data.recipeName is string && data.recipeName.size() <= 200 &&
+             data.totalCarbs is number &&
+             data.portions is list;
+    }
+
+    // Groups created before member lists existed have no `memberUids`. Until the first
+    // updated app registers itself, membership is what it used to be: the groupId stored
+    // in the user's own profile.
+    function isLegacyMember(groupId, group) {
+      return !('memberUids' in group) &&
+             exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
+             get(/databases/$(database)/documents/users/$(request.auth.uid)).data.groupId == groupId;
+    }
+
+    function isMember(groupId, group) {
+      return signedIn() &&
+             (request.auth.uid in group.get('memberUids', []) || isLegacyMember(groupId, group));
+    }
 
     match /users/{userId} {
-      // Allow read if user is owner OR if they are in the same group
-      allow read: if isOwner(userId) || (
-        isAuthenticated() && 
-        exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
-        resource.data.groupId != null &&
-        resource.data.groupId == get(/databases/$(database)/documents/users/$(request.auth.uid)).data.groupId
-      );
-      allow create: if isOwner(userId) && isValidUser(request.resource.data);
-      allow update: if isOwner(userId) && isValidUser(request.resource.data);
+      allow read: if isOwner(userId);
+      allow create, update: if isOwner(userId) && isValidUser(request.resource.data);
+
+      match /meals/{mealId} {
+        allow read, delete: if isOwner(userId);
+        allow create, update: if isOwner(userId) && isValidMeal(request.resource.data, mealId);
+      }
+
+      match /private/{docId} {
+        allow read, write: if isOwner(userId);
+      }
     }
 
     match /groups/{groupId} {
-      // Allow get if authenticated (to check inviteCode)
-      allow get: if isAuthenticated();
-      
-      // Only admin can create or update group settings, but members can update data
-      allow create: if isAuthenticated() && isValidGroup(request.resource.data) && request.resource.data.adminUid == request.auth.uid;
-      
-      // Update data (ingredients, recipes, etc.) if member
-      // Update group settings (name, admin) if admin
-      allow update: if (isGroupMember(groupId) || isGroupAdmin()) && isValidGroup(request.resource.data);
+      function changedKeys() {
+        return request.resource.data.diff(resource.data).affectedKeys();
+      }
+      function addedUids() {
+        return request.resource.data.get('memberUids', []).toSet()
+                 .difference(resource.data.get('memberUids', []).toSet());
+      }
+      function removedUids() {
+        return resource.data.get('memberUids', []).toSet()
+                 .difference(request.resource.data.get('memberUids', []).toSet());
+      }
+      // The only entry of the `members` map (names and photos) a user may touch is their own
+      function onlyOwnMemberEntry() {
+        return request.resource.data.get('members', {})
+                 .diff(resource.data.get('members', {})).affectedKeys()
+                 .hasOnly([request.auth.uid]);
+      }
+      function notBlocked() {
+        return !(request.auth.uid in resource.data.get('blockedUids', []));
+      }
+
+      allow get: if isMember(groupId, resource.data);
+
+      allow create: if signedIn() &&
+                       isValidGroup(request.resource.data) &&
+                       request.resource.data.id == groupId &&
+                       request.resource.data.adminUid == request.auth.uid &&
+                       request.resource.data.memberUids == [request.auth.uid];
+
+      // Join: add yourself to the member list, and nothing else
+      allow update: if signedIn() && notBlocked() &&
+                       changedKeys().hasOnly(['memberUids', 'members']) &&
+                       addedUids() == [request.auth.uid].toSet() &&
+                       removedUids().size() == 0 &&
+                       onlyOwnMemberEntry() &&
+                       isValidGroup(request.resource.data);
+
+      // Leave: remove yourself from the member list, and nothing else
+      allow update: if signedIn() &&
+                       changedKeys().hasOnly(['memberUids', 'members']) &&
+                       removedUids() == [request.auth.uid].toSet() &&
+                       addedUids().size() == 0 &&
+                       onlyOwnMemberEntry();
+
+      // Members edit the family's data, but not who belongs to the group
+      allow update: if isMember(groupId, resource.data) && notBlocked() &&
+                       !changedKeys().hasAny(['id', 'adminUid', 'inviteCode', 'memberUids', 'blockedUids']) &&
+                       onlyOwnMemberEntry() &&
+                       isValidGroup(request.resource.data);
+
+      // The admin also manages members (remove / block) and the group name
+      allow update: if signedIn() && resource.data.adminUid == request.auth.uid &&
+                       !changedKeys().hasAny(['id', 'adminUid', 'inviteCode']) &&
+                       addedUids().size() == 0 &&
+                       isValidGroup(request.resource.data);
+
+      match /meals/{mealId} {
+        function isGroupMember() {
+          return signedIn() &&
+                 request.auth.uid in get(/databases/$(database)/documents/groups/$(groupId)).data.get('memberUids', []);
+        }
+        allow read, delete: if isGroupMember();
+        allow create, update: if isGroupMember() && isValidMeal(request.resource.data, mealId);
+      }
     }
   }
 }

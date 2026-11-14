@@ -45,8 +45,10 @@ export interface SyncEngineOptions<T extends Record<string, unknown>> {
     /** Called with the fields that must be replaced in local state. */
     apply: (patch: Partial<T>) => void;
     onStatus?: (status: SyncStatus) => void;
+    /** Called when the listener is rejected by the server. */
+    onError?: (error: unknown) => void;
     /** Called with the raw document on every snapshot (null when it does not exist). */
-    onRemoteDocument?: (path: string, data: Record<string, unknown> | null) => void;
+    onRemoteDocument?: (path: string, data: Record<string, unknown> | null, fromCache: boolean) => void;
     /** Extra fields added to every write (e.g. the owner uid required by the security rules). */
     extraOnWrite?: () => Record<string, unknown> | undefined;
     /** When false, a missing document is never created (group documents). */
@@ -95,6 +97,7 @@ export class SyncEngine<T extends Record<string, unknown>> {
             error => {
                 console.error('Cloud sync listener failed', (error as any)?.code || error);
                 this.setStatus('error');
+                this.options.onError?.(error);
             }
         );
     }
@@ -172,7 +175,7 @@ export class SyncEngine<T extends Record<string, unknown>> {
         this.hydrated = true;
 
         const remote = snapshot.exists ? snapshot.data : {};
-        this.options.onRemoteDocument?.(this.options.path, snapshot.exists ? remote : null);
+        this.options.onRemoteDocument?.(this.options.path, snapshot.exists ? remote : null, snapshot.fromCache);
 
         const base = this.base ?? {};
         const nextBase: Record<string, unknown> = {};

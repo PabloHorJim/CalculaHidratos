@@ -1,5 +1,5 @@
 import { initializeApp } from 'firebase/app';
-import { getAuth, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged } from 'firebase/auth';
+import { getAuth, GoogleAuthProvider, signInWithPopup, signInWithRedirect, getRedirectResult, signOut, onAuthStateChanged } from 'firebase/auth';
 import type { User } from 'firebase/auth';
 import {
   initializeFirestore,
@@ -16,6 +16,11 @@ import {
   onSnapshot,
   updateDoc,
   arrayUnion,
+  arrayRemove,
+  deleteField,
+  orderBy,
+  limit,
+  writeBatch,
   runTransaction
 } from 'firebase/firestore';
 import type { DocumentData } from 'firebase/firestore';
@@ -67,8 +72,13 @@ export function handleFirestoreError(error: unknown, operationType: OperationTyp
   }));
 }
 
+/** Host that serves the sign-in helper pages (see README: sign-in inside the installed app). */
+export const authDomain: string = firebaseConfig.authDomain ?? '';
+
 export {
   signInWithPopup,
+  signInWithRedirect,
+  getRedirectResult,
   signOut,
   onAuthStateChanged,
   collection,
@@ -82,6 +92,11 @@ export {
   onSnapshot,
   updateDoc,
   arrayUnion,
+  arrayRemove,
+  deleteField,
+  orderBy,
+  limit,
+  writeBatch,
   runTransaction
 };
 export type { User, DocumentData };

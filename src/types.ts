@@ -54,6 +54,12 @@ export interface FamilyGroup {
   inviteCode: string;
 }
 
+export interface GroupMember {
+  uid: string;
+  displayName: string;
+  photoURL: string | null;
+}
+
 export interface AppState {
   ingredients: Ingredient[];
   recipes: Recipe[];

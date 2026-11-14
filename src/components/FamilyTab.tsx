@@ -14,7 +14,7 @@ export function FamilyTab({ state }: FamilyTabProps) {
         user, groupId, familyGroup, groupMembers,
         groupNameInput, setGroupNameInput,
         inviteInput, setInviteInput,
-        handleLogin, createGroup, joinGroup, leaveGroup, setToast,
+        handleLogin, createGroup, joinGroup, leaveGroup, removeGroupMember, setToast,
     } = state;
 
     return (
@@ -155,6 +155,15 @@ export function FamilyTab({ state }: FamilyTabProps) {
                                     <span className="text-xs font-bold text-gray-700 dark:text-gray-300 flex-1">{member.displayName || 'Usuario'}</span>
                                     {member.uid === familyGroup.adminUid && (
                                         <span className="text-[7px] font-black uppercase bg-blue-100 dark:bg-blue-800 text-blue-600 dark:text-blue-400 px-1 py-0.5 rounded">Admin</span>
+                                    )}
+                                    {user.uid === familyGroup.adminUid && member.uid !== user.uid && (
+                                        <button
+                                            onClick={() => removeGroupMember(member)}
+                                            className="p-1 text-gray-300 dark:text-gray-500 hover:text-red-500"
+                                            title={`Expulsar a ${member.displayName}`}
+                                        >
+                                            <Trash2 size={14} />
+                                        </button>
                                     )}
                                 </div>
                             ))}

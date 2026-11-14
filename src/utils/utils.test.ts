@@ -153,3 +153,26 @@ test('voice: no amount', () => {
     assert.equal(r.amount, null);
     assert.equal(r.ingredientName, 'cebolla');
 });
+
+// ---------- share / export ----------
+import { whatsappNumber, fullMealMessage } from './share';
+import { mealsToCsv } from './exportData';
+
+test('whatsappNumber keeps digits only', () => {
+    assert.equal(whatsappNumber('+34 600-123 456'), '34600123456');
+    assert.equal(whatsappNumber('0034600123456'), '34600123456');
+    assert.equal(whatsappNumber(undefined), '');
+});
+
+test('csv export quotes commas and keeps meals without portions', () => {
+    const csv = mealsToCsv([
+        { id: '1', timestamp: '2026-01-01T12:00:00.000Z', recipeName: 'Arroz, con "cosas"', totalCarbs: 50, netWeight: 500, portions: [{ memberName: 'Ana', weight: 200, carbs: 20, isDiabetic: true }] },
+        { id: '2', timestamp: '2026-01-02T12:00:00.000Z', recipeName: 'Tarta', totalCarbs: 300, netWeight: 900, isBatch: true, portions: [] }
+    ]);
+    const lines = csv.split('\n');
+    assert.equal(lines.length, 3);
+    assert.ok(lines[1].includes('"Arroz, con ""cosas"""'));
+    assert.ok(lines[1].endsWith('Ana,200,20.0,Sí'));
+    assert.ok(lines[2].startsWith('2026-01-02T12:00:00.000Z,Tarta,300.0,900,'));
+    assert.ok(fullMealMessage('X', 10, 100, [], true).includes('*Reparto: X*'));
+});
