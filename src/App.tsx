@@ -1,6 +1,7 @@
 import React, { useCallback } from 'react';
 import {
   ChefHat,
+  Syringe,
   Scale,
   Users,
   Menu,
@@ -10,7 +11,10 @@ import {
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 
-import { useAppState, MAIN_TABS, TabType } from './hooks/useAppState';
+import { useAppState, MAIN_TABS, PATIENT_TABS } from './hooks/useAppState';
+import { usePatientState } from './hooks/usePatientState';
+import { DoseTab } from './components/patient/DoseTab';
+import { PatientSettingsTab } from './components/patient/PatientSettingsTab';
 import { useSwipeNavigation } from './hooks/useSwipeNavigation';
 import { RecipeTab } from './components/RecipeTab';
 import { SplitTab } from './components/SplitTab';
@@ -29,19 +33,23 @@ export default function App() {
   const state = useAppState();
   const { activeTab, setActiveTab, isSidebarOpen, setIsSidebarOpen, user, syncStatus, toast, showTutorial, dismissTutorial, needsConsentPrompt } = state;
 
-  const currentTabIndex = MAIN_TABS.indexOf(activeTab);
+  const patient = usePatientState({ user, cloudEnabled: state.cloudEnabled });
+  const patientMode = patient.settings.enabled;
+  const mainTabs = patientMode ? PATIENT_TABS : MAIN_TABS;
+
+  const currentTabIndex = mainTabs.indexOf(activeTab);
 
   const goToNextTab = useCallback(() => {
-    if (currentTabIndex >= 0 && currentTabIndex < MAIN_TABS.length - 1) {
-      setActiveTab(MAIN_TABS[currentTabIndex + 1]);
+    if (currentTabIndex >= 0 && currentTabIndex < mainTabs.length - 1) {
+      setActiveTab(mainTabs[currentTabIndex + 1]);
     }
-  }, [currentTabIndex, setActiveTab]);
+  }, [currentTabIndex, setActiveTab, mainTabs]);
 
   const goToPrevTab = useCallback(() => {
     if (currentTabIndex > 0) {
-      setActiveTab(MAIN_TABS[currentTabIndex - 1]);
+      setActiveTab(mainTabs[currentTabIndex - 1]);
     }
-  }, [currentTabIndex, setActiveTab]);
+  }, [currentTabIndex, setActiveTab, mainTabs]);
 
   const { onTouchStart, onTouchEnd } = useSwipeNavigation({
     onSwipeLeft: goToNextTab,
@@ -61,7 +69,7 @@ export default function App() {
       {showTutorial && <OnboardingTutorial onDismiss={dismissTutorial} />}
 
       {/* Sidebar */}
-      <Sidebar state={state} />
+      <Sidebar state={state} patient={patient} />
 
       {/* Header */}
       <header className="bg-white dark:bg-gray-800 px-6 py-4 shadow-sm dark:shadow-gray-900/50 sticky top-0 z-20 transition-colors">
@@ -128,6 +136,8 @@ export default function App() {
             {activeTab === 'ingredients' && <IngredientsTab state={state} />}
             {activeTab === 'history' && <HistoryTab state={state} />}
             {activeTab === 'stats' && <StatsTab state={state} />}
+            {activeTab === 'dose' && <DoseTab state={state} patient={patient} />}
+            {activeTab === 'patient' && <PatientSettingsTab state={state} patient={patient} />}
             {activeTab === 'legal' && <LegalNotice />}
           </motion.div>
         </AnimatePresence>
@@ -137,6 +147,9 @@ export default function App() {
       <nav className="fixed bottom-0 left-0 right-0 bg-white dark:bg-gray-800 border-t border-gray-100 dark:border-gray-700 px-2 py-3 flex justify-around items-center z-30 shadow-[0_-4px_20px_rgba(0,0,0,0.05)] dark:shadow-[0_-4px_20px_rgba(0,0,0,0.3)] transition-colors">
         <NavButton active={activeTab === 'recipe'} onClick={() => setActiveTab('recipe')} icon={<ChefHat size={20} />} label="Recetas" />
         <NavButton active={activeTab === 'split'} onClick={() => setActiveTab('split')} icon={<Scale size={20} />} label="Reparto" />
+        {patientMode && (
+          <NavButton active={activeTab === 'dose'} onClick={() => setActiveTab('dose')} icon={<Syringe size={20} />} label="Dosis" />
+        )}
         <NavButton active={activeTab === 'family'} onClick={() => setActiveTab('family')} icon={<Users size={20} />} label="Familia" />
       </nav>
 

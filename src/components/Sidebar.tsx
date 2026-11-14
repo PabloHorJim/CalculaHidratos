@@ -1,17 +1,19 @@
 import React from 'react';
 import {
-    Calculator, History, Utensils, Percent, Download, Apple,
+    Calculator, History, Utensils, Percent, Download, Apple, HeartPulse,
     LogIn, LogOut, BarChart3, Shield, Mail, FileDown
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { SidebarButton } from './SidebarButton';
 import { AppState } from '../hooks/useAppState';
+import { PatientState } from '../hooks/usePatientState';
 
 interface SidebarProps {
     state: AppState;
+    patient: PatientState;
 }
 
-export function Sidebar({ state }: SidebarProps) {
+export function Sidebar({ state, patient }: SidebarProps) {
     const {
         activeTab, setActiveTab,
         isSidebarOpen, setIsSidebarOpen,
@@ -118,6 +120,16 @@ export function Sidebar({ state }: SidebarProps) {
                                     )}
                                 </div>
                             </div>
+
+                            {/* Patient mode */}
+                            <div className="text-[9px] font-black text-gray-300 dark:text-gray-600 uppercase tracking-widest px-3 pt-4 pb-1">Salud</div>
+                            <SidebarButton
+                                active={activeTab === 'patient'}
+                                onClick={() => { setActiveTab('patient'); setIsSidebarOpen(false); }}
+                                icon={<HeartPulse size={20} />}
+                                label="Modo paciente"
+                                description={patient.settings.enabled ? 'Activado · ratios y ajustes de insulina' : 'Calculadora de dosis de insulina (privado)'}
+                            />
 
                             {/* Info Section */}
                             <div className="text-[9px] font-black text-gray-300 dark:text-gray-600 uppercase tracking-widest px-3 pt-4 pb-1">Info</div>

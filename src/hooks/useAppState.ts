@@ -9,6 +9,7 @@ import { useCollectionSync } from './useCollectionSync';
 import { useConsent } from './useConsent';
 import { useInstallPrompt } from './useInstallPrompt';
 import { useSession, LOCAL_STATE_KEY } from './useSession';
+import { PATIENT_BASE_KEY } from './usePatientState';
 import { copyText, portionMessage, fullMealMessage, sharePortionOnWhatsApp, shareFullMealOnWhatsApp, shareDiabeticCarbsOnWhatsApp } from '../utils/share';
 import { mealsToCsv, downloadFile } from '../utils/exportData';
 import { db, doc, setDoc, collection, getDocs, query, orderBy } from '../firebase';
@@ -22,6 +23,7 @@ export type TabType = 'recipe' | 'split' | 'family' | 'cookware' | 'ingredients'
 
 // Ordered tabs for swipe navigation (main nav bar tabs only)
 export const MAIN_TABS: TabType[] = ['recipe', 'split', 'family'];
+export const PATIENT_TABS: TabType[] = ['recipe', 'split', 'dose', 'family'];
 
 type Portion = MealHistoryEntry['portions'][number];
 
@@ -227,7 +229,7 @@ export function useAppState() {
         acceptConsent,
         setToast,
         getGroupSeed: () => seedRef.current(),
-        onSignedOut: () => clearSyncBase(SHARED_BASE_KEY, HISTORY_BASE_KEY)
+        onSignedOut: () => clearSyncBase(SHARED_BASE_KEY, HISTORY_BASE_KEY, PATIENT_BASE_KEY)
     });
     const { user, isAuthReady, groupId, familyGroup, groupMembers, syncDocPath } = session;
 
@@ -736,7 +738,7 @@ export function useAppState() {
 
         // UI state
         isLoaded, syncStatus, toast, setToast,
-        user, isAuthReady,
+        user, isAuthReady, cloudEnabled: session.cloudEnabled,
         isSidebarOpen, setIsSidebarOpen,
         isInstallable, handleInstallClick,
         showTutorial, dismissTutorial,
