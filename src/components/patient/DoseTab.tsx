@@ -88,8 +88,8 @@ export function DoseTab({ state, patient, glucoseSensor }: DoseTabProps) {
     const [exercise, setExercise] = useState(false);
     const [illness, setIllness] = useState(false);
     const [administered, setAdministered] = useState<number | ''>('');
-    // Time of the sensor reading typed into the glucose field, if that is where it came from
-    const [sensorTime, setSensorTime] = useState<number | null>(null);
+    // The sensor reading is used by default; a typed value or "No usar" takes its place
+    const [useSensor, setUseSensor] = useState(true);
 
     const sensor = glucoseSensor.active ? latestReading(glucoseSensor.readings, now) : null;
     const chartEvents = useMemo<ChartEvent[]>(() => {
@@ -114,18 +114,24 @@ export function DoseTab({ state, patient, glucoseSensor }: DoseTabProps) {
     const mealCarbs = selectedKey === 'manual' ? (manualCarbs === '' ? 0 : manualCarbs) : selected?.carbs ?? 0;
     const totalCarbs = mealCarbs + (extraCarbs === '' ? 0 : extraCarbs);
 
+    // Only a recent reading counts (see FRESH_MS): an old one is shown but never used
+    const sensorGlucose = useSensor && sensor?.fresh ? sensor.reading.mgdl : null;
+    const effectiveGlucose = glucose !== '' ? glucose : sensorGlucose;
+    const followingSensor = glucose === '' && sensorGlucose !== null;
+
     const profile = activeProfile(settings.profiles, new Date(now));
     const estimatedIob = estimateIob(bolusHistory, now, settings.dia);
     const iob = iobOverride === '' ? estimatedIob : iobOverride;
 
     const result = computeBolus({
         carbs: totalCarbs,
-        glucose: glucose === '' ? null : glucose,
+        glucose: effectiveGlucose,
         iob, profile, settings, exercise, illness
     });
 
     // The amount to register follows the suggestion until the user types their own
-    useEffect(() => { setAdministered(''); }, [result.dose]);
+    // (it is cleared when another meal is chosen, not when the sensor moves: what was typed stays)
+    useEffect(() => { setAdministered(''); }, [selectedKey]);
     const finalDose = administered === '' ? result.dose : administered;
     const alreadyDosed = !!selected?.mealId && bolusHistory.some(b => b.mealId === selected.mealId);
 
@@ -135,12 +141,12 @@ export function DoseTab({ state, patient, glucoseSensor }: DoseTabProps) {
             mealId: selected?.mealId ?? null,
             mealName: selected?.label ?? (selectedKey === 'manual' ? 'Entrada manual' : 'Sin comida'),
             carbs: Math.round(totalCarbs * 10) / 10,
-            glucose: glucose === '' ? null : glucose,
+            glucose: effectiveGlucose,
             iob,
             suggestedDose: result.dose,
             administeredDose: finalDose
         });
-        setExtraCarbs(''); setGlucose(''); setIobOverride(''); setAdministered(''); setSensorTime(null);
+        setExtraCarbs(''); setGlucose(''); setIobOverride(''); setAdministered(''); setUseSensor(true);
         setExercise(false); setIllness(false);
         setToast(`Dosis registrada: ${formatUnits(finalDose, settings.precision)} U`);
     };
@@ -236,10 +242,17 @@ export function DoseTab({ state, patient, glucoseSensor }: DoseTabProps) {
                                     {sensor.reading.trend && <div className="text-xs text-gray-500 dark:text-gray-400">{TREND_TEXT[sensor.reading.trend]}</div>}
                                 </div>
                                 {sensor.fresh ? (
-                                    <button onClick={() => { setGlucose(sensor.reading.mgdl); setSensorTime(sensor.reading.time); }}
-                                        className="min-h-11 px-4 bg-cyan-500 text-white rounded-xl font-bold text-sm">
-                                        Usar {sensor.reading.mgdl}
-                                    </button>
+                                    followingSensor ? (
+                                        <div className="text-right">
+                                            <div className="text-xs font-bold text-cyan-700 dark:text-cyan-300">Se usa para la corrección</div>
+                                            <button onClick={() => setUseSensor(false)} className="min-h-9 text-xs font-bold underline text-gray-600 dark:text-gray-300">No usar</button>
+                                        </div>
+                                    ) : (
+                                        <button onClick={() => { setGlucose(''); setUseSensor(true); }}
+                                            className="min-h-11 px-4 bg-cyan-500 text-white rounded-xl font-bold text-sm">
+                                            Usar {sensor.reading.mgdl}
+                                        </button>
+                                    )
                                 ) : (
                                     <div className="text-xs font-medium text-yellow-800 dark:text-yellow-300 bg-yellow-100 dark:bg-yellow-900/30 p-2 rounded-xl max-w-40">
                                         Lectura antigua: mide de nuevo antes de corregir.
@@ -256,9 +269,9 @@ export function DoseTab({ state, patient, glucoseSensor }: DoseTabProps) {
                 <div className="flex items-center justify-between gap-3">
                     <div>
                         <div className="text-sm font-bold text-gray-800 dark:text-gray-100 flex items-center gap-1.5"><Droplets size={16} className="text-cyan-500" /> Glucemia</div>
-                        <div className="text-[0.6875rem] text-gray-500">mg/dL · opcional · objetivo {settings.targetBg}{sensorTime ? ` · del sensor (${timeOf(new Date(sensorTime).toISOString())})` : ''}</div>
+                        <div className="text-[0.6875rem] text-gray-500">mg/dL · objetivo {settings.targetBg} · {followingSensor ? 'del sensor; escribe para usar otra' : glucose !== '' ? 'escrita a mano' : 'vacía: sin corrección'}</div>
                     </div>
-                    <NumberInput allowEmpty max={600} aria-label="Glucemia actual en mg/dL" placeholder="—" value={glucose} onChange={(v) => { setGlucose(v); setSensorTime(null); }} className={field} />
+                    <NumberInput allowEmpty max={600} aria-label="Glucemia actual en mg/dL" placeholder={sensorGlucose !== null ? String(sensorGlucose) : '—'} value={glucose} onChange={setGlucose} className={field} />
                 </div>
                 <div className="flex items-center justify-between gap-3">
                     <div>
