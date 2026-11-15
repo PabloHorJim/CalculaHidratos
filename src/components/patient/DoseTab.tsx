@@ -6,10 +6,14 @@ import { NumberInput } from '../NumberInput';
 import { activeProfile, computeBolus, estimateIob, BolusWarning } from '../../utils/bolus';
 import { memberFraction } from '../../utils/split';
 import { MealHistoryEntry } from '../../types';
+import { GlucoseState } from '../../hooks/useGlucose';
+import { latestReading, TREND_ARROW, TREND_TEXT } from '../../glucose/sources';
+import { GlucoseChart, ChartEvent } from './GlucoseChart';
 
 interface DoseTabProps {
     state: AppState;
     patient: PatientState;
+    glucoseSensor: GlucoseState;
 }
 
 interface MealOption {
@@ -32,7 +36,7 @@ const WARNING_TEXT: Record<BolusWarning, string> = {
 const formatUnits = (value: number, precision: number) => value.toFixed(precision < 1 ? 1 : 0);
 const timeOf = (iso: string) => new Date(iso).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 
-export function DoseTab({ state, patient }: DoseTabProps) {
+export function DoseTab({ state, patient, glucoseSensor }: DoseTabProps) {
     const { family, mealHistory, getMemberCarbs, effectiveCarbs, currentRecipeName, cachedRecipeName, setActiveTab, setToast } = state;
     const { settings, bolusHistory, addBolus, removeBolus } = patient;
 
@@ -52,6 +56,8 @@ export function DoseTab({ state, patient }: DoseTabProps) {
         const myCarbs = (meal: MealHistoryEntry) => {
             const portion = meal.portions.find(p => (p.memberId ? p.memberId === me.id : p.memberName === me.name));
             if (portion) return { carbs: portion.carbs, estimated: false };
+            // Something another person ate on their own
+            if (meal.kind === 'single') return { carbs: 0, estimated: false };
             // Not shared out yet: my usual share of the whole dish
             return { carbs: memberFraction(me, family) * meal.totalCarbs, estimated: true };
         };
@@ -82,6 +88,19 @@ export function DoseTab({ state, patient }: DoseTabProps) {
     const [exercise, setExercise] = useState(false);
     const [illness, setIllness] = useState(false);
     const [administered, setAdministered] = useState<number | ''>('');
+    // Time of the sensor reading typed into the glucose field, if that is where it came from
+    const [sensorTime, setSensorTime] = useState<number | null>(null);
+
+    const sensor = glucoseSensor.active ? latestReading(glucoseSensor.readings, now) : null;
+    const chartEvents = useMemo<ChartEvent[]>(() => {
+        if (!me || !glucoseSensor.active) return [];
+        const meals = mealHistory.flatMap(meal => {
+            const portion = meal.portions.find(p => (p.memberId ? p.memberId === me.id : p.memberName === me.name));
+            return portion && portion.carbs > 0 ? [{ time: new Date(meal.timestamp).getTime(), kind: 'meal' as const, label: String(Math.round(portion.carbs)) }] : [];
+        });
+        const doses = bolusHistory.map(b => ({ time: new Date(b.timestamp).getTime(), kind: 'dose' as const, label: String(b.administeredDose).replace('.', ',') }));
+        return [...meals, ...doses];
+    }, [me, mealHistory, bolusHistory, glucoseSensor.active]);
 
     // Preselect the most relevant meal once, unless it already has a dose registered
     useEffect(() => {
@@ -121,7 +140,7 @@ export function DoseTab({ state, patient }: DoseTabProps) {
             suggestedDose: result.dose,
             administeredDose: finalDose
         });
-        setExtraCarbs(''); setGlucose(''); setIobOverride(''); setAdministered('');
+        setExtraCarbs(''); setGlucose(''); setIobOverride(''); setAdministered(''); setSensorTime(null);
         setExercise(false); setIllness(false);
         setToast(`Dosis registrada: ${formatUnits(finalDose, settings.precision)} U`);
     };
@@ -158,20 +177,20 @@ export function DoseTab({ state, patient }: DoseTabProps) {
                 <h2 className="text-xl font-bold text-gray-800 dark:text-gray-100 flex items-center gap-2">
                     <Syringe className="text-cyan-500" size={24} /> Dosis
                 </h2>
-                <button onClick={() => setActiveTab('patient')} className="p-2 text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-xl" title="Ajustes de paciente">
+                <button onClick={() => setActiveTab('patient')} className="p-2 text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-xl" title="Ajustes de paciente">
                     <Settings size={20} />
                 </button>
             </div>
 
             {/* 1. Carbs */}
             <section className="space-y-2">
-                <div className="text-[10px] font-black uppercase text-gray-400 tracking-widest px-1 flex items-center gap-1"><Utensils size={12} /> Comida de {me.name}</div>
+                <div className="text-[0.6875rem] font-black uppercase text-gray-500 tracking-widest px-1 flex items-center gap-1"><Utensils size={12} /> Comida de {me.name}</div>
                 {mealOptions.map(option => (
                     <button key={option.key} onClick={() => setSelectedKey(option.key)} className={chip(selectedKey === option.key)}>
                         <div className="flex justify-between items-center gap-2">
                             <div className="min-w-0">
                                 <div className="font-bold text-sm truncate">{option.label}</div>
-                                <div className="text-[10px] opacity-70">{option.detail}{option.mealId && bolusHistory.some(b => b.mealId === option.mealId) ? ' · dosis ya registrada' : ''}</div>
+                                <div className="text-[0.6875rem] opacity-70">{option.detail}{option.mealId && bolusHistory.some(b => b.mealId === option.mealId) ? ' · dosis ya registrada' : ''}</div>
                             </div>
                             <div className="text-lg font-black shrink-0">{option.carbs.toFixed(1)} <span className="text-xs font-normal">g HC</span></div>
                         </div>
@@ -188,7 +207,7 @@ export function DoseTab({ state, patient }: DoseTabProps) {
                         </div>
                     </div>
                 </div>
-                <div className="flex items-center gap-2 px-1">
+                <div className="flex flex-wrap items-center gap-2 px-1">
                     <span className="text-xs font-bold text-gray-500 dark:text-gray-400">Extras</span>
                     {[5, 10, 15].map(g => (
                         <button key={g} onClick={() => setExtraCarbs((extraCarbs === '' ? 0 : extraCarbs) + g)}
@@ -198,23 +217,53 @@ export function DoseTab({ state, patient }: DoseTabProps) {
                     ))}
                     <NumberInput allowEmpty max={300} aria-label="Hidratos extra" placeholder="0" value={extraCarbs} onChange={setExtraCarbs}
                         className="ml-auto w-16 px-2 py-1 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg text-right text-sm font-bold outline-none dark:text-gray-100" />
-                    <span className="text-xs text-gray-400">g</span>
+                    <span className="text-xs text-gray-500">g</span>
                 </div>
             </section>
 
             {/* 2. Glucose and insulin on board */}
             <section className="bg-white dark:bg-gray-800 p-4 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 space-y-3">
+                {glucoseSensor.active && (
+                    <div className="flex items-center justify-between gap-3 pb-3 border-b border-gray-100 dark:border-gray-700" aria-live="polite">
+                        {sensor ? (
+                            <>
+                                <div>
+                                    <div className="text-xs font-bold text-gray-500 dark:text-gray-400">Sensor · hace {sensor.ageMinutes} min</div>
+                                    <div className={`text-3xl font-black leading-none ${sensor.fresh ? 'text-gray-800 dark:text-gray-100' : 'text-gray-500 dark:text-gray-400'}`}>
+                                        {sensor.reading.mgdl}
+                                        {sensor.reading.trend && <span className="text-2xl ml-1" title={TREND_TEXT[sensor.reading.trend]}>{TREND_ARROW[sensor.reading.trend]}</span>}
+                                    </div>
+                                    {sensor.reading.trend && <div className="text-xs text-gray-500 dark:text-gray-400">{TREND_TEXT[sensor.reading.trend]}</div>}
+                                </div>
+                                {sensor.fresh ? (
+                                    <button onClick={() => { setGlucose(sensor.reading.mgdl); setSensorTime(sensor.reading.time); }}
+                                        className="min-h-11 px-4 bg-cyan-500 text-white rounded-xl font-bold text-sm">
+                                        Usar {sensor.reading.mgdl}
+                                    </button>
+                                ) : (
+                                    <div className="text-xs font-medium text-yellow-800 dark:text-yellow-300 bg-yellow-100 dark:bg-yellow-900/30 p-2 rounded-xl max-w-40">
+                                        Lectura antigua: mide de nuevo antes de corregir.
+                                    </div>
+                                )}
+                            </>
+                        ) : (
+                            <div className="text-xs text-gray-500 dark:text-gray-400">
+                                {glucoseSensor.error || (glucoseSensor.loading ? 'Leyendo el sensor…' : 'Sin lecturas del sensor')}
+                            </div>
+                        )}
+                    </div>
+                )}
                 <div className="flex items-center justify-between gap-3">
                     <div>
                         <div className="text-sm font-bold text-gray-800 dark:text-gray-100 flex items-center gap-1.5"><Droplets size={16} className="text-cyan-500" /> Glucemia</div>
-                        <div className="text-[10px] text-gray-400">mg/dL · opcional · objetivo {settings.targetBg}</div>
+                        <div className="text-[0.6875rem] text-gray-500">mg/dL · opcional · objetivo {settings.targetBg}{sensorTime ? ` · del sensor (${timeOf(new Date(sensorTime).toISOString())})` : ''}</div>
                     </div>
-                    <NumberInput allowEmpty max={600} aria-label="Glucemia actual en mg/dL" placeholder="—" value={glucose} onChange={setGlucose} className={field} />
+                    <NumberInput allowEmpty max={600} aria-label="Glucemia actual en mg/dL" placeholder="—" value={glucose} onChange={(v) => { setGlucose(v); setSensorTime(null); }} className={field} />
                 </div>
                 <div className="flex items-center justify-between gap-3">
                     <div>
                         <div className="text-sm font-bold text-gray-800 dark:text-gray-100">Insulina activa</div>
-                        <div className="text-[10px] text-gray-400">Estimada de tus dosis registradas: {estimatedIob.toFixed(1)} U</div>
+                        <div className="text-[0.6875rem] text-gray-500">Estimada de tus dosis registradas: {estimatedIob.toFixed(1)} U</div>
                     </div>
                     <NumberInput allowEmpty max={50} aria-label="Insulina activa en unidades" placeholder={estimatedIob.toFixed(1)} value={iobOverride} onChange={setIobOverride} className={field} />
                 </div>
@@ -230,15 +279,15 @@ export function DoseTab({ state, patient }: DoseTabProps) {
 
             {/* 3. Result */}
             <section className="bg-cyan-50 dark:bg-cyan-900/20 p-4 rounded-2xl border border-cyan-100 dark:border-cyan-800 space-y-3">
-                <div className="flex items-end justify-between">
+                <div className="flex flex-wrap items-end justify-between gap-2">
                     <div>
-                        <div className="text-[10px] font-bold text-cyan-700 dark:text-cyan-400 uppercase">Dosis sugerida</div>
+                        <div className="text-[0.6875rem] font-bold text-cyan-700 dark:text-cyan-400 uppercase">Dosis sugerida</div>
                         <div className="text-5xl font-black text-cyan-700 dark:text-cyan-300 leading-none">
                             {formatUnits(result.dose, settings.precision)} <span className="text-lg font-normal">U</span>
                         </div>
                     </div>
                     {profile && (
-                        <div className="text-right text-[10px] text-cyan-700/80 dark:text-cyan-400/80 leading-relaxed">
+                        <div className="text-right text-[0.6875rem] text-cyan-700/80 dark:text-cyan-400/80 leading-relaxed">
                             <div>Tramo desde {profile.time}</div>
                             <div>Ratio {profile.ratio} U/10 g</div>
                             <div>Sensibilidad {profile.isf} mg/dL</div>
@@ -269,8 +318,8 @@ export function DoseTab({ state, patient }: DoseTabProps) {
                         Ya registraste una dosis para esta comida.
                     </div>
                 )}
-                <div className="flex items-center gap-2 pt-1">
-                    <div className="flex-1 text-xs font-bold text-gray-600 dark:text-gray-300">Dosis administrada</div>
+                <div className="flex flex-wrap items-center justify-end gap-2 pt-1">
+                    <div className="flex-1 min-w-24 text-xs font-bold text-gray-600 dark:text-gray-300">Dosis administrada</div>
                     <NumberInput allowEmpty max={settings.maxBolus} aria-label="Dosis administrada en unidades"
                         placeholder={formatUnits(result.dose, settings.precision)} value={administered} onChange={setAdministered}
                         className="w-20 px-2 py-2 bg-white dark:bg-gray-800 border border-cyan-200 dark:border-cyan-700 rounded-xl text-right font-bold outline-none dark:text-gray-100" />
@@ -281,19 +330,23 @@ export function DoseTab({ state, patient }: DoseTabProps) {
                 </div>
             </section>
 
-            <p className="text-[10px] text-gray-400 dark:text-gray-500 leading-tight px-1">
+            {glucoseSensor.active && (
+                <GlucoseChart readings={glucoseSensor.readings} events={chartEvents} targetBg={settings.targetBg} hypoThreshold={settings.hypoThreshold} now={now} />
+            )}
+
+            <p className="text-[0.6875rem] text-gray-500 dark:text-gray-400 leading-tight px-1">
                 ⚠️ Ayuda de cálculo con los parámetros que tú has configurado. No es un producto sanitario ni sustituye las indicaciones de tu equipo médico: comprueba siempre la dosis antes de administrarla.
             </p>
 
             {/* 4. Log */}
             {bolusHistory.length > 0 && (
                 <section className="space-y-2">
-                    <div className="text-[10px] font-black uppercase text-gray-400 tracking-widest px-1">Últimas dosis</div>
+                    <div className="text-[0.6875rem] font-black uppercase text-gray-500 tracking-widest px-1">Últimas dosis</div>
                     {bolusHistory.slice(0, 6).map(record => (
                         <div key={record.id} className="bg-white dark:bg-gray-800 px-3 py-2 rounded-xl border border-gray-100 dark:border-gray-700 flex items-center gap-3">
                             <div className="min-w-0 flex-1">
                                 <div className="text-sm font-bold text-gray-800 dark:text-gray-200 truncate">{record.mealName}</div>
-                                <div className="text-[10px] text-gray-400">
+                                <div className="text-[0.6875rem] text-gray-500">
                                     {new Date(record.timestamp).toLocaleDateString('es-ES', { weekday: 'short', day: 'numeric' })} {timeOf(record.timestamp)}
                                     {' · '}{record.carbs} g HC{record.glucose !== null ? ` · ${record.glucose} mg/dL` : ''}
                                 </div>
@@ -301,11 +354,11 @@ export function DoseTab({ state, patient }: DoseTabProps) {
                             <div className="text-right">
                                 <div className="text-lg font-black text-cyan-600 dark:text-cyan-400 leading-none">{formatUnits(record.administeredDose, settings.precision)} U</div>
                                 {record.administeredDose !== record.suggestedDose && (
-                                    <div className="text-[9px] text-gray-400">sugerida {formatUnits(record.suggestedDose, settings.precision)}</div>
+                                    <div className="text-[0.6875rem] text-gray-500">sugerida {formatUnits(record.suggestedDose, settings.precision)}</div>
                                 )}
                             </div>
                             <button onClick={() => { if (window.confirm('¿Eliminar este registro de dosis?')) removeBolus(record.id); }}
-                                className="p-1 text-gray-300 dark:text-gray-600 hover:text-red-500" title="Eliminar registro">
+                                className="p-1 text-gray-400 dark:text-gray-500 hover:text-red-500" title="Eliminar registro">
                                 <Trash2 size={14} />
                             </button>
                         </div>

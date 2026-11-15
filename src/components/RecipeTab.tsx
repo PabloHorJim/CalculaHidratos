@@ -6,6 +6,8 @@ import { AppState } from '../hooks/useAppState';
 import { getCategoryColor } from '../utils/categoryColors';
 import { memberFraction } from '../utils/split';
 import { NumberInput } from './NumberInput';
+import { IngredientAmount } from './IngredientAmount';
+import { ingredientCarbs } from '../utils/nutrition';
 
 
 interface RecipeTabProps {
@@ -34,6 +36,7 @@ export function RecipeTab({ state }: RecipeTabProps) {
         createAndAddIngredient,
         updateIngredientWeight,
         removeIngredientFromRecipe,
+        setIngredientCooked, scaleCurrentRecipe, recipeTotals,
         saveRecipe, saveAsNewRecipe, startNewRecipe, clearCookingState,
         filteredRecipes, recipeSearchTerm, setRecipeSearchTerm,
         loadRecipe, deleteRecipe, mealHistory,
@@ -216,7 +219,7 @@ export function RecipeTab({ state }: RecipeTabProps) {
 
                 {/* Recipe search */}
                 <div className="relative">
-                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500" size={18} />
                     <input
                         type="text"
                         placeholder="Buscar receta guardada..."
@@ -241,7 +244,7 @@ export function RecipeTab({ state }: RecipeTabProps) {
                                     className="p-3 bg-orange-50/50 dark:bg-orange-900/20 border border-orange-100 dark:border-orange-800/50 rounded-xl text-left hover:bg-orange-100 dark:hover:bg-orange-900/40 transition-colors shadow-sm active:scale-95"
                                 >
                                     <div className="font-bold text-sm text-gray-800 dark:text-gray-200 line-clamp-1" title={recipe.name}>{recipe.name}</div>
-                                    <div className="text-[10px] text-gray-500">{recipe.ingredients.length} ingr.</div>
+                                    <div className="text-[0.6875rem] text-gray-500">{recipe.ingredients.length} ingr.</div>
                                 </button>
                             ))}
                         </div>
@@ -251,9 +254,9 @@ export function RecipeTab({ state }: RecipeTabProps) {
                 {/* Saved recipes list */}
                 {filteredRecipes.length === 0 ? (
                     <div className="text-center py-12 bg-white dark:bg-gray-800 rounded-3xl border border-dashed border-gray-200 dark:border-gray-700">
-                        <Utensils className="mx-auto text-gray-300 dark:text-gray-600 mb-3" size={48} />
-                        <p className="text-gray-400 dark:text-gray-500 text-sm">No se encontraron recetas.</p>
-                        <p className="text-gray-300 dark:text-gray-600 text-xs mt-1">Pulsa "Cocinar sin receta" para empezar.</p>
+                        <Utensils className="mx-auto text-gray-400 dark:text-gray-500 mb-3" size={48} />
+                        <p className="text-gray-500 dark:text-gray-400 text-sm">No se encontraron recetas.</p>
+                        <p className="text-gray-400 dark:text-gray-500 text-xs mt-1">Pulsa "Cocinar sin receta" para empezar.</p>
                     </div>
                 ) : (
                     <div className="space-y-2">
@@ -264,7 +267,7 @@ export function RecipeTab({ state }: RecipeTabProps) {
                                     className="flex-1 text-left"
                                 >
                                     <div className="font-bold text-sm text-gray-800 dark:text-gray-200">{recipe.name}</div>
-                                    <div className="text-[10px] text-gray-400 dark:text-gray-500">{recipe.ingredients.length} ingredientes</div>
+                                    <div className="text-[0.6875rem] text-gray-500 dark:text-gray-400">{recipe.ingredients.length} ingredientes</div>
                                 </button>
                                 <div className="flex items-center gap-1">
                                     <button
@@ -275,7 +278,7 @@ export function RecipeTab({ state }: RecipeTabProps) {
                                     </button>
                                     <button
                                         onClick={() => deleteRecipe(recipe.id)}
-                                        className="p-1.5 text-gray-300 dark:text-gray-600 hover:text-red-500 rounded-lg"
+                                        className="p-1.5 text-gray-400 dark:text-gray-500 hover:text-red-500 rounded-lg"
                                     >
                                         <Trash2 size={18} />
                                     </button>
@@ -308,7 +311,7 @@ export function RecipeTab({ state }: RecipeTabProps) {
                     onClick={() => setCookingMode(false)}
                     className="flex items-center gap-2 px-3 py-2 bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-300 rounded-xl font-bold text-sm shadow-sm border border-gray-100 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
                 >
-                    <ArrowLeft size={16} className="text-gray-400" />
+                    <ArrowLeft size={16} className="text-gray-500" />
                     Volver a Recetas
                 </button>
                 {(currentRecipeName || currentRecipeIngredients.length > 0) && (
@@ -329,7 +332,7 @@ export function RecipeTab({ state }: RecipeTabProps) {
                 <input
                     type="text"
                     placeholder="Nombre de la receta (opcional)"
-                    className="flex-1 text-lg font-black outline-none bg-transparent placeholder:text-gray-300 dark:placeholder:text-gray-600 dark:text-gray-100"
+                    className="flex-1 min-w-0 text-lg font-black outline-none bg-transparent placeholder:text-gray-300 dark:placeholder:text-gray-600 dark:text-gray-100"
                     value={currentRecipeName}
                     onChange={(e) => setCurrentRecipeName(e.target.value)}
                 />
@@ -354,7 +357,7 @@ export function RecipeTab({ state }: RecipeTabProps) {
                                     startListening(handleVoiceResult);
                                 }
                             }}
-                            className={`p-2 rounded-xl transition-all ${isListening ? 'bg-red-500 text-white animate-pulse' : 'bg-gray-50 dark:bg-gray-700 text-gray-400 dark:text-gray-500 hover:text-orange-500 hover:bg-orange-50 dark:hover:bg-orange-900/30'} mr-1`}
+                            className={`p-2 rounded-xl transition-all ${isListening ? 'bg-red-500 text-white animate-pulse' : 'bg-gray-50 dark:bg-gray-700 text-gray-500 dark:text-gray-400 hover:text-orange-500 hover:bg-orange-50 dark:hover:bg-orange-900/30'} mr-1`}
                             title="Añadir por voz"
                         >
                             {isListening ? <Mic size={18} /> : <MicOff size={18} />}
@@ -376,9 +379,9 @@ export function RecipeTab({ state }: RecipeTabProps) {
                                 >
                                     <div>
                                         <span className={`font-medium ${colors.text} block`}>{i.name}</span>
-                                        {i.category && <span className={`text-[10px] ${colors.text} uppercase font-bold tracking-tight opacity-70`}>{i.category}</span>}
+                                        {i.category && <span className={`text-[0.6875rem] ${colors.text} uppercase font-bold tracking-tight opacity-70`}>{i.category}</span>}
                                     </div>
-                                    <span className={`text-xs ${colors.text} shrink-0 font-mono tracking-tighter ml-2 ${colors.badge} px-1.5 py-0.5 rounded-md border ${colors.border}`}>{i.carbsPer100g}g <span className="text-[10px]">HC</span></span>
+                                    <span className={`text-xs ${colors.text} shrink-0 font-mono tracking-tighter ml-2 ${colors.badge} px-1.5 py-0.5 rounded-md border ${colors.border}`}>{i.carbsPer100g}g <span className="text-[0.6875rem]">HC</span></span>
                                 </button>
                             );
                         })}
@@ -432,7 +435,7 @@ export function RecipeTab({ state }: RecipeTabProps) {
                 {!showAddIngredient ? (
                     <button
                         onClick={() => setShowAddIngredient(true)}
-                        className="w-full py-3 border-2 border-dashed border-gray-200 dark:border-gray-700 text-gray-400 dark:text-gray-500 rounded-2xl font-bold flex items-center justify-center gap-2 hover:bg-gray-50 dark:hover:bg-gray-800/50 hover:text-orange-500 dark:hover:text-orange-400 transition-colors"
+                        className="w-full py-3 border-2 border-dashed border-gray-200 dark:border-gray-700 text-gray-500 dark:text-gray-400 rounded-2xl font-bold flex items-center justify-center gap-2 hover:bg-gray-50 dark:hover:bg-gray-800/50 hover:text-orange-500 dark:hover:text-orange-400 transition-colors"
                     >
                         <Plus size={18} /> Crear ingrediente
                     </button>
@@ -457,7 +460,7 @@ export function RecipeTab({ state }: RecipeTabProps) {
                             <input
                                 type="text"
                                 placeholder="Categoría (opcional)"
-                                className="flex-1 px-3 py-2 bg-white dark:bg-gray-800 rounded-lg text-sm outline-none dark:text-gray-100"
+                                className="flex-1 min-w-0 px-3 py-2 bg-white dark:bg-gray-800 rounded-lg text-sm outline-none dark:text-gray-100"
                                 value={newIngredientCategory}
                                 onChange={(e) => setNewIngredientCategory(e.target.value)}
                             />
@@ -469,7 +472,7 @@ export function RecipeTab({ state }: RecipeTabProps) {
                             </button>
                             <button
                                 onClick={() => setShowAddIngredient(false)}
-                                className="text-gray-400 px-2"
+                                className="text-gray-500 px-2"
                             >
                                 ✕
                             </button>
@@ -509,12 +512,13 @@ export function RecipeTab({ state }: RecipeTabProps) {
                             initial={{ opacity: 0, y: 10 }}
                             animate={{ opacity: 1, y: 0 }}
                             key={ri.ingredientId}
-                            className={`flex items-center gap-3 ${colors.bg} p-3 rounded-xl shadow-sm border transition-colors ${isHighAmount ? 'border-yellow-300 dark:border-yellow-600 ring-2 ring-yellow-400' : colors.border}`}
+                            className={`${colors.bg} p-3 rounded-xl shadow-sm border transition-colors ${isHighAmount ? 'border-yellow-300 dark:border-yellow-600 ring-2 ring-yellow-400' : colors.border}`}
                         >
-                            <div className="flex-1">
+                          <div className="flex flex-wrap items-center justify-end gap-x-3 gap-y-2">
+                            <div className="flex-1 min-w-32">
                                 <div className={`font-medium text-sm ${colors.text}`}>{ingredient.name}</div>
-                                <div className={`text-[10px] opacity-80 ${colors.text} flex items-center gap-2 mt-0.5`}>
-                                    {ingredient.category && <span className={`uppercase font-bold tracking-tight text-[9px] ${colors.badge} border ${colors.border} px-1 rounded-sm`}>{ingredient.category}</span>}
+                                <div className={`text-[0.6875rem] opacity-80 ${colors.text} flex items-center gap-2 mt-0.5`}>
+                                    {ingredient.category && <span className={`uppercase font-bold tracking-tight text-[0.6875rem] ${colors.badge} border ${colors.border} px-1 rounded-sm`}>{ingredient.category}</span>}
                                     <span>{ingredient.carbsPer100g}g HC/100g</span>
                                 </div>
                             </div>
@@ -533,11 +537,22 @@ export function RecipeTab({ state }: RecipeTabProps) {
                                 <span className="text-sm text-gray-500 dark:text-gray-400">g</span>
                                 <button
                                     onClick={() => removeIngredientFromRecipe(ri.ingredientId)}
-                                    className="p-1.5 text-gray-400 hover:text-red-500"
+                                    className="p-1.5 text-gray-500 hover:text-red-500"
+                                    aria-label={`Quitar ${ingredient.name}`}
                                 >
                                     <Trash2 size={16} />
                                 </button>
                             </div>
+                          </div>
+                          <div className={`text-xs font-bold mt-1 ${colors.text}`}>= {ingredientCarbs(ingredient, ri).toFixed(1)} g HC</div>
+                          <IngredientAmount
+                              className="mt-2"
+                              ingredient={ingredient}
+                              weight={ri.weight}
+                              cooked={!!ri.cooked}
+                              onWeight={(grams) => updateIngredientWeight(ri.ingredientId, grams)}
+                              onCooked={(cooked) => setIngredientCooked(ri.ingredientId, cooked)}
+                          />
                         </motion.div>
                     );
                 })}
@@ -546,11 +561,31 @@ export function RecipeTab({ state }: RecipeTabProps) {
             {currentRecipeIngredients.length > 0 && (
                 <div className="mt-4 pt-4 border-t border-gray-100 dark:border-gray-700">
                     <div className="mb-3">
-                        <div className="text-xs text-gray-400 uppercase tracking-wider font-bold mb-1">Total Carbohidratos</div>
+                        <div className="text-xs text-gray-500 uppercase tracking-wider font-bold mb-1">Total Carbohidratos</div>
                         <div className="text-3xl font-black text-orange-600 dark:text-orange-400 leading-none">{totalCarbs.toFixed(1)} <span className="text-base font-normal">g HC</span></div>
+                        {recipeTotals.complete && (recipeTotals.fat > 0 || recipeTotals.protein > 0) && (
+                            <div className="text-xs text-gray-500 dark:text-gray-400 mt-1">Grasa {recipeTotals.fat.toFixed(0)} g · Proteína {recipeTotals.protein.toFixed(0)} g</div>
+                        )}
+                    </div>
+                    <div className="mb-3 flex flex-wrap items-center gap-2" role="group" aria-label="Cambiar cantidades de toda la receta">
+                        <span className="text-xs font-bold text-gray-500 dark:text-gray-400">Cantidades</span>
+                        {[[0.5, '½'], [1.5, '×1,5'], [2, '×2']].map(([factor, label]) => (
+                            <button key={label} onClick={() => scaleCurrentRecipe(factor as number)}
+                                className="h-9 px-3 rounded-lg text-sm font-bold bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-300">
+                                {label}
+                            </button>
+                        ))}
+                        <button
+                            onClick={() => {
+                                const answer = window.prompt('Multiplicar todas las cantidades por… (por ejemplo 1,5 para 6 personas en vez de 4)', '1,5');
+                                if (answer) scaleCurrentRecipe(Number(answer.replace(',', '.')));
+                            }}
+                            className="h-9 px-3 rounded-lg text-sm font-bold bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-300">
+                            Otra…
+                        </button>
                     </div>
                     {setAsideMode !== 'none' && setAsideAmount > 0 && (
-                        <div className="mb-3 text-xs text-gray-400">
+                        <div className="mb-3 text-xs text-gray-500">
                             Tras apartar comida: <span className="font-bold text-orange-500">{effectiveCarbsForDiabetics.toFixed(1)}g HC</span>
                         </div>
                     )}
@@ -588,7 +623,7 @@ export function RecipeTab({ state }: RecipeTabProps) {
                             🍰 Modo Postre/Lote {isBatchCooking ? '(Activado)' : ''}
                         </button>
                         {isBatchCooking && (
-                            <div className="text-[10px] text-purple-500/80 text-center mt-1">
+                            <div className="text-[0.6875rem] text-purple-500/80 text-center mt-1">
                                 No se repartirá a familiares. Se calcularán macros por ración.
                             </div>
                         )}
@@ -599,7 +634,7 @@ export function RecipeTab({ state }: RecipeTabProps) {
                             <button
                                 onClick={saveRecipe}
                                 disabled={!currentRecipeName}
-                                className={`flex-1 py-3 rounded-xl font-bold flex items-center justify-center gap-2 transition-colors text-base ${currentRecipeName ? 'bg-orange-500 text-white hover:bg-orange-600' : 'bg-gray-100 dark:bg-gray-700 text-gray-400 cursor-not-allowed'}`}
+                                className={`flex-1 py-3 rounded-xl font-bold flex items-center justify-center gap-2 transition-colors text-base ${currentRecipeName ? 'bg-orange-500 text-white hover:bg-orange-600' : 'bg-gray-100 dark:bg-gray-700 text-gray-500 cursor-not-allowed'}`}
                             >
                                 <Save size={18} />
                                 {editingRecipeId ? 'Actualizar' : 'Guardar'}
@@ -615,7 +650,7 @@ export function RecipeTab({ state }: RecipeTabProps) {
                             )}
                         </div>
                         {!currentRecipeName && (
-                            <div className="flex-1 flex items-center justify-center text-xs text-gray-400 font-medium text-center leading-tight">
+                            <div className="flex-1 flex items-center justify-center text-xs text-gray-500 font-medium text-center leading-tight">
                                 Pon un nombre para guardar como receta
                             </div>
                         )}

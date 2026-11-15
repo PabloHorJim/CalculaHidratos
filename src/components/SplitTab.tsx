@@ -147,7 +147,7 @@ export function SplitTab({ state }: SplitTabProps) {
                                 </button>
                                 <button
                                     onClick={clearReparto}
-                                    className="p-2 bg-gray-100 dark:bg-gray-700 text-gray-400 rounded-xl hover:bg-red-100 hover:text-red-500 dark:hover:bg-red-900/30 transition-colors"
+                                    className="p-2 bg-gray-100 dark:bg-gray-700 text-gray-500 rounded-xl hover:bg-red-100 hover:text-red-500 dark:hover:bg-red-900/30 transition-colors"
                                     title="Limpiar reparto"
                                 >
                                     <Trash2 size={20} />
@@ -159,14 +159,14 @@ export function SplitTab({ state }: SplitTabProps) {
 
                 <div className="space-y-4">
                     <div>
-                        <label className="text-xs font-bold text-gray-400 uppercase mb-2 block">Seleccionar Utensilio</label>
+                        <label className="text-xs font-bold text-gray-500 uppercase mb-2 block">Seleccionar Utensilio</label>
                         <div className="grid grid-cols-2 gap-2">
                             <button
                                 onClick={() => setSelectedCookwareId('none')}
                                 className={`px-3 py-3 rounded-xl text-sm font-medium transition-all ${selectedCookwareId === 'none' ? 'bg-green-500 text-white shadow-md' : 'bg-gray-50 dark:bg-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-600'}`}
                             >
                                 Sin utensilio
-                                <div className={`text-[10px] ${selectedCookwareId === 'none' ? 'text-green-100' : 'text-gray-400 dark:text-gray-500'}`}>Peso directo</div>
+                                <div className={`text-[0.6875rem] ${selectedCookwareId === 'none' ? 'text-green-100' : 'text-gray-500 dark:text-gray-400'}`}>Peso directo</div>
                             </button>
                             {cookware.map(c => (
                                 <button
@@ -175,14 +175,14 @@ export function SplitTab({ state }: SplitTabProps) {
                                     className={`px-3 py-3 rounded-xl text-sm font-medium transition-all ${selectedCookwareId === c.id ? 'bg-purple-500 text-white shadow-md' : 'bg-gray-50 dark:bg-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-600'}`}
                                 >
                                     {c.name}
-                                    <div className={`text-[10px] ${selectedCookwareId === c.id ? 'text-purple-100' : 'text-gray-400 dark:text-gray-500'}`}>{c.mass}g</div>
+                                    <div className={`text-[0.6875rem] ${selectedCookwareId === c.id ? 'text-purple-100' : 'text-gray-500 dark:text-gray-400'}`}>{c.mass}g</div>
                                 </button>
                             ))}
                         </div>
                     </div>
 
                     <div>
-                        <label className="text-xs font-bold text-gray-400 uppercase mb-2 block">
+                        <label className="text-xs font-bold text-gray-500 uppercase mb-2 block">
                             {selectedCookwareId === 'none' ? 'Peso Total' : 'Peso Total (con utensilio)'}
                         </label>
                         <div className="flex items-center gap-3">
@@ -192,9 +192,9 @@ export function SplitTab({ state }: SplitTabProps) {
                                 placeholder="0"
                                 value={totalWeightWithCookware}
                                 onChange={setTotalWeightWithCookware}
-                                className="flex-1 px-4 py-3 bg-gray-50 dark:bg-gray-700 rounded-2xl text-xl font-bold outline-none focus:ring-2 focus:ring-green-200 dark:focus:ring-green-800 dark:text-gray-100 transition-colors"
+                                className="flex-1 min-w-0 px-4 py-3 bg-gray-50 dark:bg-gray-700 rounded-2xl text-xl font-bold outline-none focus:ring-2 focus:ring-green-200 dark:focus:ring-green-800 dark:text-gray-100 transition-colors"
                             />
-                            <span className="text-lg font-bold text-gray-400">g</span>
+                            <span className="text-lg font-bold text-gray-500">g</span>
                         </div>
                     </div>
 
@@ -215,11 +215,11 @@ export function SplitTab({ state }: SplitTabProps) {
 
                             <div className="bg-gray-50 dark:bg-gray-700 p-3 rounded-2xl border border-gray-100 dark:border-gray-600">
                                 <div className="flex items-center justify-between mb-2">
-                                    <div className="text-xs font-bold text-gray-400 uppercase">Apartar comida</div>
+                                    <div className="text-xs font-bold text-gray-500 uppercase">Apartar comida</div>
                                     <div className="flex gap-1">
                                         <button
                                             onClick={() => { setSetAsideMode(setAsideMode === 'none' ? 'percentage' : 'none'); setSetAsideValue(''); }}
-                                            className={`text-[10px] font-bold px-2 py-1 rounded-lg transition-colors ${setAsideMode !== 'none' ? 'bg-orange-100 dark:bg-orange-900/30 text-orange-600 dark:text-orange-400' : 'bg-gray-100 dark:bg-gray-600 text-gray-400'}`}
+                                            className={`text-[0.6875rem] font-bold px-2 py-1 rounded-lg transition-colors ${setAsideMode !== 'none' ? 'bg-orange-100 dark:bg-orange-900/30 text-orange-600 dark:text-orange-400' : 'bg-gray-100 dark:bg-gray-600 text-gray-500'}`}
                                         >
                                             {setAsideMode !== 'none' ? 'Activado' : 'Desactivado'}
                                         </button>
@@ -249,12 +249,12 @@ export function SplitTab({ state }: SplitTabProps) {
                                                 placeholder={setAsideMode === 'percentage' ? '25' : '500'}
                                                 value={setAsideValue}
                                                 onChange={setSetAsideValue}
-                                                className="flex-1 px-3 py-2 bg-white dark:bg-gray-800 rounded-lg text-sm outline-none focus:ring-2 focus:ring-orange-200 dark:focus:ring-orange-800 border border-gray-200 dark:border-gray-600 dark:text-gray-100"
+                                                className="flex-1 min-w-0 px-3 py-2 bg-white dark:bg-gray-800 rounded-lg text-sm outline-none focus:ring-2 focus:ring-orange-200 dark:focus:ring-orange-800 border border-gray-200 dark:border-gray-600 dark:text-gray-100"
                                             />
-                                            <span className="text-sm font-bold text-gray-400">{setAsideMode === 'percentage' ? '%' : 'g'}</span>
+                                            <span className="text-sm font-bold text-gray-500">{setAsideMode === 'percentage' ? '%' : 'g'}</span>
                                         </div>
                                         {setAsideWeight > 0 && (
-                                            <div className="text-xs text-gray-400">
+                                            <div className="text-xs text-gray-500">
                                                 Apartando <span className="font-bold text-orange-500">{setAsideWeight.toFixed(0)}g</span> → Queda <span className="font-bold text-green-600 dark:text-green-400">{netWeight.toFixed(0)}g</span>
                                             </div>
                                         )}
@@ -287,7 +287,7 @@ export function SplitTab({ state }: SplitTabProps) {
                                 )}
                             </div>
                             {cachedRecipeName && (
-                                <div className="text-[10px] text-orange-400 mt-0.5">Receta: {cachedRecipeName}</div>
+                                <div className="text-[0.6875rem] text-orange-400 mt-0.5">Receta: {cachedRecipeName}</div>
                             )}
                         </div>
                     )}
@@ -303,13 +303,13 @@ export function SplitTab({ state }: SplitTabProps) {
                     <div className="text-xs text-purple-600 dark:text-purple-400 font-bold uppercase mb-3 tracking-wider">Modo Lote / Postre</div>
                     <div className="flex flex-col gap-3">
                         <div className="bg-white dark:bg-gray-800 p-4 rounded-2xl shadow-sm border border-purple-100 dark:border-purple-800/30">
-                            <div className="text-[10px] text-gray-500 dark:text-gray-400 font-bold uppercase mb-1">Concentración de Carbohidratos</div>
+                            <div className="text-[0.6875rem] text-gray-500 dark:text-gray-400 font-bold uppercase mb-1">Concentración de Carbohidratos</div>
                             <div className="text-2xl font-black text-purple-700 dark:text-purple-400">
                                 {((adjustedCarbs / netWeight) * 100).toFixed(1)} <span className="text-sm font-normal text-gray-500">g HC/100g</span>
                             </div>
                         </div>
                         <div className="bg-purple-500 text-white p-4 rounded-2xl shadow-md border border-purple-400">
-                            <div className="text-[10px] text-purple-200 font-bold uppercase mb-1">Pesa esto para obtener 1 Ración (10g HC)</div>
+                            <div className="text-[0.6875rem] text-purple-200 font-bold uppercase mb-1">Pesa esto para obtener 1 Ración (10g HC)</div>
                             <div className="text-4xl font-black">
                                 {((netWeight / adjustedCarbs) * 10).toFixed(0)} <span className="text-lg font-normal opacity-80">gramos</span>
                             </div>
@@ -321,11 +321,11 @@ export function SplitTab({ state }: SplitTabProps) {
             {netWeight > 0 && activeFamilyProportionSum > 0 && !isBatchCooking && (
                 <div className="space-y-3">
                     <div className="flex items-center justify-between px-2">
-                        <h3 className="text-sm font-bold text-gray-400 uppercase">Raciones Calculadas</h3>
+                        <h3 className="text-sm font-bold text-gray-500 uppercase">Raciones Calculadas</h3>
                         {portionErrorPercent > 0 && (
                             <button
                                 onClick={() => setIsErrorDisabledForCurrentSplit(!isErrorDisabledForCurrentSplit)}
-                                className={`text-[10px] font-bold px-2 py-1 rounded-lg transition-colors ${isErrorDisabledForCurrentSplit ? 'bg-gray-100 dark:bg-gray-700 text-gray-400' : 'bg-yellow-100 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-400'}`}
+                                className={`text-[0.6875rem] font-bold px-2 py-1 rounded-lg transition-colors ${isErrorDisabledForCurrentSplit ? 'bg-gray-100 dark:bg-gray-700 text-gray-500' : 'bg-yellow-100 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-400'}`}
                                 title={isErrorDisabledForCurrentSplit ? 'Error de pesaje desactivado' : `Aplicando -${portionErrorPercent}% de error`}
                             >
                                 {isErrorDisabledForCurrentSplit ? 'Error OFF' : `-${portionErrorPercent}%`}
@@ -342,14 +342,14 @@ export function SplitTab({ state }: SplitTabProps) {
                             <div className="flex-1">
                                 <div className="font-bold text-gray-800 dark:text-gray-200 flex items-center gap-2 text-sm">
                                     {member.name}
-                                    {member.isDiabetic && <span className="text-[8px] bg-blue-500 text-white px-1.5 py-0.5 rounded-full uppercase">Diabético</span>}
+                                    {member.isDiabetic && <span className="text-[0.625rem] bg-blue-500 text-white px-1.5 py-0.5 rounded-full uppercase">Diabético</span>}
                                 </div>
-                                <div className="text-[10px] text-gray-400">Prop: {member.proportion}</div>
+                                <div className="text-[0.6875rem] text-gray-500">Prop: {member.proportion}</div>
                             </div>
                             <div className="text-right">
                                 <div className="text-lg font-black text-gray-900 dark:text-gray-100 leading-none">{portion.toFixed(0)} <span className="text-xs font-normal">g</span></div>
                                 {adjustedCarbs > 0 && (
-                                    <div className="text-xs font-bold text-orange-600 dark:text-orange-400 mt-0.5">{portionCarbs.toFixed(1)} <span className="text-[10px] font-normal">g HC</span></div>
+                                    <div className="text-xs font-bold text-orange-600 dark:text-orange-400 mt-0.5">{portionCarbs.toFixed(1)} <span className="text-[0.6875rem] font-normal">g HC</span></div>
                                 )}
                             </div>
                         </motion.div>

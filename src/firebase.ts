@@ -22,9 +22,11 @@ import {
   orderBy,
   limit,
   writeBatch,
-  runTransaction
+  runTransaction,
+  Timestamp
 } from 'firebase/firestore';
 import type { DocumentData } from 'firebase/firestore';
+import { initializeAppCheck, ReCaptchaV3Provider } from 'firebase/app-check';
 
 // Firebase Configuration
 // Environment variables are prioritized for security and deployment (Vercel/GitHub)
@@ -41,6 +43,18 @@ const firestoreDatabaseId: string = env.VITE_FIREBASE_FIRESTORE_DATABASE_ID || '
 
 // Initialize Firebase
 const app = initializeApp(firebaseConfig);
+
+// App Check: proves to Firebase that requests come from this app and not from a script
+// using the (public) project keys. Active once VITE_FIREBASE_APPCHECK_SITE_KEY is set;
+// it only blocks anything after enforcement is switched on in the Firebase console.
+const appCheckSiteKey: string | undefined = env.VITE_FIREBASE_APPCHECK_SITE_KEY;
+if (appCheckSiteKey && env.VITE_USE_EMULATORS !== 'true') {
+  try {
+    initializeAppCheck(app, { provider: new ReCaptchaV3Provider(appCheckSiteKey), isTokenAutoRefreshEnabled: true });
+  } catch (e) {
+    console.error('App Check could not start', e);
+  }
+}
 export const auth = getAuth(app);
 
 // Offline cache that works with several tabs / PWA windows open at once.
@@ -109,6 +123,7 @@ export {
   orderBy,
   limit,
   writeBatch,
-  runTransaction
+  runTransaction,
+  Timestamp
 };
 export type { User, DocumentData };

@@ -159,9 +159,9 @@ export function StatsTab({ state }: StatsTabProps) {
                     Estadísticas
                 </h2>
                 <div className="text-center py-12 bg-white dark:bg-gray-800 rounded-3xl border border-dashed border-gray-200 dark:border-gray-700">
-                    <Activity className="mx-auto text-gray-300 dark:text-gray-600 mb-3" size={48} />
-                    <p className="text-gray-400 dark:text-gray-500 text-sm">No hay miembros diabéticos configurados.</p>
-                    <p className="text-gray-300 dark:text-gray-600 text-xs mt-1">Marca a alguien como diabético en la pestaña Familia.</p>
+                    <Activity className="mx-auto text-gray-400 dark:text-gray-500 mb-3" size={48} />
+                    <p className="text-gray-500 dark:text-gray-400 text-sm">No hay miembros diabéticos configurados.</p>
+                    <p className="text-gray-400 dark:text-gray-500 text-xs mt-1">Marca a alguien como diabético en la pestaña Familia.</p>
                 </div>
             </div>
         );
@@ -212,7 +212,7 @@ export function StatsTab({ state }: StatsTabProps) {
             {isCustomPeriod && (
                 <div className="flex gap-2">
                     <div className="flex-1">
-                        <label className="text-[9px] font-bold text-gray-400 uppercase block mb-1">Desde</label>
+                        <label className="text-[0.6875rem] font-bold text-gray-500 uppercase block mb-1">Desde</label>
                         <input
                             type="date"
                             value={customStartDate}
@@ -221,7 +221,7 @@ export function StatsTab({ state }: StatsTabProps) {
                         />
                     </div>
                     <div className="flex-1">
-                        <label className="text-[9px] font-bold text-gray-400 uppercase block mb-1">Hasta</label>
+                        <label className="text-[0.6875rem] font-bold text-gray-500 uppercase block mb-1">Hasta</label>
                         <input
                             type="date"
                             value={customEndDate}
@@ -238,7 +238,7 @@ export function StatsTab({ state }: StatsTabProps) {
                     <button
                         key={type}
                         onClick={() => setMealFilter(type)}
-                        className={`flex-1 py-1.5 rounded-lg text-[10px] font-bold transition-colors ${mealFilter === type ? 'bg-orange-500 text-white' : 'bg-gray-50 dark:bg-gray-700 text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-600'}`}
+                        className={`flex-1 py-1.5 rounded-lg text-[0.6875rem] font-bold transition-colors ${mealFilter === type ? 'bg-orange-500 text-white' : 'bg-gray-50 dark:bg-gray-700 text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-600'}`}
                     >
                         {getMealLabel(type)}
                     </button>
@@ -247,28 +247,28 @@ export function StatsTab({ state }: StatsTabProps) {
 
             {mealsCount === 0 ? (
                 <div className="text-center py-8 bg-white dark:bg-gray-800 rounded-3xl border border-dashed border-gray-200 dark:border-gray-700">
-                    <Calendar className="mx-auto text-gray-300 dark:text-gray-600 mb-3" size={36} />
-                    <p className="text-gray-400 dark:text-gray-500 text-sm">Sin datos para este periodo.</p>
-                    <p className="text-gray-300 dark:text-gray-600 text-xs mt-1">Guarda comidas en el historial para ver estadísticas.</p>
+                    <Calendar className="mx-auto text-gray-400 dark:text-gray-500 mb-3" size={36} />
+                    <p className="text-gray-500 dark:text-gray-400 text-sm">Sin datos para este periodo.</p>
+                    <p className="text-gray-400 dark:text-gray-500 text-xs mt-1">Guarda comidas en el historial para ver estadísticas.</p>
                 </div>
             ) : (
                 <>
                     {/* Summary cards */}
                     <div className="grid grid-cols-2 gap-2">
                         <div className="bg-white dark:bg-gray-800 p-3 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700">
-                            <div className="text-[10px] text-gray-400 font-bold uppercase mb-1">HC Medio /comida</div>
+                            <div className="text-[0.6875rem] text-gray-500 font-bold uppercase mb-1">HC Medio /comida</div>
                             <div className="text-2xl font-black text-purple-600 dark:text-purple-400 leading-none">{meanCarbs.toFixed(1)}<span className="text-xs font-normal ml-1">g</span></div>
                         </div>
                         <div className="bg-white dark:bg-gray-800 p-3 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700">
-                            <div className="text-[10px] text-gray-400 font-bold uppercase mb-1">HC Diario Medio</div>
+                            <div className="text-[0.6875rem] text-gray-500 font-bold uppercase mb-1">HC Diario Medio</div>
                             <div className="text-2xl font-black text-blue-600 dark:text-blue-400 leading-none">{dailyAvg.toFixed(1)}<span className="text-xs font-normal ml-1">g</span></div>
                         </div>
                         <div className="bg-white dark:bg-gray-800 p-3 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700">
-                            <div className="text-[10px] text-gray-400 font-bold uppercase mb-1">Comidas</div>
+                            <div className="text-[0.6875rem] text-gray-500 font-bold uppercase mb-1">Comidas</div>
                             <div className="text-2xl font-black text-gray-800 dark:text-gray-200 leading-none">{mealsCount}</div>
                         </div>
                         <div className="bg-white dark:bg-gray-800 p-3 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700">
-                            <div className="text-[10px] text-gray-400 font-bold uppercase mb-1">HC Total</div>
+                            <div className="text-[0.6875rem] text-gray-500 font-bold uppercase mb-1">HC Total</div>
                             <div className="text-2xl font-black text-orange-600 dark:text-orange-400 leading-none">{totalCarbs.toFixed(0)}<span className="text-xs font-normal ml-1">g</span></div>
                         </div>
                     </div>
@@ -277,27 +277,27 @@ export function StatsTab({ state }: StatsTabProps) {
                     <div className="grid grid-cols-2 gap-2">
                         {maxEntry && (
                             <div className="bg-red-50 dark:bg-red-900/20 p-3 rounded-2xl border border-red-100 dark:border-red-800">
-                                <div className="flex items-center gap-1 text-[10px] font-bold text-red-400 uppercase mb-1">
+                                <div className="flex items-center gap-1 text-[0.6875rem] font-bold text-red-400 uppercase mb-1">
                                     <TrendingUp size={12} /> Máximo HC
                                 </div>
                                 <div className="text-lg font-black text-red-600 dark:text-red-400 leading-none">{maxEntry.carbs.toFixed(1)}g</div>
-                                <div className="text-[10px] text-red-400 truncate mt-0.5">{maxEntry.recipeName}</div>
+                                <div className="text-[0.6875rem] text-red-400 truncate mt-0.5">{maxEntry.recipeName}</div>
                             </div>
                         )}
                         {minEntry && (
                             <div className="bg-green-50 dark:bg-green-900/20 p-3 rounded-2xl border border-green-100 dark:border-green-800">
-                                <div className="flex items-center gap-1 text-[10px] font-bold text-green-400 uppercase mb-1">
+                                <div className="flex items-center gap-1 text-[0.6875rem] font-bold text-green-400 uppercase mb-1">
                                     <TrendingDown size={12} /> Mínimo HC
                                 </div>
                                 <div className="text-lg font-black text-green-600 dark:text-green-400 leading-none">{minEntry.carbs.toFixed(1)}g</div>
-                                <div className="text-[10px] text-green-400 truncate mt-0.5">{minEntry.recipeName}</div>
+                                <div className="text-[0.6875rem] text-green-400 truncate mt-0.5">{minEntry.recipeName}</div>
                             </div>
                         )}
                     </div>
 
                     {/* Mean by meal type */}
                     <div className="bg-white dark:bg-gray-800 p-4 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700">
-                        <div className="text-[10px] font-bold text-gray-400 uppercase mb-3">Media HC por Tipo de Comida</div>
+                        <div className="text-[0.6875rem] font-bold text-gray-500 uppercase mb-3">Media HC por Tipo de Comida</div>
                         <div className="space-y-2">
                             {meanByMealType.map(({ type, label, mean, count }) => (
                                 <div key={type} className="flex items-center gap-3">
@@ -309,7 +309,7 @@ export function StatsTab({ state }: StatsTabProps) {
                                         />
                                     </div>
                                     <div className="text-xs font-bold text-gray-600 dark:text-gray-300 min-w-[4ch] text-right">{mean.toFixed(0)}g</div>
-                                    <div className="text-[10px] text-gray-400 min-w-[3ch]">({count})</div>
+                                    <div className="text-[0.6875rem] text-gray-500 min-w-[3ch]">({count})</div>
                                 </div>
                             ))}
                         </div>
@@ -317,7 +317,7 @@ export function StatsTab({ state }: StatsTabProps) {
 
                     {/* Daily bar chart */}
                     <div className="bg-white dark:bg-gray-800 p-4 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700">
-                        <div className="text-[10px] font-bold text-gray-400 uppercase mb-3">HC Diarios — {memberName}</div>
+                        <div className="text-[0.6875rem] font-bold text-gray-500 uppercase mb-3">HC Diarios — {memberName}</div>
                         <div className="flex items-end gap-[2px] h-32">
                             {dailyData.map((day, i) => {
                                 const height = day.carbs > 0 && maxDailyCarbs > 0
@@ -330,11 +330,11 @@ export function StatsTab({ state }: StatsTabProps) {
                                             style={{ height: day.carbs > 0 ? `${Math.max(height, 4)}%` : '2%' }}
                                         />
                                         {actualDays <= 14 && (
-                                            <div className="text-[7px] text-gray-400 -rotate-45 origin-top-left mt-1 whitespace-nowrap">{day.label}</div>
+                                            <div className="text-[0.625rem] text-gray-500 -rotate-45 origin-top-left mt-1 whitespace-nowrap">{day.label}</div>
                                         )}
                                         {/* Tooltip on hover */}
                                         {day.carbs > 0 && (
-                                            <div className="absolute -top-8 bg-gray-900 dark:bg-gray-100 text-white dark:text-gray-900 text-[9px] px-2 py-0.5 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap z-10">
+                                            <div className="absolute -top-8 bg-gray-900 dark:bg-gray-100 text-white dark:text-gray-900 text-[0.6875rem] px-2 py-0.5 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap z-10">
                                                 {day.carbs.toFixed(0)}g — {day.label}
                                             </div>
                                         )}
@@ -350,7 +350,7 @@ export function StatsTab({ state }: StatsTabProps) {
             {batchEntries.length > 0 && (
                 <div className="bg-purple-50 dark:bg-purple-900/10 p-4 rounded-2xl shadow-sm border border-purple-100 dark:border-purple-800/30">
                     <div className="flex justify-between items-center mb-3">
-                        <div className="text-[10px] font-bold text-purple-600 dark:text-purple-400 uppercase">🍰 Elaboraciones en Lote / Postres</div>
+                        <div className="text-[0.6875rem] font-bold text-purple-600 dark:text-purple-400 uppercase">🍰 Elaboraciones en Lote / Postres</div>
                         <div className="text-xs font-bold text-purple-800 dark:text-purple-300">{batchEntries.length} recetas</div>
                     </div>
                     <div className="space-y-2">
@@ -363,11 +363,11 @@ export function StatsTab({ state }: StatsTabProps) {
                                 <div key={entry.id} className="bg-white dark:bg-gray-800 px-3 py-2 rounded-xl flex items-center justify-between border border-purple-50 dark:border-purple-800/20">
                                     <div className="min-w-0 flex-1">
                                         <div className="font-bold text-gray-800 dark:text-gray-200 truncate text-sm">{entry.recipeName}</div>
-                                        <div className="text-[10px] text-gray-400 capitalize">{date}</div>
+                                        <div className="text-[0.6875rem] text-gray-500 capitalize">{date}</div>
                                     </div>
                                     <div className="text-right ml-3 flex flex-col items-end">
                                         <div className="text-xs font-bold text-purple-600 dark:text-purple-400">{concentration}g HC/100g</div>
-                                        <div className="text-[9px] text-gray-500">1 Ración = {portionWeight}g</div>
+                                        <div className="text-[0.6875rem] text-gray-500">1 Ración = {portionWeight}g</div>
                                     </div>
                                 </div>
                             );

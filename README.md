@@ -16,6 +16,13 @@ CarbCalc es una aplicación web progresiva (PWA) diseñada para facilitar el cá
 - **Historial de comidas** — Registra y consulta los repartos anteriores
 - **Estadísticas** — Panel de estadísticas centrado en los miembros diabéticos (media por comida, diaria, gráficos)
 - **Compartir** — Comparte raciones individuales o el reparto completo por WhatsApp o portapapeles
+- **Comida rápida** — Lo que come una sola persona sin cocinar (fruta, pan, un yogur): por gramos o por unidades
+- **Unidades y peso cocido** — «2 plátanos», «1 rebanada»; pasta, arroz y legumbres pesados ya cocidos; multiplicar una receta (×1,5, ×2…)
+- **Código de barras** — Crea ingredientes envasados con los datos de Open Food Facts
+- **Modo paciente** — Calculadora de dosis privada, con la glucosa del sensor (LibreLinkUp o Nightscout) y gráfica con comidas y dosis
+- **Avisos a la familia** — Notificación en el móvil cuando alguien guarda un reparto
+- **Invitaciones caducables** — Código, enlace o QR válidos 24 horas para unirse al grupo
+- **Accesibilidad** — Tamaño de texto ajustable por móvil, zoom, lectores de pantalla, menos movimiento
 - **Sincronización en la nube** — Comparte datos en tiempo real con tu familia mediante Firebase
 - **PWA installable** — Instálala como app nativa en tu móvil
 - **Tutorial interactivo** — Guía paso a paso para nuevos usuarios
@@ -101,9 +108,9 @@ src/
 
 ```bash
 npm run lint        # TypeScript estricto
-npm test            # unitarios: sincronización simulada entre dispositivos, reparto, dosis, Alexa, proxy de login
+npm test            # unitarios: sincronización simulada, reparto, dosis, unidades/cocido, sensor, avisos, Alexa, proxy de login
 npm run test:rules  # reglas de seguridad contra el emulador de Firestore (necesita Java)
-npm run test:e2e    # tres navegadores contra los emuladores: grupos, sincronización, sin conexión, modo paciente
+npm run test:e2e    # tres navegadores contra los emuladores: grupos e invitaciones, sincronización, sin conexión, comida rápida, modo paciente
 ```
 
 ## 🚀 Despliegue
@@ -120,6 +127,30 @@ npm run test:e2e    # tres navegadores contra los emuladores: grupos, sincroniza
 3. **Alexa:** añade en Vercel `NODEJS_HELPERS=0` (y, si quieres, `ALEXA_SKILL_ID`). El endpoint ahora rechaza peticiones
    que no vengan firmadas por Amazon; si la skill dejase de responder, mira los logs de la función y pon
    temporalmente `ALEXA_SIGNATURE_MODE=log`.
+
+### Novedades que necesitan configuración (todas opcionales)
+
+Sin configurar nada, la app funciona igual que antes; cada bloque se activa por separado.
+
+**1. Reglas de Firestore (obligatorio para las invitaciones).** Vuelve a publicar `firestore.rules`: las invitaciones caducables usan la colección `invites`. Los grupos antiguos siguen funcionando: sus miembros se registran solos al abrir la app nueva y disponen de 30 días desde que lo haga el primero; después, solo se entra con invitación.
+
+**2. Avisos a la familia (push).**
+1. `npx web-push generate-vapid-keys` genera una clave pública y una privada.
+2. En Vercel: `VITE_VAPID_PUBLIC_KEY` (pública), `VAPID_PRIVATE_KEY` (privada) y `VAPID_SUBJECT` (`mailto:` con un correo de contacto). Vuelve a desplegar.
+3. Cada persona los activa en su móvil: menú → *Ajustes de este móvil* → *Activar avisos*. En iPhone hay que instalar antes la app en la pantalla de inicio (iOS 16.4 o posterior).
+
+**3. Sensor de glucosa** (Modo paciente → Sensor de glucosa).
+- *Nightscout*: dirección `https://…` del sitio y, si lo exige, un token de solo lectura. El sitio debe permitir CORS (activado por defecto en Nightscout).
+- *LibreLinkUp*: usa `/api/glucose`, que necesita `FIREBASE_SERVICE_ACCOUNT` (el mismo de Alexa). Hace falta una cuenta de LibreLinkUp invitada desde FreeStyle LibreLink. No es una API oficial: si deja de funcionar, prueba a subir `LIBRE_LLU_VERSION` a la versión actual de la app LibreLinkUp.
+
+**4. App Check** (impide usar la base de datos desde fuera de la app).
+1. Firebase Console → App Check → registra la app web con reCAPTCHA v3 y copia la *site key*.
+2. `VITE_FIREBASE_APPCHECK_SITE_KEY=<site key>` en Vercel y despliega.
+3. Deja pasar unos días mirando en App Check → *Métricas* que las peticiones aparecen como verificadas, y entonces pulsa *Aplicar* (enforce) en Firestore y Authentication. No lo apliques antes: los móviles con la versión antigua dejarían de sincronizar. Alexa y los avisos no se ven afectados (usan la cuenta de servicio).
+
+**5. Alexa: frases nuevas.** Añade los intents de `alexa/intents.es-ES.json` en la consola de Alexa (Build → JSON Editor) y pulsa *Build Model*: «añade dos plátanos», «quita el arroz», «¿cuántos hidratos lleva?», «empieza una receta nueva».
+
+**6. Base de datos con nombre.** Si usas `VITE_FIREBASE_FIRESTORE_DATABASE_ID` distinto de `(default)`, define también `FIRESTORE_DATABASE_ID` en Vercel para que Alexa y los avisos usen esa misma base.
 
 ### Inicio de sesión dentro de la app instalada (opcional)
 

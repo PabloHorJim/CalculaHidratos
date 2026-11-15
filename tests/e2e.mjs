@@ -40,7 +40,7 @@ async function device(label) {
     open: async () => { await page.send('Page.navigate', { url: APP }); await sleep(2500); },
     signIn: async (email, name) => { await ev(`__emulatorSignIn('${email}','${name}').then(() => true)`); await sleep(3000); },
     waitFor: async (fn, ms = 20000) => { const end = Date.now() + ms; while (Date.now() < end) { try { if (await fn()) return true; } catch {} await sleep(500); } return false; },
-    sidebar: async item => { await ev(`document.querySelector('header button').click()`); await sleep(500); await ev(`__click('${item}')`); await sleep(700); },
+    sidebar: async item => { await ev(`document.querySelector('header button').click()`); await sleep(500); await ev(`__click('${item}')`); await sleep(1500); },
     cook: async (ingredientSearch, ingredientName, grams, recipeName) => {
       await d.do(`__click('Recetas')`);
       if ((await d.text()).includes('Volver a Recetas')) await d.do(`__click('Volver a Recetas')`);
@@ -84,24 +84,35 @@ const anaDoc = await getDoc(`users/${anaUid}`);
 check('personal document: recipes synced, history flagged as migrated, no history array', anaDoc.recipes?.length === 1 && anaDoc.historyMigrated === true && !('mealHistory' in anaDoc));
 
 // 2. Ana creates a family group
-await A.do(`__click('Familia')`);
+await A.do(`__click('Familia')`, 1500);
+check('family screen opens (loaded on demand)', await A.waitFor(async () => A.ev(`!!document.querySelector('input[placeholder^="Nombre (ej"]')`), 8000), (await A.text()).slice(0, 200));
 await A.do(`__type('input[placeholder^="Nombre (ej"]', 'Familia e2e')`);
 await A.do(`__click('Crear')`, 4000);
-const code = await A.ev(`document.querySelector('.font-mono.tracking-widest')?.textContent || ''`);
-check('group created with an 8 character code', /^[A-Z2-9]{8}$/.test(code), code);
+const code = (await listDocs('groups')).find(g => g.name === 'Familia e2e')?.id || '';
+check('group created with an id that is not shown as a code', /^[A-Z2-9]{20}$/.test(code) && !(await A.text()).includes(code), code);
 let group = await getDoc(`groups/${code}`);
 check('group lists Ana as only member and admin', JSON.stringify(group.memberUids) === JSON.stringify([anaUid]) && group.adminUid === anaUid);
 check('history moved into the group', await A.waitFor(async () => (await listDocs(`groups/${code}/meals`)).length === 1));
 
-// 3. Bob joins with the code and sees everything
+// 3. Ana invites Bob with a temporary code; Bob opens the invitation link and sees everything
+await A.do(`__click('Invitar a alguien')`, 3000);
+const inviteCode = await A.ev(`document.querySelector('.font-mono.tracking-widest')?.textContent || ''`);
+const inviteDoc = await getDoc(`invites/${inviteCode}`);
+check('invitation created: 8 characters, for this group', /^[A-Z2-9]{8}$/.test(inviteCode) && inviteDoc?.groupId === code, inviteCode);
+check('invitation shows a QR code', await A.waitFor(async () => A.ev(`!!document.querySelector('img[alt^="Código QR"]')`), 5000));
 await B.signIn('bob@example.com', 'Bob');
-await B.do(`__click('Familia')`);
+await B.do(`__click('Familia')`, 1500);
 await B.do(`__type('input[placeholder="Código de invitación"]', '${code}')`);
+await B.do(`__click('Unirse')`, 3000);
+check('the group id alone does not let Bob in', !(await B.state()).groupId && (await getDoc(`groups/${code}`)).memberUids.length === 1);
+await B.ev(`location.assign('${APP}?invite=${inviteCode}')`).catch(() => {});
+await sleep(4000);
+check('invitation link fills in the code', (await B.ev(`document.querySelector('input[placeholder="Código de invitación"]')?.value || ''`)) === inviteCode && !(await B.ev('location.search')));
 await B.do(`__click('Unirse')`, 4000);
 check('B sees the shared recipe', await B.waitFor(async () => (await B.state()).recipes?.some(r => r.name === 'Paella e2e')));
 check('B sees the shared meal history', await B.waitFor(async () => (await B.state()).mealHistory?.some(m => m.recipeName === 'Paella e2e')));
 check('B header shows synced', await B.waitFor(async () => /Nube OK/i.test(await B.header() || '')), await B.header());
-await A.do(`__click('Familia')`);
+await A.do(`__click('Familia')`, 1500);
 check('A sees both members', await A.waitFor(async () => { const t = await A.text(); return /Miembros.*Ana.*Bob/i.test(t); }));
 group = await getDoc(`groups/${code}`);
 check('group document lists two members', group.memberUids.length === 2);
@@ -116,7 +127,7 @@ check('B receives the utensil added by A', await B.waitFor(async () => (await B.
 // 5. B goes offline; both keep working; everything merges on reconnect
 await B.offline(true);
 await B.cook('lentejas', 'Lentejas', 300, 'Lentejas offline');
-await B.do(`__click('Familia')`);
+await B.do(`__click('Familia')`, 1500);
 await B.do(`document.querySelector('button.bg-blue-500.rounded-full').click()`, 300);
 await A.cook('pan blanco', 'Pan', 100, 'Bocadillo online');
 await A.sidebar('Mis Utensilios');
@@ -139,12 +150,29 @@ check('after reconnect both devices have all meals, recipes, members and utensil
 meals = await listDocs(`groups/${code}/meals`);
 check('server has the three meals as separate documents', meals.length === 3, meals.map(m => m.recipeName).sort().join(', '));
 
+// 5b. Quick single-person meal: two bananas by pieces, pasta weighed cooked
+await A.do(`__click('Rápida')`, 1500);
+await A.do(`__type('input[aria-label="Buscar alimento"]', 'plátano')`);
+await A.do(`__click('Plátano')`);
+await A.do(`document.querySelector('button[aria-label="Añadir una unidad"]').click()`);
+await A.do(`__type('input[aria-label="Buscar alimento"]', 'pasta')`);
+await A.do(`__click('Pasta')`);
+await A.do(`__type('input[aria-label="Gramos de Pasta"]', '230')`);
+await A.do(`__click('Cocido')`);
+const quickTotal = ((await A.text()).match(/([\d.]+) g HC Guardar/) || [])[1];
+// 240 g plátano × 20 % + 230 g cocida ÷ 2,3 × 75,8 % = 48 + 75,8
+check('quick meal: 2 plátanos + 230 g de pasta cocida = 123.8 g HC', quickTotal === '123.8', quickTotal);
+await A.do(`__click('Guardar')`, 2500);
+const quickMeal = (await listDocs(`groups/${code}/meals`)).find(m => m.kind === 'single');
+check('quick meal saved for one person only', quickMeal?.portions?.length === 1 && Math.abs(quickMeal.totalCarbs - 123.8) < 0.01, JSON.stringify(quickMeal?.portions));
+check('B receives the quick meal', await B.waitFor(async () => (await B.state()).mealHistory?.some(m => m.kind === 'single')));
+
 // 6. Patient mode: private dose log
 await A.sidebar('Modo paciente');
 await A.do(`document.querySelector('input[type=checkbox]').click()`);
 const firstMember = (await A.state()).family[0].id;
 await A.do(`__type('#patient-member', '${firstMember}')`);
-await A.do(`__click('Dosis')`, 800);
+await A.do(`__click('Dosis')`, 1500);
 await A.do(`__click('Otra cantidad')`).catch(() => {});
 await A.do(`__type('input[aria-label="Hidratos de la comida"]', '60')`);
 await A.do(`__type('input[aria-label="Glucemia actual en mg/dL"]', '210')`);
@@ -172,7 +200,7 @@ check('old group now has a member list and the migration flag', JSON.stringify(l
 check('C shows the migrated meals', (await C.state()).mealHistory?.length === 2, names(await C.state()));
 
 // 8. Admin removes Bob
-await A.do(`__click('Familia')`);
+await A.do(`__click('Familia')`, 1500);
 await A.do(`document.querySelector('button[title="Expulsar a Bob"]').click()`, 2500);
 group = await getDoc(`groups/${code}`);
 check('Bob removed and blocked in the group document', group.memberUids.length === 1 && group.blockedUids.includes((await listDocs('users')).find(u => u.email === 'bob@example.com').name.split('/')[1]));

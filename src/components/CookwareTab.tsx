@@ -43,10 +43,10 @@ export function CookwareTab({ state }: CookwareTabProps) {
                                 onChange={(v) => updateCookware(c.id, { mass: v === '' ? 0 : v })}
                                 className="w-20 px-2 py-1 bg-gray-50 dark:bg-gray-700 rounded text-sm text-right outline-none focus:ring-2 focus:ring-purple-200 dark:focus:ring-purple-800 dark:text-gray-100"
                             />
-                            <span className="text-xs text-gray-400">g</span>
+                            <span className="text-xs text-gray-500">g</span>
                             <button
                                 onClick={() => removeCookware(c.id)}
-                                className="text-gray-300 dark:text-gray-600 hover:text-red-500 p-1"
+                                className="text-gray-400 dark:text-gray-500 hover:text-red-500 p-1"
                             >
                                 <Trash2 size={16} />
                             </button>
@@ -56,8 +56,8 @@ export function CookwareTab({ state }: CookwareTabProps) {
             </div>
             {cookware.length === 0 && (
                 <div className="text-center py-12 bg-white dark:bg-gray-800 rounded-3xl border border-dashed border-gray-200 dark:border-gray-700">
-                    <Utensils className="mx-auto text-gray-300 dark:text-gray-600 mb-3" size={48} />
-                    <p className="text-gray-400 dark:text-gray-500 text-sm">No hay utensilios configurados.</p>
+                    <Utensils className="mx-auto text-gray-400 dark:text-gray-500 mb-3" size={48} />
+                    <p className="text-gray-500 dark:text-gray-400 text-sm">No hay utensilios configurados.</p>
                 </div>
             )}
         </div>

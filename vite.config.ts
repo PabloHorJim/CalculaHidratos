@@ -24,7 +24,6 @@ export default defineConfig(({ mode }) => {
           theme_color: '#f97316',
           background_color: '#ffffff',
           display: 'standalone',
-          orientation: 'portrait',
           start_url: '/',
           scope: '/',
           icons: [
@@ -38,6 +37,8 @@ export default defineConfig(({ mode }) => {
           // Never answer API calls or Firebase's sign-in helper pages with the cached app shell
           navigateFallbackDenylist: [/^\/api\//, /^\/__\//],
           cleanupOutdatedCaches: true,
+          // Push notification handlers (public/push-sw.js)
+          importScripts: ['/push-sw.js'],
           runtimeCaching: [
             {
               urlPattern: /^https:\/\/fonts\.googleapis\.com\/.*/i,
@@ -57,6 +58,19 @@ export default defineConfig(({ mode }) => {
         }
       })
     ],
+    build: {
+      rollupOptions: {
+        output: {
+          // Libraries change far less often than the app: separate files stay cached across updates
+          manualChunks(id: string) {
+            if (!id.includes('node_modules')) return undefined;
+            if (id.includes('firebase')) return 'firebase';
+            if (id.includes('react') || id.includes('motion') || id.includes('scheduler')) return 'ui';
+            return undefined;
+          }
+        }
+      }
+    },
     resolve: {
       alias: {
         '@': path.resolve(__dirname, '.'),

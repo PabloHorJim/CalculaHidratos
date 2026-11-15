@@ -46,7 +46,7 @@ export function OnboardingTutorial({ onDismiss }: OnboardingTutorialProps) {
                 className="bg-white dark:bg-gray-800 rounded-3xl shadow-2xl max-w-sm w-full overflow-hidden"
             >
                 <div className="flex justify-end p-3">
-                    <button onClick={onDismiss} className="p-2 text-gray-300 dark:text-gray-600 hover:text-gray-600 dark:hover:text-gray-300 rounded-full hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">
+                    <button onClick={onDismiss} className="p-2 text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300 rounded-full hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">
                         <X size={20} />
                     </button>
                 </div>
@@ -99,7 +99,7 @@ export function OnboardingTutorial({ onDismiss }: OnboardingTutorialProps) {
 
                 {/* Disclaimer at bottom of tutorial */}
                 <div className="px-6 pb-5">
-                    <p className="text-[9px] text-gray-400 dark:text-gray-500 text-center leading-tight">
+                    <p className="text-[0.6875rem] text-gray-500 dark:text-gray-400 text-center leading-tight">
                         ⚠️ Esta app no sustituye el consejo médico profesional. Consulta siempre con tu endocrino.
                     </p>
                 </div>

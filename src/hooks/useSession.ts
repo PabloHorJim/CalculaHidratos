@@ -4,8 +4,8 @@ import { toPlain } from '../sync/merge';
 import {
     auth, db, googleProvider, authDomain,
     signInWithPopup, signInWithRedirect, getRedirectResult, signOut, onAuthStateChanged,
-    doc, setDoc, getDoc, updateDoc, onSnapshot,
-    arrayUnion, arrayRemove, deleteField,
+    doc, setDoc, getDoc, updateDoc, deleteDoc, onSnapshot,
+    arrayUnion, arrayRemove, deleteField, Timestamp,
     OperationType, handleFirestoreError, User
 } from '../firebase';
 
@@ -32,18 +32,55 @@ const isStandalone = () =>
 /** Redirect sign-in only works when the sign-in helper pages are served from the app's own host. */
 const canUseRedirect = () => !!authDomain && authDomain === window.location.host;
 
-function newInviteCode(): string {
+function randomCode(length: number): string {
     const alphabet = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'; // no 0/O/1/I: easier to dictate
-    const random = crypto.getRandomValues(new Uint8Array(8));
+    const random = crypto.getRandomValues(new Uint8Array(length));
     return Array.from(random, n => alphabet[n % alphabet.length]).join('');
+}
+
+const INVITE_KEY = 'carb_calc_invite';
+const PENDING_INVITE_KEY = 'carb_calc_pending_invite';
+/** How long an invitation works. */
+export const INVITE_HOURS = 24;
+/** Groups made by old app versions accept their old members for this long after the first one updates. */
+const LEGACY_JOIN_DAYS = 30;
+
+export interface Invite { groupId: string; code: string; expiresAt: number }
+
+export const normalizeInviteCode = (text: string) => text.trim().toUpperCase().replace(/[^A-Z0-9]/g, '');
+
+function loadInvite(): Invite | null {
+    try {
+        const invite = JSON.parse(localStorage.getItem(INVITE_KEY) || 'null') as Invite | null;
+        return invite && invite.expiresAt > Date.now() ? invite : null;
+    } catch {
+        return null;
+    }
+}
+
+/** An invitation link (…/?invite=CODE) opened on this device: remembered until it is used. */
+function takeInviteFromUrl(): string {
+    try {
+        const params = new URLSearchParams(window.location.search);
+        const code = normalizeInviteCode(params.get('invite') ?? '');
+        if (code) {
+            localStorage.setItem(PENDING_INVITE_KEY, code);
+            params.delete('invite');
+            const rest = params.toString();
+            window.history.replaceState(null, '', window.location.pathname + (rest ? `?${rest}` : ''));
+        }
+        return localStorage.getItem(PENDING_INVITE_KEY) ?? '';
+    } catch {
+        return '';
+    }
 }
 
 /**
  * Who is signed in and which family group they belong to.
  *
- * A group document lists its members (`memberUids`, `members`). Knowing the invite code
+ * A group document lists its members (`memberUids`, `members`). A temporary invitation
  * lets a user add themself to that list; only listed members can read the group's data,
- * and the admin can remove (and block) a member.
+ * and the admin can remove a member.
  */
 export function useSession({ isLoaded, hasConsent, acceptConsent, setToast, getGroupSeed, onSignedOut }: Options) {
     const [user, setUser] = useState<User | null>(null);
@@ -63,6 +100,10 @@ export function useSession({ isLoaded, hasConsent, acceptConsent, setToast, getG
     const [familyGroup, setFamilyGroup] = useState<FamilyGroup | null>(null);
     const [groupMembers, setGroupMembers] = useState<GroupMember[]>([]);
     const membershipRetries = useRef(0);
+    // True while joinGroup is running, so the automatic registration below does not race with it
+    const joining = useRef(false);
+    const [invite, setInvite] = useState<Invite | null>(loadInvite);
+    const [pendingInvite, setPendingInvite] = useState<string>(takeInviteFromUrl);
 
     useEffect(() => {
         const unsubscribe = onAuthStateChanged(auth, currentUser => {
@@ -87,6 +128,31 @@ export function useSession({ isLoaded, hasConsent, acceptConsent, setToast, getG
     };
 
     const memberInfo = (u: User) => ({ displayName: u.displayName ?? '', photoURL: u.photoURL ?? null });
+
+    /**
+     * Puts the user on the member list of a group their profile already points to.
+     * In a group made by an old app version the first one to do it also starts the
+     * period during which the other old members can still get in this way.
+     */
+    const registerInGroup = async (u: User, id: string) => {
+        const ref = doc(db, 'groups', id);
+        const entry = { memberUids: arrayUnion(u.uid), [`members.${u.uid}`]: memberInfo(u) };
+        let legacy = false;
+        try {
+            const snapshot = await getDoc(ref);
+            legacy = snapshot.exists() && !Array.isArray(snapshot.data().memberUids);
+        } catch { /* not readable yet: a group that already has a member list */ }
+        if (legacy) {
+            try {
+                await updateDoc(ref, { ...entry, legacyJoinUntil: Timestamp.fromMillis(Date.now() + LEGACY_JOIN_DAYS * 86400000) });
+                return;
+            } catch (err) {
+                // Someone else registered first in the meantime: register the normal way
+                if (errorCode(err) !== 'permission-denied') throw err;
+            }
+        }
+        await updateDoc(ref, entry);
+    };
 
     // User profile: make sure it exists and follow which group the user belongs to
     useEffect(() => {
@@ -118,13 +184,10 @@ export function useSession({ isLoaded, hasConsent, acceptConsent, setToast, getG
     const wantedTag = user && groupId ? `${user.uid}:${groupId}` : null;
     useEffect(() => {
         if (!cloudEnabled || !isProfileReady || !user || !groupId || !wantedTag) return;
-        if (memberTag === wantedTag) return;
+        if (memberTag === wantedTag || joining.current) return;
 
         let cancelled = false;
-        updateDoc(doc(db, 'groups', groupId), {
-            memberUids: arrayUnion(user.uid),
-            [`members.${user.uid}`]: memberInfo(user)
-        }).then(() => {
+        registerInGroup(user, groupId).then(() => {
             if (!cancelled) rememberMembership(wantedTag);
         }).catch(err => {
             if (cancelled) return;
@@ -243,8 +306,9 @@ export function useSession({ isLoaded, hasConsent, acceptConsent, setToast, getG
     const createGroup = async (name: string): Promise<boolean> => {
         const groupName = name.trim();
         if (!user || !groupName) return false;
-        const inviteCode = newInviteCode();
-        const newGroup: FamilyGroup = { id: inviteCode, name: groupName, adminUid: user.uid, inviteCode };
+        // The id is not an invitation any more: people join with temporary codes (createInvite)
+        const inviteCode = randomCode(20);
+        const newGroup: FamilyGroup = { id: inviteCode, name: groupName, adminUid: user.uid, inviteCode: '' };
 
         try {
             await setDoc(doc(db, 'groups', inviteCode), toPlain({
@@ -268,48 +332,114 @@ export function useSession({ isLoaded, hasConsent, acceptConsent, setToast, getG
         }
     };
 
+    const forgetPendingInvite = () => {
+        try { localStorage.removeItem(PENDING_INVITE_KEY); } catch { /* ignore */ }
+        setPendingInvite('');
+    };
+
+    /** Creates a code that lets someone join this group for the next 24 hours. */
+    const createInvite = async (): Promise<Invite | null> => {
+        if (!user || !groupId) return null;
+        const created: Invite = { groupId, code: randomCode(8), expiresAt: Date.now() + INVITE_HOURS * 3600 * 1000 };
+        try {
+            await setDoc(doc(db, 'invites', created.code), {
+                groupId, createdBy: user.uid, expiresAt: Timestamp.fromMillis(created.expiresAt)
+            });
+            // One invitation at a time per device: the previous one stops working
+            if (invite && invite.groupId === groupId) deleteDoc(doc(db, 'invites', invite.code)).catch(() => undefined);
+            localStorage.setItem(INVITE_KEY, JSON.stringify(created));
+            setInvite(created);
+            return created;
+        } catch (err) {
+            handleFirestoreError(err, OperationType.CREATE, 'invites');
+            setToast('No se pudo crear la invitación. Comprueba tu conexión.');
+            return null;
+        }
+    };
+
+    const revokeInvite = async () => {
+        if (!invite) return;
+        try {
+            await deleteDoc(doc(db, 'invites', invite.code));
+        } catch (err) {
+            handleFirestoreError(err, OperationType.DELETE, 'invites');
+            setToast('No se pudo anular la invitación');
+            return;
+        }
+        localStorage.removeItem(INVITE_KEY);
+        setInvite(null);
+        setToast('Invitación anulada');
+    };
+
     const joinGroup = async (inviteCodeInput: string): Promise<boolean> => {
         if (!user) return false;
-        const inviteCode = inviteCodeInput.trim().toUpperCase();
-        if (!inviteCode || inviteCode.includes('/')) return false;
-        const groupRef = doc(db, 'groups', inviteCode);
-
-        let joined = false;
+        const code = normalizeInviteCode(inviteCodeInput);
+        if (!code) return false;
+        const profileRef = doc(db, 'users', user.uid);
+        joining.current = true;
         try {
-            // Knowing the code is what allows adding yourself to the member list
-            await updateDoc(groupRef, {
-                memberUids: arrayUnion(user.uid),
-                [`members.${user.uid}`]: memberInfo(user)
-            });
-            joined = true;
-        } catch (err) {
-            const code = errorCode(err);
-            if (code !== 'permission-denied' && code !== 'not-found') {
-                handleFirestoreError(err, OperationType.UPDATE, `groups/${inviteCode}`);
-                setToast('No se pudo unir al grupo. Comprueba tu conexión.');
-                return false;
-            }
-            // Groups created by older versions of the app (before member lists existed)
-            // accept whoever points their profile at them; registration then follows.
-            try {
-                if (!(await getDoc(groupRef)).exists()) throw err;
-            } catch {
-                setToast('Código de invitación inválido o sin acceso');
-                return false;
-            }
+            return await joinWithCode(user, code, inviteCodeInput, profileRef);
+        } finally {
+            joining.current = false;
         }
+    };
 
+    const joinWithCode = async (user: User, code: string, inviteCodeInput: string, profileRef: ReturnType<typeof doc>): Promise<boolean> => {
+        let targetGroup: string | null = null;
         try {
-            await setDoc(doc(db, 'users', user.uid), { uid: user.uid, groupId: inviteCode }, { merge: true });
-            if (joined) rememberMembership(`${user.uid}:${inviteCode}`);
-            setGroupId(inviteCode);
-            setToast('Te has unido al grupo');
-            return true;
+            const snapshot = await getDoc(doc(db, 'invites', code));
+            if (snapshot.exists()) {
+                const data = snapshot.data() as { groupId?: string; expiresAt?: { toMillis(): number } };
+                if (!data.groupId || !data.expiresAt || data.expiresAt.toMillis() <= Date.now()) {
+                    setToast('Esta invitación ha caducado. Pide una nueva.');
+                    forgetPendingInvite();
+                    return false;
+                }
+                targetGroup = data.groupId;
+            }
         } catch (err) {
-            handleFirestoreError(err, OperationType.WRITE, `users/${user.uid}`);
-            setToast('No se pudo unir al grupo. Comprueba tu conexión.');
+            handleFirestoreError(err, OperationType.GET, 'invites');
+            setToast('No se pudo comprobar la invitación. Comprueba tu conexión.');
             return false;
         }
+
+        try {
+            if (targetGroup) {
+                // The invitation named in my own member entry is what the server checks
+                await updateDoc(doc(db, 'groups', targetGroup), {
+                    memberUids: arrayUnion(user.uid),
+                    [`members.${user.uid}`]: { ...memberInfo(user), invite: code }
+                });
+                await setDoc(profileRef, { uid: user.uid, groupId: targetGroup }, { merge: true });
+            } else {
+                // Not an invitation: maybe the permanent code of a group made by an old version,
+                // which accepts whoever's profile points at it (for a limited time)
+                targetGroup = inviteCodeInput.trim().toUpperCase();
+                if (targetGroup.includes('/')) throw Object.assign(new Error('invalid'), { code: 'not-found' });
+                await setDoc(profileRef, { uid: user.uid, groupId: targetGroup }, { merge: true });
+                try {
+                    await registerInGroup(user, targetGroup);
+                } catch (err) {
+                    await setDoc(profileRef, { uid: user.uid, groupId: null }, { merge: true }).catch(() => undefined);
+                    throw err;
+                }
+            }
+        } catch (err) {
+            const failure = errorCode(err);
+            if (failure === 'permission-denied' || failure === 'not-found') {
+                setToast('Código de invitación inválido o caducado');
+            } else {
+                handleFirestoreError(err, OperationType.UPDATE, `groups/${targetGroup}`);
+                setToast('No se pudo unir al grupo. Comprueba tu conexión.');
+            }
+            return false;
+        }
+
+        rememberMembership(`${user.uid}:${targetGroup}`);
+        setGroupId(targetGroup);
+        forgetPendingInvite();
+        setToast('Te has unido al grupo');
+        return true;
     };
 
     const leaveGroup = async () => {
@@ -333,10 +463,10 @@ export function useSession({ isLoaded, hasConsent, acceptConsent, setToast, getG
         }
     };
 
-    /** Admin only: takes a member out of the group and prevents them from rejoining. */
+    /** Admin only: takes a member out of the group. They need a new invitation to come back. */
     const removeGroupMember = async (member: GroupMember) => {
         if (!user || !groupId || !familyGroup || familyGroup.adminUid !== user.uid || member.uid === user.uid) return;
-        if (!window.confirm(`¿Expulsar a ${member.displayName} del grupo? No podrá volver a unirse con el código.`)) return;
+        if (!window.confirm(`¿Expulsar a ${member.displayName} del grupo? Para volver necesitará una invitación nueva.`)) return;
         try {
             await updateDoc(doc(db, 'groups', groupId), {
                 memberUids: arrayRemove(member.uid),
@@ -355,6 +485,8 @@ export function useSession({ isLoaded, hasConsent, acceptConsent, setToast, getG
         groupId, familyGroup, groupMembers,
         syncDocPath, handleRemoteDocument, handleSyncError,
         handleLogin, handleLogout,
-        createGroup, joinGroup, leaveGroup, removeGroupMember
+        createGroup, joinGroup, leaveGroup, removeGroupMember,
+        invite: invite && invite.groupId === groupId && invite.expiresAt > Date.now() ? invite : null,
+        createInvite, revokeInvite, pendingInvite, forgetPendingInvite
     };
 }

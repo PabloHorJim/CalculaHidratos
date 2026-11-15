@@ -34,3 +34,40 @@ html {
 .dark input[type="date"]::-webkit-calendar-picker-indicator {
     filter: invert(1);
 }
+
+/* ---- Accessibility ---- */
+
+/* Keyboard and switch users always see where they are */
+:focus-visible {
+    outline: 2px solid #f97316;
+    outline-offset: 2px;
+}
+
+/* No double-tap delay on controls; taps never select text by accident */
+button, a, label, summary, input[type="checkbox"], input[type="range"] {
+    touch-action: manipulation;
+}
+
+/* Typing in a field must not make iOS zoom the page: fields are never below 16px */
+@media (pointer: coarse) {
+    input, select, textarea {
+        font-size: max(1rem, 16px);
+    }
+}
+
+/* People who ask their phone for less motion get none */
+@media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
+        scroll-behavior: auto !important;
+    }
+}
+
+/* Phones set to high contrast: stronger borders and no faint text */
+@media (prefers-contrast: more) {
+    .border-gray-100, .border-gray-200 { border-color: #6b7280 !important; }
+    .text-gray-500, .text-gray-600 { color: #1f2937 !important; }
+    .dark .text-gray-400, .dark .text-gray-300 { color: #f3f4f6 !important; }
+}

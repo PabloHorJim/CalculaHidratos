@@ -6,8 +6,21 @@ set -euo pipefail
 cd "$(dirname "$0")/.."
 WORK="$(mktemp -d)"
 CHROME="${CHROME:-$(command -v google-chrome || command -v chromium || command -v chromium-browser)}"
-cleanup() { kill $(jobs -p) 2>/dev/null || true; rm -rf "$WORK"; }
+PORTS="4174 8085 9099 9334"
+# The emulators and the browser start child processes of their own: stop whatever is
+# still listening on the test ports, not only the commands launched here.
+cleanup() {
+  kill $(jobs -p) 2>/dev/null || true
+  sleep 1
+  for port in $PORTS; do kill $(lsof -ti "tcp:$port" -sTCP:LISTEN 2>/dev/null) 2>/dev/null || true; done
+  rm -rf "$WORK" 2>/dev/null || true
+}
 trap cleanup EXIT
+for port in $PORTS; do
+  if lsof -ti "tcp:$port" -sTCP:LISTEN > /dev/null 2>&1; then
+    echo "Port $port is in use (an earlier test run or 'npm run emulators'?). Stop it and try again."; exit 1
+  fi
+done
 
 VITE_USE_EMULATORS=true VITE_FIREBASE_PROJECT_ID=demo-carbcalc VITE_FIREBASE_API_KEY=fake-key \
 VITE_FIREBASE_AUTH_DOMAIN=localhost VITE_FIREBASE_FIRESTORE_DATABASE_ID="(default)" \

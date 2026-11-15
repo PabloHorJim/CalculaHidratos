@@ -1,0 +1,55 @@
+{
+  "_comment": "Intents nuevos de la skill. En la consola de Alexa (Build > Interaction Model > JSON Editor) añade estos objetos a la lista interactionModel.languageModel.intents, guarda y pulsa Build Model. AnadirRegistroIntent ya existe y no cambia.",
+  "intents": [
+    {
+      "name": "AnadirUnidadesIntent",
+      "slots": [
+        { "name": "unidades", "type": "AMAZON.NUMBER" },
+        { "name": "alimento", "type": "AMAZON.Food" }
+      ],
+      "samples": [
+        "añade {unidades} {alimento}",
+        "añade {unidades} unidades de {alimento}",
+        "pon {unidades} {alimento}",
+        "apunta {unidades} {alimento}",
+        "añade {unidades} piezas de {alimento}"
+      ]
+    },
+    {
+      "name": "QuitarIngredienteIntent",
+      "slots": [{ "name": "alimento", "type": "AMAZON.Food" }],
+      "samples": [
+        "quita {alimento}",
+        "quita el {alimento}",
+        "quita la {alimento}",
+        "elimina {alimento}",
+        "borra {alimento}",
+        "borra el {alimento} de la receta"
+      ]
+    },
+    {
+      "name": "ConsultarHidratosIntent",
+      "slots": [],
+      "samples": [
+        "cuántos hidratos lleva",
+        "cuántos hidratos lleva la receta",
+        "cuántos hidratos llevamos",
+        "cuántos carbohidratos tiene",
+        "dime los hidratos",
+        "qué lleva la receta",
+        "cuánto le toca"
+      ]
+    },
+    {
+      "name": "NuevaRecetaIntent",
+      "slots": [],
+      "samples": [
+        "empieza una receta nueva",
+        "nueva receta",
+        "empezar de cero",
+        "borra la receta",
+        "vacía la receta"
+      ]
+    }
+  ]
+}

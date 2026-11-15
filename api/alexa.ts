@@ -1,29 +1,13 @@
 import * as Alexa from 'ask-sdk-core';
-import admin from 'firebase-admin';
-import axios from 'axios';
 import stringSimilarity from 'string-similarity';
 import { INITIAL_INGREDIENTS } from './_lib/ingredients.js';
+import { IngredientLike, withExtras, ingredientCarbs, recipeMacros } from './_lib/nutrition.js';
 import { verifyAlexaRequest } from './_lib/alexaVerify.js';
 import { ApiRequest, readBody, sendJson } from './_lib/http.js';
+import { admin, firestore } from './_lib/admin.js';
 import type { ServerResponse } from 'node:http';
 
-const serviceAccountStr = process.env.FIREBASE_SERVICE_ACCOUNT || process.env.VITE_FIREBASE_SERVICE_ACCOUNT;
-if (!admin.apps.length) {
-    if (serviceAccountStr) {
-        try {
-            admin.initializeApp({
-                credential: admin.credential.cert(JSON.parse(serviceAccountStr))
-            });
-        } catch (e) {
-            console.error("Error parsing FIREBASE_SERVICE_ACCOUNT", e);
-            admin.initializeApp();
-        }
-    } else {
-        console.warn("FIREBASE_SERVICE_ACCOUNT not set. Ensure default credentials are valid.");
-        admin.initializeApp();
-    }
-}
-const db = admin.firestore();
+const db = firestore();
 
 const LaunchRequestHandler = {
     canHandle(handlerInput: Alexa.HandlerInput) {
@@ -44,66 +28,9 @@ const AnadirRegistroIntentHandler = {
             && Alexa.getIntentName(handlerInput.requestEnvelope) === 'AnadirRegistroIntent';
     },
     async handle(handlerInput: Alexa.HandlerInput) {
-        const accessToken = handlerInput.requestEnvelope.context.System.user.accessToken;
-
-        if (!accessToken) {
-            return handlerInput.responseBuilder
-                .speak('Por favor, ingresa a la aplicación de Alexa y vincula tu cuenta de Google para usar esta skill.')
-                .withLinkAccountCard()
-                .getResponse();
-        }
-
-        let userInfo;
-        try {
-            const res = await axios.get('https://www.googleapis.com/oauth2/v3/userinfo', {
-                headers: { Authorization: `Bearer ${accessToken}` }
-            });
-            userInfo = res.data;
-        } catch (error) {
-            console.error('Code token expiration or invalidity', error);
-            return handlerInput.responseBuilder
-                .speak('El token de tu cuenta ha expirado. Por favor, vincula tu cuenta de nuevo.')
-                .withLinkAccountCard()
-                .getResponse();
-        }
-
-        if (!userInfo || !userInfo.email) {
-            return handlerInput.responseBuilder
-                .speak('No pude obtener tu correo electrónico. Revisa los permisos proporcionados.')
-                .getResponse();
-        }
-
-        let userRecord;
-        try {
-            userRecord = await admin.auth().getUserByEmail(userInfo.email);
-        } catch (error) {
-            return handlerInput.responseBuilder
-                .speak(`No tienes una cuenta de Calcula Hidratos con el correo ${userInfo.email}. Por favor ingresa a la aplicación primero.`)
-                .getResponse();
-        }
-
-        const userDoc = await db.collection('users').doc(userRecord.uid).get();
-        if (!userDoc.exists) {
-            return handlerInput.responseBuilder
-                .speak(`Inicia sesión en la aplicación web para inicializar tu cuenta primero.`)
-                .getResponse();
-        }
-
-        let docRef: admin.firestore.DocumentReference;
-        if (userDoc.data()?.groupId) {
-            docRef = db.collection('groups').doc(userDoc.data()?.groupId);
-        } else {
-            docRef = db.collection('users').doc(userRecord.uid);
-        }
-
-        const groupDataDoc = await docRef.get();
-        if (!groupDataDoc.exists) {
-            return handlerInput.responseBuilder
-                .speak('No encontré tus datos de cocina en el servidor.')
-                .getResponse();
-        }
-        const groupData = groupDataDoc.data() || {};
-        const customIngredients = Array.isArray(groupData.customIngredients) ? groupData.customIngredients : [];
+        const kitchen = await resolveKitchen(handlerInput);
+        if ('response' in kitchen) return kitchen.response;
+        const { docRef, options } = kitchen;
 
         const intentRequest = handlerInput.requestEnvelope.request as any;
         const alimento = intentRequest.intent.slots?.alimento?.value;
@@ -124,18 +51,14 @@ const AnadirRegistroIntentHandler = {
                 .getResponse();
         }
 
-        const options = [...INITIAL_INGREDIENTS, ...customIngredients];
-        const match = stringSimilarity.findBestMatch(alimento.toLowerCase(), options.map(o => o.name.toLowerCase()));
-
-        if (match.bestMatch.rating < 0.3) {
+        const matchedIngredient = findIngredient(options, alimento);
+        if (!matchedIngredient) {
             return handlerInput.responseBuilder
                 .speak(`No encontré algo parecido a ${alimento} en tu lista de ingredientes. Prueba con otro nombre.`)
                 .reprompt('Dime el ingrediente y la cantidad en gramos.')
                 .getResponse();
         }
 
-        const matchIndex = match.bestMatchIndex;
-        const matchedIngredient = options[matchIndex];
 
         // Each ingredient appears once in a recipe: saying it again adds to its weight.
         // Done in a transaction so two quick requests (or the app) cannot overwrite each other.
@@ -172,16 +95,200 @@ const AnadirRegistroIntentHandler = {
     }
 };
 
+
+type Kitchen = {
+    docRef: FirebaseFirestore.DocumentReference;
+    data: FirebaseFirestore.DocumentData;
+    /** Built-in and family ingredients, with their piece weights and cooking factors. */
+    options: IngredientLike[];
+};
+
+const isIntent = (handlerInput: Alexa.HandlerInput, name: string) =>
+    Alexa.getRequestType(handlerInput.requestEnvelope) === 'IntentRequest'
+    && Alexa.getIntentName(handlerInput.requestEnvelope) === name;
+
+const slot = (handlerInput: Alexa.HandlerInput, name: string): string | undefined =>
+    (handlerInput.requestEnvelope.request as any).intent?.slots?.[name]?.value;
+
+/** Spanish number for speech: "12,5", "40". */
+const say = (n: number) => String(Math.round(n * 10) / 10).replace('.', ',');
+
+function findIngredient(options: IngredientLike[], spoken: string): IngredientLike | null {
+    if (options.length === 0) return null;
+    const match = stringSimilarity.findBestMatch(spoken.toLowerCase(), options.map(o => o.name.toLowerCase()));
+    return match.bestMatch.rating < 0.3 ? null : options[match.bestMatchIndex];
+}
+
+/** Finds the shared document (family group or personal) of the linked Google account. */
+async function resolveKitchen(handlerInput: Alexa.HandlerInput): Promise<Kitchen | { response: ReturnType<Alexa.ResponseBuilder['getResponse']> }> {
+    const fail = (text: string, linkCard = false) => {
+        const builder = handlerInput.responseBuilder.speak(text);
+        if (linkCard) builder.withLinkAccountCard();
+        return { response: builder.getResponse() };
+    };
+    const accessToken = handlerInput.requestEnvelope.context.System.user.accessToken;
+    if (!accessToken) return fail('Por favor, ingresa a la aplicación de Alexa y vincula tu cuenta de Google para usar esta skill.', true);
+
+    let email: string | undefined;
+    try {
+        const res = await fetch('https://www.googleapis.com/oauth2/v3/userinfo', { headers: { Authorization: `Bearer ${accessToken}` } });
+        if (!res.ok) throw new Error(`userinfo ${res.status}`);
+        email = (await res.json() as { email?: string }).email;
+    } catch (error) {
+        console.error('Account token expired or invalid', error);
+        return fail('El token de tu cuenta ha expirado. Por favor, vincula tu cuenta de nuevo.', true);
+    }
+    if (!email) return fail('No pude obtener tu correo electrónico. Revisa los permisos proporcionados.');
+
+    let uid: string;
+    try {
+        uid = (await admin.auth().getUserByEmail(email)).uid;
+    } catch {
+        return fail('No tienes una cuenta de Calcula Hidratos con ese correo. Por favor ingresa a la aplicación primero.');
+    }
+
+    const userDoc = await db.collection('users').doc(uid).get();
+    if (!userDoc.exists) return fail('Inicia sesión en la aplicación web para inicializar tu cuenta primero.');
+
+    const groupId = userDoc.data()?.groupId;
+    const docRef = groupId ? db.collection('groups').doc(groupId) : db.collection('users').doc(uid);
+    const snapshot = await docRef.get();
+    if (!snapshot.exists) return fail('No encontré tus datos de cocina en el servidor.');
+    const data = snapshot.data() || {};
+    const custom: IngredientLike[] = Array.isArray(data.customIngredients) ? data.customIngredients : [];
+    const extras = data.ingredientExtras && typeof data.ingredientExtras === 'object' ? data.ingredientExtras : {};
+    const options = [...(INITIAL_INGREDIENTS as IngredientLike[]), ...custom].map(i => withExtras(i, extras));
+    return { docRef, data, options };
+}
+
+type RecipeItem = { ingredientId: string; weight: number; cooked?: boolean };
+
+/** Changes the recipe being cooked inside a transaction, so the app and Alexa never overwrite each other. */
+async function editCurrentRecipe<T>(docRef: FirebaseFirestore.DocumentReference, edit: (items: RecipeItem[]) => { items: RecipeItem[]; result: T }): Promise<T> {
+    return db.runTransaction(async tx => {
+        const fresh = (await tx.get(docRef)).data() || {};
+        const cooking = !!fresh.cookingMode;
+        const current: RecipeItem[] = cooking && Array.isArray(fresh.currentRecipeIngredients) ? [...fresh.currentRecipeIngredients] : [];
+        const { items, result } = edit(current);
+        tx.update(docRef, {
+            cookingMode: true,
+            currentRecipeName: cooking ? (fresh.currentRecipeName || '') : 'Receta de Alexa',
+            currentRecipeIngredients: items,
+            updatedAt: new Date().toISOString()
+        });
+        return result;
+    });
+}
+
+/** "Añade dos plátanos": pieces instead of grams, for ingredients with a known piece weight. */
+const AnadirUnidadesIntentHandler = {
+    canHandle: (handlerInput: Alexa.HandlerInput) => isIntent(handlerInput, 'AnadirUnidadesIntent'),
+    async handle(handlerInput: Alexa.HandlerInput) {
+        const kitchen = await resolveKitchen(handlerInput);
+        if ('response' in kitchen) return kitchen.response;
+        const alimento = slot(handlerInput, 'alimento');
+        const unidades = parseFloat(slot(handlerInput, 'unidades') ?? '');
+        const again = 'Dime el ingrediente y la cantidad.';
+        if (!alimento || !Number.isFinite(unidades) || unidades <= 0 || unidades > 100) {
+            return handlerInput.responseBuilder.speak('No entendí el alimento o cuántas unidades. Por favor repítelo.').reprompt(again).getResponse();
+        }
+        const ingredient = findIngredient(kitchen.options, alimento);
+        if (!ingredient) {
+            return handlerInput.responseBuilder.speak(`No encontré algo parecido a ${alimento}. Prueba con otro nombre.`).reprompt(again).getResponse();
+        }
+        if (!ingredient.unitWeight) {
+            return handlerInput.responseBuilder
+                .speak(`No sé cuánto pesa una unidad de ${ingredient.name}. Dime la cantidad en gramos, o pon el peso por unidad en la aplicación.`)
+                .reprompt(again).getResponse();
+        }
+        const grams = Math.round(unidades * ingredient.unitWeight);
+        const total = await editCurrentRecipe(kitchen.docRef, items => {
+            const index = items.findIndex(ri => ri.ingredientId === ingredient.id);
+            const weight = (index >= 0 ? Number(items[index].weight) || 0 : 0) + grams;
+            if (index >= 0) items[index] = { ...items[index], weight };
+            else items.push({ ingredientId: ingredient.id, weight });
+            return { items, result: weight };
+        });
+        const carbs = ingredientCarbs(ingredient, { weight: grams });
+        return handlerInput.responseBuilder
+            .speak(`He añadido ${say(unidades)} de ${ingredient.name}, unos ${grams} gramos y ${say(carbs)} de hidratos${total !== grams ? `, en total ${total} gramos` : ''}. ¿Algo más?`)
+            .reprompt('Dime el siguiente ingrediente, o di basta para terminar.')
+            .getResponse();
+    }
+};
+
+/** "Quita el arroz" */
+const QuitarIngredienteIntentHandler = {
+    canHandle: (handlerInput: Alexa.HandlerInput) => isIntent(handlerInput, 'QuitarIngredienteIntent'),
+    async handle(handlerInput: Alexa.HandlerInput) {
+        const kitchen = await resolveKitchen(handlerInput);
+        if ('response' in kitchen) return kitchen.response;
+        const alimento = slot(handlerInput, 'alimento');
+        const inRecipe: RecipeItem[] = kitchen.data.cookingMode && Array.isArray(kitchen.data.currentRecipeIngredients) ? kitchen.data.currentRecipeIngredients : [];
+        // Only look among what is in the recipe: "quita el pan" must not match another bread
+        const candidates = kitchen.options.filter(o => inRecipe.some(ri => ri.ingredientId === o.id));
+        const ingredient = alimento ? findIngredient(candidates, alimento) : null;
+        if (!ingredient) {
+            return handlerInput.responseBuilder.speak(`No encontré ${alimento ?? 'ese ingrediente'} en la receta actual.`).reprompt('¿Qué más necesitas?').getResponse();
+        }
+        await editCurrentRecipe(kitchen.docRef, items => ({ items: items.filter(ri => ri.ingredientId !== ingredient.id), result: null }));
+        return handlerInput.responseBuilder.speak(`He quitado ${ingredient.name} de la receta. ¿Algo más?`).reprompt('¿Qué más necesitas?').getResponse();
+    }
+};
+
+/** "¿Cuántos hidratos lleva?" */
+const ConsultarHidratosIntentHandler = {
+    canHandle: (handlerInput: Alexa.HandlerInput) => isIntent(handlerInput, 'ConsultarHidratosIntent'),
+    async handle(handlerInput: Alexa.HandlerInput) {
+        const kitchen = await resolveKitchen(handlerInput);
+        if ('response' in kitchen) return kitchen.response;
+        const { data, options } = kitchen;
+        const items: RecipeItem[] = data.cookingMode && Array.isArray(data.currentRecipeIngredients) ? data.currentRecipeIngredients : [];
+        if (items.length === 0) {
+            return handlerInput.responseBuilder.speak('Ahora mismo no hay ninguna receta en preparación. Dime un ingrediente y su cantidad para empezar.')
+                .reprompt('Puedes decir: añade 50 gramos de pan.').getResponse();
+        }
+        const byId = new Map(options.map(o => [o.id, o]));
+        const totals = recipeMacros(items, id => byId.get(id));
+        const unknown = items.filter(ri => !byId.has(ri.ingredientId)).length;
+        let speech = `La receta ${data.currentRecipeName ? data.currentRecipeName + ' ' : ''}lleva ${items.length} ingrediente${items.length === 1 ? '' : 's'} y ${say(totals.carbs)} gramos de hidratos en total.`;
+        if (unknown > 0) speech += ` Ojo: ${unknown} ingrediente${unknown === 1 ? ' ya no existe y no se cuenta' : 's ya no existen y no se cuentan'}.`;
+
+        // Share of each diabetic member if the whole dish is shared out with the usual proportions
+        const family: { name?: string; proportion?: number; isDiabetic?: boolean; isActive?: boolean }[] = Array.isArray(data.family) ? data.family : [];
+        const active = family.filter(m => m.isActive);
+        const sum = active.reduce((acc, m) => acc + (Number(m.proportion) || 0), 0);
+        if (sum > 0) {
+            for (const member of active.filter(m => m.isDiabetic && m.name)) {
+                speech += ` A ${member.name} le corresponden ${say(totals.carbs * (Number(member.proportion) || 0) / sum)}.`;
+            }
+        }
+        return handlerInput.responseBuilder.speak(speech + ' ¿Algo más?').reprompt('¿Qué más necesitas?').getResponse();
+    }
+};
+
+/** "Empieza una receta nueva" */
+const NuevaRecetaIntentHandler = {
+    canHandle: (handlerInput: Alexa.HandlerInput) => isIntent(handlerInput, 'NuevaRecetaIntent'),
+    async handle(handlerInput: Alexa.HandlerInput) {
+        const kitchen = await resolveKitchen(handlerInput);
+        if ('response' in kitchen) return kitchen.response;
+        await kitchen.docRef.update({ cookingMode: true, currentRecipeName: 'Receta de Alexa', currentRecipeIngredients: [], updatedAt: new Date().toISOString() });
+        return handlerInput.responseBuilder.speak('Receta nueva empezada. Dime el primer ingrediente y su cantidad.')
+            .reprompt('Puedes decir: añade 200 gramos de arroz.').getResponse();
+    }
+};
+
 const HelpIntentHandler = {
     canHandle(handlerInput: Alexa.HandlerInput) {
         return Alexa.getRequestType(handlerInput.requestEnvelope) === 'IntentRequest'
             && Alexa.getIntentName(handlerInput.requestEnvelope) === 'AMAZON.HelpIntent';
     },
     handle(handlerInput: Alexa.HandlerInput) {
-        const speakOutput = 'Puedes decir: añade 50 gramos de pan.';
+        const speakOutput = 'Puedes decir: añade 50 gramos de pan; añade dos plátanos; quita el arroz; cuántos hidratos lleva; o empieza una receta nueva.';
         return handlerInput.responseBuilder
             .speak(speakOutput)
-            .reprompt(speakOutput)
+            .reprompt('¿Qué quieres hacer?')
             .getResponse();
     }
 };
@@ -297,6 +404,10 @@ export default async function handler(req: ApiRequest, res: ServerResponse) {
             .addRequestHandlers(
                 LaunchRequestHandler,
                 AnadirRegistroIntentHandler,
+                AnadirUnidadesIntentHandler,
+                QuitarIngredienteIntentHandler,
+                ConsultarHidratosIntentHandler,
+                NuevaRecetaIntentHandler,
                 HelpIntentHandler,
                 CancelAndStopIntentHandler,
                 FallbackIntentHandler,

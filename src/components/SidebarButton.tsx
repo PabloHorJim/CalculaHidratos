@@ -17,12 +17,12 @@ export function SidebarButton({ active, onClick, icon, label, description }: Sid
                     : 'text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700'
                 }`}
         >
-            <div className={active ? 'text-orange-500 dark:text-orange-400' : 'text-gray-400 dark:text-gray-500'}>
+            <div className={active ? 'text-orange-500 dark:text-orange-400' : 'text-gray-500 dark:text-gray-400'}>
                 {icon}
             </div>
             <div className="text-left">
                 <div className="text-sm font-bold leading-none mb-1">{label}</div>
-                <div className="text-[10px] text-gray-400 dark:text-gray-500 font-medium">{description}</div>
+                <div className="text-[0.6875rem] text-gray-500 dark:text-gray-400 font-medium">{description}</div>
             </div>
         </button>
     );

@@ -136,3 +136,14 @@ Alexa signature verification and the sign-in proxy. `npm run test:rules` and `np
 - The stats panel classifies meals by timestamp hour (6-11=breakfast, 11-16=lunch, 16-23=dinner)
 - The legal notice follows RGPD/LOPDGDD two-layer information system
 - TypeScript runs in strict mode (`npm run lint`); numeric fields use `components/NumberInput`
+
+## Added in the "roadmap" round (November 2026)
+
+- **Carbohydrate maths** live in `api/_lib/nutrition.ts` (re-exported by `src/utils/nutrition.ts`) so the app and Alexa share one implementation: pieces (`unitWeight`), raw→cooked (`cookedFactor`, `RecipeIngredient.cooked`), recipe scaling, fat/protein totals. Built-in defaults are `DEFAULT_EXTRAS`; family overrides are the synced map `ingredientExtras`.
+- **Quick meals** (`QuickTab`) save a history entry with `kind: 'single'` and one portion; `upsertHistory` never merges them with a shared dish.
+- **Invitations**: `invites/{code}` documents (24 h) created by members; joining names the code in `members.<uid>.invite`, which `firestore.rules` checks. The group id is no longer a join secret. Old groups: `legacyJoinUntil` window (30 days).
+- **Sensor glucose**: `src/glucose/sources.ts` + `useGlucose` (device-only config). Nightscout is called from the browser; LibreLinkUp through `api/glucose.ts` → `api/_lib/librelink.ts` (unofficial API). Readings older than 10 minutes are never offered for a dose.
+- **Push**: `src/push.ts` (subscription in `users/<uid>/private/push`), `api/notify.ts` + `api/_lib/notify.ts` (web-push, VAPID), handlers in `public/push-sw.js` imported by the generated service worker.
+- **Serverless helpers**: `api/_lib/admin.ts` (one Firebase Admin init, `requestUid` verifies the caller's ID token). New endpoints must call it.
+- **Screens are lazy** (`App.tsx`): only Recetas and Reparto ship in the first chunk, the rest are preloaded when idle. Tests that open another screen must wait for it.
+- **Accessibility rules**: no fixed pixel font sizes (use rem so the text-size setting works), every icon-only button needs `aria-label`, text fields in a row need `min-w-0`, check new screens at 320 px and with text size "Muy grande".

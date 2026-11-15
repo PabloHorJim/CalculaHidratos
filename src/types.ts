@@ -3,11 +3,20 @@ export interface Ingredient {
   name: string;
   carbsPer100g: number;
   category?: string;
+  /** Grams of one piece ("1 plátano ≈ 120 g") and what a piece is called. */
+  unitWeight?: number;
+  unitName?: string;
+  /** Cooked weight / raw weight (pasta ≈ 2.3). */
+  cookedFactor?: number;
+  fatPer100g?: number;
+  proteinPer100g?: number;
 }
 
 export interface RecipeIngredient {
   ingredientId: string;
   weight: number;
+  /** Weighed after cooking: converted to raw weight with the ingredient's cookedFactor. */
+  cooked?: boolean;
 }
 
 export interface Recipe {
@@ -38,6 +47,11 @@ export interface MealHistoryEntry {
   totalCarbs: number;
   netWeight: number;
   isBatch?: boolean;
+  /** "single": something one person ate on their own (snack, fruit...), not a shared dish. */
+  kind?: 'single';
+  /** Fat and protein of the whole dish, when every ingredient has that data. */
+  totalFat?: number;
+  totalProtein?: number;
   portions: {
     memberId?: string; // absent in entries saved by older versions
     memberName: string;

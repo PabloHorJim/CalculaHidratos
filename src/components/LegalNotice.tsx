@@ -27,6 +27,16 @@ export function LegalNotice() {
                 </div>
 
                 <div>
+                    <h3 className="text-sm font-black text-gray-800 dark:text-gray-200 uppercase mb-2">Servicios opcionales de terceros</h3>
+                    <ul className="text-xs text-gray-600 dark:text-gray-400 leading-relaxed list-disc pl-4 space-y-1">
+                        <li><strong>Código de barras:</strong> al buscar un producto envasado se envía únicamente su código de barras a Open Food Facts.</li>
+                        <li><strong>Avisos a la familia:</strong> si los activas, el aviso viaja cifrado a través del servicio de notificaciones de tu navegador (Google, Apple o Mozilla), que no puede leer su contenido.</li>
+                        <li><strong>Sensor de glucosa:</strong> si conectas Nightscout o LibreLinkUp, la app lee tus lecturas de ese servicio. Los datos de conexión se guardan solo en tu dispositivo; la contraseña de LibreLinkUp se transmite una vez a LibreLinkUp y no se almacena. Las lecturas no se guardan en la nube de la app. LibreLinkUp no es un servicio oficial para aplicaciones de terceros.</li>
+                        <li><strong>Protección contra abusos:</strong> la app puede usar Google reCAPTCHA (Firebase App Check) para comprobar que las peticiones proceden de la aplicación.</li>
+                    </ul>
+                </div>
+
+                <div>
                     <h3 className="text-sm font-black text-gray-800 dark:text-gray-200 uppercase mb-2">Base Jurídica</h3>
                     <p className="text-xs text-gray-600 dark:text-gray-400 leading-relaxed">
                         Consentimiento del interesado (Art. 6.1.a RGPD). El usuario da su consentimiento explícito al aceptar el aviso de privacidad mostrado en el primer uso de la aplicación.

@@ -28,7 +28,7 @@ export function CookieConsent({ state }: CookieConsentProps) {
                     </div>
                     <div>
                         <h2 className="text-lg font-black text-gray-800 dark:text-gray-100">Privacidad y Datos</h2>
-                        <p className="text-[10px] text-gray-400 font-bold uppercase">RGPD / LOPDGDD</p>
+                        <p className="text-[0.6875rem] text-gray-500 font-bold uppercase">RGPD / LOPDGDD</p>
                     </div>
                 </div>
 
@@ -41,7 +41,7 @@ export function CookieConsent({ state }: CookieConsentProps) {
                         Si inicias sesión con Google, tus datos se sincronizarán con <strong>Firebase (Google Cloud)</strong>{' '}
                         para compartirlos entre dispositivos y con tu familia.
                     </p>
-                    <p className="text-xs text-gray-400 dark:text-gray-500">
+                    <p className="text-xs text-gray-500 dark:text-gray-400">
                         No utilizamos cookies de terceros ni rastreadores. Consulta la sección{' '}
                         <strong>Información Legal</strong> para más detalles sobre tus derechos.
                     </p>
@@ -57,13 +57,13 @@ export function CookieConsent({ state }: CookieConsentProps) {
                     </button>
                     <button
                         onClick={declineCloudConsent}
-                        className="w-full py-2 text-gray-400 dark:text-gray-500 text-xs font-medium hover:text-gray-600 dark:hover:text-gray-300 transition-colors"
+                        className="w-full py-2 text-gray-500 dark:text-gray-400 text-xs font-medium hover:text-gray-600 dark:hover:text-gray-300 transition-colors"
                     >
                         Solo funcionalidad básica (sin nube)
                     </button>
                 </div>
 
-                <p className="text-[9px] text-gray-300 dark:text-gray-600 text-center leading-tight">
+                <p className="text-[0.6875rem] text-gray-400 dark:text-gray-500 text-center leading-tight">
                     Al aceptar, consientes el tratamiento de tus datos conforme al Art. 6.1.a RGPD.
                     Puedes revocar tu consentimiento en cualquier momento.
                 </p>

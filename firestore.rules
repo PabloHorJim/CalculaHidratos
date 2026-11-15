@@ -8,10 +8,15 @@
 // /users/{uid}/private/{id}    private data (patient mode: insulin settings, doses). Owner only.
 //
 // /groups/{groupId}            family data. `memberUids` lists who may read and write it.
-//                              The document id is the invite code: whoever knows it can add
-//                              THEMSELF to the list (and nothing else). The admin can remove
-//                              members; removed members go to `blockedUids` and cannot rejoin.
+//                              A user can add THEMSELF to the list (and nothing else) with a
+//                              valid invitation. The admin can remove members.
 // /groups/{groupId}/meals/{id} meal history of the family. Members only.
+// /invites/{code}              temporary invitation to a group, created by a member. It says
+//                              which group it is for and when it expires (at most 8 days).
+//
+// Groups created by old versions of the app used the document id as a permanent invite
+// code. Their members register themselves on first use of the new app; that old way in
+// closes 30 days after the first one does (`legacyJoinUntil`).
 //
 // Deploy with:  npx firebase-tools deploy --only firestore:rules
 // Test with:    npm run test:rules
@@ -49,6 +54,7 @@ service cloud.firestore {
              (!('memberUids' in data) || (data.memberUids is list && data.memberUids.size() <= 50)) &&
              (!('blockedUids' in data) || (data.blockedUids is list && data.blockedUids.size() <= 200)) &&
              (!('members' in data) || data.members is map) &&
+             (!('legacyJoinUntil' in data) || data.legacyJoinUntil is timestamp) &&
              (!('customIngredients' in data) || data.customIngredients is list) &&
              (!('recipes' in data) || data.recipes is list) &&
              (!('family' in data) || data.family is list) &&
@@ -92,6 +98,26 @@ service cloud.firestore {
       }
     }
 
+    match /invites/{code} {
+      function invitedGroup(data) {
+        return get(/databases/$(database)/documents/groups/$(data.groupId)).data;
+      }
+      // Whoever has the code can look it up (codes cannot be listed)
+      allow get: if signedIn();
+      allow create: if signedIn() &&
+                       code.matches('^[A-Z0-9]{8,20}$') &&
+                       request.resource.data.keys().hasOnly(['groupId', 'createdBy', 'expiresAt']) &&
+                       request.resource.data.groupId is string &&
+                       request.resource.data.createdBy == request.auth.uid &&
+                       request.resource.data.expiresAt is timestamp &&
+                       request.resource.data.expiresAt > request.time &&
+                       request.resource.data.expiresAt < request.time + duration.value(8, 'd') &&
+                       request.auth.uid in invitedGroup(request.resource.data).get('memberUids', []);
+      allow delete: if signedIn() &&
+                       (resource.data.createdBy == request.auth.uid ||
+                        request.auth.uid in invitedGroup(resource.data).get('memberUids', []));
+    }
+
     match /groups/{groupId} {
       function changedKeys() {
         return request.resource.data.diff(resource.data).affectedKeys();
@@ -122,12 +148,38 @@ service cloud.firestore {
                        request.resource.data.adminUid == request.auth.uid &&
                        request.resource.data.memberUids == [request.auth.uid];
 
+      // Invitation named in the joiner's own entry of `members`
+      function hasValidInvite() {
+        let code = request.resource.data.members[request.auth.uid].get('invite', '');
+        return code is string && code.size() >= 8 &&
+               exists(/databases/$(database)/documents/invites/$(code)) &&
+               get(/databases/$(database)/documents/invites/$(code)).data.groupId == groupId &&
+               get(/databases/$(database)/documents/invites/$(code)).data.expiresAt > request.time;
+      }
+      // Members of a group made by an old version: their profile already points to it
+      function isLegacyJoin() {
+        return notBlocked() &&
+               exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
+               get(/databases/$(database)/documents/users/$(request.auth.uid)).data.groupId == groupId &&
+               (!('memberUids' in resource.data) ||
+                request.time < resource.data.get('legacyJoinUntil', timestamp.value(0)));
+      }
+      // The first one to register starts the 30-day countdown, once
+      function legacyWindowUnchangedOrStarted() {
+        return !('legacyJoinUntil' in changedKeys()) ||
+               (!('legacyJoinUntil' in resource.data) && !('memberUids' in resource.data) &&
+                request.resource.data.legacyJoinUntil is timestamp &&
+                request.resource.data.legacyJoinUntil < request.time + duration.value(31, 'd'));
+      }
+
       // Join: add yourself to the member list, and nothing else
-      allow update: if signedIn() && notBlocked() &&
-                       changedKeys().hasOnly(['memberUids', 'members']) &&
+      allow update: if signedIn() &&
+                       changedKeys().hasOnly(['memberUids', 'members', 'legacyJoinUntil']) &&
                        addedUids() == [request.auth.uid].toSet() &&
                        removedUids().size() == 0 &&
                        onlyOwnMemberEntry() &&
+                       legacyWindowUnchangedOrStarted() &&
+                       (hasValidInvite() || isLegacyJoin()) &&
                        isValidGroup(request.resource.data);
 
       // Leave: remove yourself from the member list, and nothing else
@@ -139,13 +191,13 @@ service cloud.firestore {
 
       // Members edit the family's data, but not who belongs to the group
       allow update: if isMember(groupId, resource.data) && notBlocked() &&
-                       !changedKeys().hasAny(['id', 'adminUid', 'inviteCode', 'memberUids', 'blockedUids']) &&
+                       !changedKeys().hasAny(['id', 'adminUid', 'inviteCode', 'memberUids', 'blockedUids', 'legacyJoinUntil']) &&
                        onlyOwnMemberEntry() &&
                        isValidGroup(request.resource.data);
 
       // The admin also manages members (remove / block) and the group name
       allow update: if signedIn() && resource.data.adminUid == request.auth.uid &&
-                       !changedKeys().hasAny(['id', 'adminUid', 'inviteCode']) &&
+                       !changedKeys().hasAny(['id', 'adminUid', 'inviteCode', 'legacyJoinUntil']) &&
                        addedUids().size() == 0 &&
                        isValidGroup(request.resource.data);
 

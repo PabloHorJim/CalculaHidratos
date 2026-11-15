@@ -25,7 +25,7 @@ export interface HistoryUpdate {
 
 /** Adds a meal, or updates the entry of the same recipe saved in the last two hours. */
 export function upsertHistory(list: MealHistoryEntry[], update: HistoryUpdate, now = Date.now()): MealHistoryEntry[] {
-    const existing = list.find(m => m.recipeName === update.recipeName && now - time(m) < UPSERT_WINDOW_MS && now - time(m) >= 0);
+    const existing = list.find(m => m.kind !== 'single' && m.recipeName === update.recipeName && now - time(m) < UPSERT_WINDOW_MS && now - time(m) >= 0);
     const isBatch = update.isBatch ?? existing?.isBatch ?? false;
     const entry: MealHistoryEntry = {
         id: existing ? existing.id : now.toString(),
