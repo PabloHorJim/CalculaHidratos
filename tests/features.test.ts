@@ -191,3 +191,10 @@ test('Nightscout and reading freshness', async () => {
     assert.equal(latestReading([{ time: now - 11 * 60000, mgdl: 130 }], now)!.fresh, false);   // too old to dose with
     assert.equal(latestReading([{ time: now + 10 * 60000, mgdl: 130 }], now)!.fresh, false);   // clock problem
 });
+
+test('every serverless endpoint can be loaded (a bad import only shows up as a crash once deployed)', async () => {
+    for (const name of ['notify', 'glucose', 'alexa', 'auth-proxy']) {
+        const module = await import(`../api/${name}.ts`);
+        assert.equal(typeof module.default, 'function', name);
+    }
+});

@@ -1,5 +1,5 @@
 import type { ServerResponse } from 'node:http';
-import webpush from 'web-push';
+import { sendNotification, setVapidDetails } from 'web-push';
 import { ApiRequest, readBody, sendJson } from './_lib/http.js';
 import { admin, firestore, requestUid } from './_lib/admin.js';
 import { notifyGroup, NotifyDeps, PushSubscriptionData } from './_lib/notify.js';
@@ -27,7 +27,7 @@ const deps = (): NotifyDeps => {
         },
         async send(subscription, payload) {
             try {
-                await webpush.sendNotification(subscription, payload, { TTL: 3600, urgency: 'high' });
+                await sendNotification(subscription, payload, { TTL: 3600, urgency: 'high' });
                 return 'ok';
             } catch (error) {
                 const status = (error as { statusCode?: number }).statusCode;
@@ -61,7 +61,7 @@ export default async function handler(req: ApiRequest, res: ServerResponse) {
     }
 
     try {
-        webpush.setVapidDetails(subject, publicKey, privateKey);
+        setVapidDetails(subject, publicKey, privateKey);
         const result = await notifyGroup(deps(), uid, input);
         sendJson(res, result.status, result.body);
     } catch (error) {
