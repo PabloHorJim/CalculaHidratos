@@ -34,6 +34,8 @@ export default defineConfig(({ mode }) => {
         },
         workbox: {
           globPatterns: ['**/*.{js,css,html,ico,png,svg}'],
+          // Link-preview picture for social networks: phones never need it offline
+          globIgnores: ['og-image.png'],
           // Never answer API calls or Firebase's sign-in helper pages with the cached app shell
           navigateFallbackDenylist: [/^\/api\//, /^\/__\//],
           cleanupOutdatedCaches: true,
