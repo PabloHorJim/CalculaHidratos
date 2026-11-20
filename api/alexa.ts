@@ -5,6 +5,7 @@ import { IngredientLike, withExtras, ingredientCarbs, recipeMacros } from './_li
 import { verifyAlexaRequest } from './_lib/alexaVerify.js';
 import { ApiRequest, readBody, sendJson } from './_lib/http.js';
 import { admin, firestore } from './_lib/admin.js';
+import { isGroupMember } from './_lib/membership.js';
 import type { ServerResponse } from 'node:http';
 
 const db = firestore();
@@ -150,11 +151,18 @@ async function resolveKitchen(handlerInput: Alexa.HandlerInput): Promise<Kitchen
     const userDoc = await db.collection('users').doc(uid).get();
     if (!userDoc.exists) return fail('Inicia sesión en la aplicación web para inicializar tu cuenta primero.');
 
+    // The profile's groupId is written by the user, so it does not prove membership: this code
+    // runs with admin rights and must apply the same test as firestore.rules (member list,
+    // or a group made by an old version that has no member list yet).
     const groupId = userDoc.data()?.groupId;
-    const docRef = groupId ? db.collection('groups').doc(groupId) : db.collection('users').doc(uid);
+    const docRef = typeof groupId === 'string' && groupId && !groupId.includes('/')
+        ? db.collection('groups').doc(groupId) : db.collection('users').doc(uid);
     const snapshot = await docRef.get();
     if (!snapshot.exists) return fail('No encontré tus datos de cocina en el servidor.');
     const data = snapshot.data() || {};
+    if (docRef.parent.id === 'groups' && !isGroupMember(data, uid)) {
+        return fail('No perteneces a ese grupo familiar. Únete desde la aplicación con una invitación.');
+    }
     const custom: IngredientLike[] = Array.isArray(data.customIngredients) ? data.customIngredients : [];
     const extras = data.ingredientExtras && typeof data.ingredientExtras === 'object' ? data.ingredientExtras : {};
     const options = [...(INITIAL_INGREDIENTS as IngredientLike[]), ...custom].map(i => withExtras(i, extras));

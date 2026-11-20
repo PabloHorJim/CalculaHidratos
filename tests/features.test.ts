@@ -5,7 +5,8 @@ import type { IngredientLike } from '../src/utils/nutrition';
 import { ingredientCarbs, recipeMacros, scaleIngredients, withExtras, piecesOf, cleanExtra, DEFAULT_EXTRAS } from '../src/utils/nutrition';
 import { parseOpenFoodFacts, lookupBarcode, isBarcode } from '../src/utils/openFoodFacts';
 import { upsertHistory } from '../src/utils/history';
-import { notifyGroup, NotifyDeps } from '../api/_lib/notify';
+import { notifyGroup, NotifyDeps, isPushEndpoint } from '../api/_lib/notify';
+import { isGroupMember } from '../api/_lib/membership';
 import { libreLogin, libreRead, parseFactoryTimestamp } from '../api/_lib/librelink';
 import { parseNightscout, normalizeNightscoutUrl, fetchNightscout, fetchLibre, latestReading, GlucoseError } from '../src/glucose/sources';
 import { INITIAL_INGREDIENTS } from '../src/data/ingredients';
@@ -93,7 +94,7 @@ test('Open Food Facts: reads carbohydrates, refuses products without them', asyn
 });
 
 test('family notifications: only members can send, the sender is skipped, dead devices are removed', async () => {
-    const sub = (n: number) => ({ endpoint: `https://push.example/${n}`, keys: { p256dh: 'k', auth: 'a' } });
+    const sub = (n: number) => ({ endpoint: `https://fcm.googleapis.com/fcm/send/${n}`, keys: { p256dh: 'k', auth: 'a' } });
     const sent: string[] = [];
     const removed: string[] = [];
     const deps: NotifyDeps = {
@@ -103,13 +104,27 @@ test('family notifications: only members can send, the sender is skipped, dead d
         removeSubscription: async (uid, id) => { removed.push(`${uid}/${id}`); }
     };
     assert.deepEqual(await notifyGroup(deps, 'ana', { groupId: 'G1', title: 'Lentejas: reparto listo', body: 'Pablo: 45 g HC' }), { status: 200, body: { sent: 1, devices: 2 } });
-    assert.deepEqual(sent.sort(), ['https://push.example/2 Lentejas: reparto listo', 'https://push.example/3 Lentejas: reparto listo']);
+    assert.deepEqual(sent.sort(), ['https://fcm.googleapis.com/fcm/send/2 Lentejas: reparto listo', 'https://fcm.googleapis.com/fcm/send/3 Lentejas: reparto listo']);
     assert.deepEqual(removed, ['bob/b2']);
     assert.equal((await notifyGroup(deps, 'eve', { groupId: 'G1', title: 'x' })).status, 403);
     assert.equal((await notifyGroup(deps, 'ana', { groupId: 'NOPE', title: 'x' })).status, 403);
     assert.equal((await notifyGroup(deps, 'ana', { groupId: 'G1' })).status, 400);
     assert.equal((await notifyGroup(deps, 'ana', { groupId: 'a/b', title: 'x' })).status, 400);
     assert.equal((await notifyGroup(deps, 'ana', null)).status, 400);
+});
+
+test('notifications only go to the browsers\' push services', () => {
+    for (const ok of ['https://fcm.googleapis.com/fcm/send/abc', 'https://updates.push.services.mozilla.com/wpush/v2/x',
+        'https://web.push.apple.com/QX', 'https://wns2-db5p.notify.windows.com/w/?token=1']) assert.ok(isPushEndpoint(ok), ok);
+    for (const bad of ['http://fcm.googleapis.com/x', 'https://fcm.googleapis.com:8443/x', 'https://evil.com/fcm.googleapis.com',
+        'https://fcm.googleapis.com.evil.com/x', 'https://169.254.169.254/latest', 'https://localhost/x', 'nonsense']) assert.ok(!isPushEndpoint(bad), bad);
+});
+
+test('server-side group access needs the same membership as the rules', () => {
+    assert.ok(isGroupMember({ memberUids: ['ana', 'bob'] }, 'bob'));
+    assert.ok(!isGroupMember({ memberUids: ['ana'] }, 'eve'));
+    assert.ok(!isGroupMember({ memberUids: 'eve' }, 'eve'));
+    assert.ok(isGroupMember({ name: 'old group' }, 'ana'));
 });
 
 test('LibreLinkUp: region redirect, session, readings; errors are explained', async () => {

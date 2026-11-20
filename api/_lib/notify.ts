@@ -16,9 +16,25 @@ export interface NotifyResult { status: number; body: { error?: string; sent?: n
 
 const text = (value: unknown, max: number) => (typeof value === 'string' ? value.trim().slice(0, max) : '');
 
+/**
+ * Push services of the browsers (Chrome/Android, Firefox, Safari/iOS, Edge). Subscriptions are
+ * written by users, so without this list the server could be made to send requests anywhere.
+ */
+const PUSH_HOSTS = [/^fcm\.googleapis\.com$/, /^android\.googleapis\.com$/, /^updates\.push\.services\.mozilla\.com$/,
+    /^web\.push\.apple\.com$/, /^[a-z0-9-]+\.notify\.windows\.com$/];
+
+export const isPushEndpoint = (endpoint: string) => {
+    try {
+        const url = new URL(endpoint);
+        return url.protocol === 'https:' && !url.port && PUSH_HOSTS.some(host => host.test(url.hostname));
+    } catch {
+        return false;
+    }
+};
+
 const isSubscription = (s: unknown): s is PushSubscriptionData => {
     const sub = s as PushSubscriptionData | null;
-    return !!sub && typeof sub.endpoint === 'string' && sub.endpoint.startsWith('https://') &&
+    return !!sub && typeof sub.endpoint === 'string' && isPushEndpoint(sub.endpoint) &&
         typeof sub.keys?.p256dh === 'string' && typeof sub.keys?.auth === 'string';
 };
 
